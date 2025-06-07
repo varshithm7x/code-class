@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Create an Axios instance with a base URL
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'https://code-class-eight.vercel.app/api/v1',
+  baseURL: import.meta.env.VITE_API_URL || 'https://codeclass.up.railway.app/api/v1',
 });
 
 // Interceptor to add JWT token to request headers

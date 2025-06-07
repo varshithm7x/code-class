@@ -41,12 +41,58 @@ const JoinClassPage: React.FC = () => {
         description: 'You have successfully joined the class.',
       });
       navigate('/classes');
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to join class. Please check the code and try again.',
-        variant: 'destructive',
-      });
+    } catch (error: any) {
+      // Handle different types of errors with specific messages
+      if (error.response) {
+        const status = error.response.status;
+        const message = error.response.data?.message || 'Unknown error occurred';
+        
+        switch (status) {
+          case 400:
+            if (message.includes('already enrolled')) {
+              toast({
+                title: 'Already Enrolled',
+                description: 'You are already a member of this class.',
+                variant: 'default', // Use default variant instead of destructive
+              });
+            } else if (message.includes('cannot join your own class')) {
+              toast({
+                title: 'Cannot Join',
+                description: 'You cannot join your own class as a student.',
+                variant: 'destructive',
+              });
+            } else {
+              toast({
+                title: 'Invalid Request',
+                description: message,
+                variant: 'destructive',
+              });
+            }
+            break;
+          
+          case 404:
+            toast({
+              title: 'Class Not Found',
+              description: 'No class found with this join code. Please check the code and try again.',
+              variant: 'destructive',
+            });
+            break;
+            
+          default:
+            toast({
+              title: 'Error',
+              description: message || 'Failed to join class. Please try again.',
+              variant: 'destructive',
+            });
+        }
+      } else {
+        // Network or other errors
+        toast({
+          title: 'Connection Error',
+          description: 'Unable to connect to the server. Please check your internet connection.',
+          variant: 'destructive',
+        });
+      }
     }
   };
 

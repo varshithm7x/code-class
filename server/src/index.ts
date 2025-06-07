@@ -18,6 +18,7 @@ const corsOptions = {
     'http://localhost:8080', // Local development
     'http://localhost:3000', // Alternative local port
     'https://codeclass.up.railway.app', // Railway backend (same domain)
+    'https://code-class-eight.vercel.app', // Deployed frontend on Vercel
     // Add your deployed frontend URL here when you deploy it
   ],
   credentials: true,

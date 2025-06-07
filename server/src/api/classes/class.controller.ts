@@ -30,22 +30,47 @@ export const joinClass = async (req: Request, res: Response): Promise<void> => {
   // @ts-ignore
   const { userId } = req.user;
 
+  console.log(`[DEBUG] Student ${userId} attempting to join class with code: ${joinCode}`);
+
   try {
     const classToJoin = await prisma.class.findUnique({
       where: { joinCode },
     });
 
     if (!classToJoin) {
+      console.log(`[DEBUG] Class not found for join code: ${joinCode}`);
       res.status(404).json({ message: 'Class not found' });
       return;
     }
 
+    console.log(`[DEBUG] Found class: ${classToJoin.id} (${classToJoin.name})`);
+
     if (classToJoin.teacherId === userId) {
+      console.log(`[DEBUG] User ${userId} attempted to join their own class`);
       res.status(400).json({ message: 'You cannot join your own class' });
       return;
     }
 
+    // Check if student is already in the class
+    const existingEnrollment = await prisma.usersOnClasses.findUnique({
+      where: {
+        userId_classId: {
+          userId,
+          classId: classToJoin.id,
+        },
+      },
+    });
+
+    if (existingEnrollment) {
+      console.log(`[DEBUG] User ${userId} is already enrolled in class ${classToJoin.id}`);
+      res.status(400).json({ message: 'You are already enrolled in this class' });
+      return;
+    }
+
+    console.log(`[DEBUG] Starting transaction to enroll user ${userId} in class ${classToJoin.id}`);
+
     await prisma.$transaction(async (tx) => {
+      // Add student to class
       await tx.usersOnClasses.create({
         data: {
           userId,
@@ -53,13 +78,20 @@ export const joinClass = async (req: Request, res: Response): Promise<void> => {
         },
       });
 
+      console.log(`[DEBUG] User ${userId} successfully added to class ${classToJoin.id}`);
+
+      // Get all assignments in the class
       const assignmentsInClass = await tx.assignment.findMany({
         where: { classId: classToJoin.id },
         include: { problems: true },
       });
 
+      console.log(`[DEBUG] Found ${assignmentsInClass.length} assignments in class ${classToJoin.id}`);
+
       if (assignmentsInClass.length > 0) {
         const problems = assignmentsInClass.flatMap(a => a.problems);
+        
+        console.log(`[DEBUG] Found ${problems.length} total problems across all assignments`);
         
         if (problems.length > 0) {
           const submissions = problems.map(problem => ({
@@ -70,13 +102,33 @@ export const joinClass = async (req: Request, res: Response): Promise<void> => {
           await tx.submission.createMany({
             data: submissions,
           });
+
+          console.log(`[DEBUG] Created ${submissions.length} submission records for user ${userId}`);
         }
       }
     });
 
+    console.log(`[DEBUG] Successfully completed enrollment for user ${userId} in class ${classToJoin.id}`);
     res.status(200).json({ message: 'Successfully joined class' });
-  } catch (error) {
-    res.status(500).json({ message: 'Error joining class', error });
+  } catch (error: any) {
+    console.error('--- DETAILED ERROR LOG: JOIN CLASS ---');
+    console.error('User ID:', userId);
+    console.error('Join Code:', joinCode);
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      console.error('Prisma Error Code:', error.code);
+      console.error('Prisma Meta:', error.meta);
+    }
+    console.error('Full Error Object:', JSON.stringify(error, null, 2));
+    console.error('--- END DETAILED ERROR LOG ---');
+    
+    res.status(500).json({ 
+      message: 'Error joining class', 
+      error: {
+        name: error.name,
+        message: error.message,
+        ...(error instanceof Prisma.PrismaClientKnownRequestError && { code: error.code, meta: error.meta }),
+      } 
+    });
   }
 };
 

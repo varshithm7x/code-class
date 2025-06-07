@@ -28,6 +28,42 @@ export const createAssignment = async (req: Request, res: Response): Promise<voi
   const { title, description, classId, assignDate, dueDate, problems } = req.body;
 
   try {
+    // Pre-validate LeetCode problems OUTSIDE the transaction
+    let validatedProblems = problems || [];
+    
+    if (problems && problems.length > 0) {
+      for (let i = 0; i < problems.length; i++) {
+        const problem = problems[i];
+        const platform = getPlatformFromUrl(problem.url);
+        
+        let problemData = {
+          title: problem.title,
+          difficulty: problem.difficulty,
+          url: problem.url,
+          platform: platform,
+        };
+
+        if (platform === 'leetcode') {
+          console.log(`Validating LeetCode URL: ${problem.url}`);
+          try {
+            const officialDetails = await getLeetCodeProblemDetails(problem.url);
+            if (officialDetails) {
+              problemData.title = officialDetails.title;
+              problemData.difficulty = officialDetails.difficulty;
+            } else {
+              console.warn(`Could not verify LeetCode problem with URL: ${problem.url}. Falling back to user-provided details.`);
+            }
+          } catch (error) {
+            console.warn(`Error validating LeetCode problem ${problem.url}:`, error);
+            // Continue with user-provided data if API fails
+          }
+        }
+        
+        validatedProblems[i] = problemData;
+      }
+    }
+
+    // Now perform the database transaction with validated data
     const newAssignment = await prisma.$transaction(async (tx) => {
       const assignment = await tx.assignment.create({
         data: {
@@ -41,30 +77,14 @@ export const createAssignment = async (req: Request, res: Response): Promise<voi
         },
       });
 
-      if (problems && problems.length > 0) {
-        for (const problem of problems) {
-          const platform = getPlatformFromUrl(problem.url);
-          
-          let problemData = {
-            title: problem.title,
-            difficulty: problem.difficulty,
-            url: problem.url,
-            platform: platform,
-            assignmentId: assignment.id,
-          };
-
-          if (platform === 'leetcode') {
-            console.log(`Validating LeetCode URL: ${problem.url}`);
-            const officialDetails = await getLeetCodeProblemDetails(problem.url);
-            if (officialDetails) {
-              problemData.title = officialDetails.title;
-              problemData.difficulty = officialDetails.difficulty;
-            } else {
-              console.warn(`Could not verify LeetCode problem with URL: ${problem.url}. Falling back to user-provided details.`);
+      if (validatedProblems && validatedProblems.length > 0) {
+        for (const problemData of validatedProblems) {
+          await tx.problem.create({ 
+            data: {
+              ...problemData,
+              assignmentId: assignment.id,
             }
-          }
-          
-          await tx.problem.create({ data: problemData });
+          });
         }
       }
 

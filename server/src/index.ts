@@ -12,7 +12,20 @@ import { scheduleSubmissionChecks } from './cron';
 const app: Express = express();
 const port = process.env.PORT || 3001;
 
-app.use(cors());
+// Configure CORS to allow requests from frontend
+const corsOptions = {
+  origin: [
+    'http://localhost:8080', // Local development
+    'http://localhost:3000', // Alternative local port
+    'https://code-class-eight.vercel.app', // Deployed frontend (if same domain)
+    // Add your deployed frontend URL here when you deploy it
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
 app.use('/api/v1/auth', authRoutes);

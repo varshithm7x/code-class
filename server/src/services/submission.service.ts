@@ -33,7 +33,7 @@ export const getAllLeetCodeSolvedSlugs = async (username: string): Promise<Set<s
             return new Set();
         }
 
-        const solvedSlugs = new Set(submissions.map(s => s.titleSlug));
+        const solvedSlugs = new Set<string>(submissions.map((s: { titleSlug: string }) => s.titleSlug));
         
         console.log(`Found ${solvedSlugs.size} unique accepted LeetCode submissions for ${username}.`);
         return solvedSlugs;
@@ -73,8 +73,8 @@ export const getAllGfgSolvedSlugs = async (username: string): Promise<Set<string
             ...(solvedStats.hard?.questions || []),
         ];
         
-        const allSolvedSlugs = new Set(
-            allSolved.map(q => getGfgProblemSlug(q.questionUrl)).filter(Boolean)
+        const allSolvedSlugs = new Set<string>(
+            allSolved.map((q: { questionUrl: string }) => getGfgProblemSlug(q.questionUrl)).filter(Boolean)
         );
         console.log(`Found ${allSolvedSlugs.size} unique solved GFG submissions for ${username}.`);
         return allSolvedSlugs;

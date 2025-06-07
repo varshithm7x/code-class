@@ -7,6 +7,7 @@ import { Textarea } from '../../components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { useToast } from '../../components/ui/use-toast';
 import { Loader2 } from 'lucide-react';
+import api from '../../api/axios';
 
 const ClassSettingsPage: React.FC = () => {
   const { classId } = useParams<{ classId: string }>();
@@ -25,17 +26,7 @@ const ClassSettingsPage: React.FC = () => {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/classes/${classId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update class settings');
-      }
+      await api.patch(`/classes/${classId}`, formData);
 
       toast({
         title: 'Success',
@@ -62,13 +53,7 @@ const ClassSettingsPage: React.FC = () => {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/classes/${classId}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete class');
-      }
+      await api.delete(`/classes/${classId}`);
 
       toast({
         title: 'Success',

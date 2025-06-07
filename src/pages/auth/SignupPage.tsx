@@ -52,7 +52,7 @@ const SignupPage: React.FC = () => {
   const onSubmit = async (values: FormValues) => {
     try {
       await signup(values.name, values.email, values.password, values.role);
-      navigate('/dashboard');
+      navigate('/classes');
     } catch (error) {
       console.error('Signup failed:', error);
     }

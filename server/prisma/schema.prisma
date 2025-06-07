@@ -1,0 +1,90 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["jsonProtocol"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 String           @id @default(cuid())
+  email              String           @unique
+  name               String
+  password           String
+  role               Role             @default(STUDENT)
+  classes            UsersOnClasses[]
+  submissions        Submission[]
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  hackerrankUsername String?
+  gfgUsername        String?
+  leetcodeUsername   String?
+  taughtClasses      Class[]
+}
+
+model Class {
+  id          String           @id @default(cuid())
+  name        String
+  joinCode    String           @unique
+  teacher     User             @relation(fields: [teacherId], references: [id])
+  teacherId   String
+  students    UsersOnClasses[]
+  assignments Assignment[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model UsersOnClasses {
+  user       User     @relation(fields: [userId], references: [id])
+  userId     String
+  class      Class    @relation(fields: [classId], references: [id])
+  classId    String
+  assignedAt DateTime @default(now())
+
+  @@id([userId, classId])
+}
+
+model Assignment {
+  id          String    @id @default(cuid())
+  class       Class     @relation(fields: [classId], references: [id])
+  classId     String
+  title       String
+  description String?
+  assignDate  DateTime
+  dueDate     DateTime
+  problems    Problem[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Problem {
+  id           String       @id @default(cuid())
+  assignment   Assignment   @relation(fields: [assignmentId], references: [id])
+  assignmentId String
+  title        String
+  url          String       
+  platform     String
+  difficulty   String?
+  submissions  Submission[]
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+}
+
+model Submission {
+  id             String    @id @default(cuid())
+  user           User      @relation(fields: [userId], references: [id])
+  userId         String
+  problem        Problem   @relation(fields: [problemId], references: [id])
+  problemId      String
+  completed      Boolean   @default(false)
+  submissionTime DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+enum Role {
+  STUDENT
+  TEACHER
+}

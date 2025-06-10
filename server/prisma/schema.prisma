@@ -21,6 +21,12 @@ model User {
   hackerrankUsername String?
   gfgUsername        String?
   leetcodeUsername   String?
+  leetcodeCookie     String?          // Encrypted session cookie for authenticated API calls
+  leetcodeCookieStatus String        @default("NOT_LINKED") // LINKED, EXPIRED, NOT_LINKED
+  leetcodeTotalSolved  Int?           // Cached total problems solved
+  leetcodeEasySolved   Int?           // Cached easy problems solved
+  leetcodeMediumSolved Int?           // Cached medium problems solved
+  leetcodeHardSolved   Int?           // Cached hard problems solved
   taughtClasses      Class[]
 }
 

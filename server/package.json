@@ -20,8 +20,10 @@
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
+    "leetcode-query": "^2.0.0",
     "nanoid": "^3.3.7",
-    "node-cron": "^4.1.0"
+    "node-cron": "^4.1.0",
+    "tsconfig-paths": "^4.2.0"
   },
   "devDependencies": {
     "@prisma/client": "^6.9.0",

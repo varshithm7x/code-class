@@ -62,7 +62,10 @@ const ClassCard: React.FC<ClassCardProps> = ({ classData, onDelete }) => {
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="text-red-600"
-                  onClick={() => onDelete?.(classData.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete?.(classData.id);
+                  }}
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
                   Delete Class

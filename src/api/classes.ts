@@ -1,10 +1,7 @@
 import api from './axios';
 import { Class, ClassWithStudents, Assignment } from '../types';
 
-export const getMyClasses = async () => {
-  const response = await api.get('/classes/my');
-  return response.data as Class[];
-};
+
 
 export const getClassDetails = async (classId: string) => {
   const response = await api.get(`/classes/${classId}`);
@@ -18,6 +15,11 @@ export const getClasses = async (): Promise<Class[]> => {
 
 export const createClass = async (name: string): Promise<Class> => {
   const response = await api.post('/classes', { name });
+  return response.data;
+};
+
+export const deleteClass = async (classId: string): Promise<any> => {
+  const response = await api.delete(`/classes/${classId}`);
   return response.data;
 };
 

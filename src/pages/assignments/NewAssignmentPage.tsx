@@ -3,7 +3,7 @@ import { useFieldArray, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { createAssignment } from '../../api/assignments';
-import { getMyClasses } from '../../api/classes';
+import { getClasses } from '../../api/classes';
 import { Class } from '../../types';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -69,7 +69,7 @@ const NewAssignmentPage = () => {
     if (!classIdFromParams) {
       const fetchClasses = async () => {
         try {
-          const classes = await getMyClasses(); // Assuming this fetches classes for the logged-in teacher
+          const classes = await getClasses(); // Fetches classes for the logged-in user
           setTeacherClasses(classes);
         } catch (error) {
           console.error('Failed to fetch classes', error);

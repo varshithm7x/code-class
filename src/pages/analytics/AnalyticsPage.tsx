@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { getClassCompletionData, getPlatformData, getDifficultyData } from '../../api/analytics';
-import { getMyClasses } from '../../api/classes';
+import { getClasses } from '../../api/classes';
 import { CompletionData, PlatformData, DifficultyData, Class } from '../../types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
@@ -38,7 +38,7 @@ const AnalyticsPage: React.FC = () => {
   useEffect(() => {
     const fetchClasses = async () => {
       try {
-        const classesData = await getMyClasses();
+        const classesData = await getClasses();
         setClasses(classesData);
 
         if (classesData.length > 0) {

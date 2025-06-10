@@ -6,6 +6,12 @@ export interface User {
   hackerrankUsername?: string;
   leetcodeUsername?: string;
   gfgUsername?: string;
+  // Enhanced LeetCode Integration fields
+  leetcodeCookieStatus?: string; // LINKED, EXPIRED, NOT_LINKED
+  leetcodeTotalSolved?: number;
+  leetcodeEasySolved?: number;
+  leetcodeMediumSolved?: number;
+  leetcodeHardSolved?: number;
   createdAt: string;
 }
 
@@ -28,6 +34,7 @@ export interface ClassWithStudents extends Class {
 export interface Student extends User {
   completedCount?: number;
   avgSubmissionTime?: string;
+  platformCount?: number; // Number of platforms linked
 }
 
 export enum Platform {
@@ -105,6 +112,13 @@ export interface LeaderboardEntry {
   name: string;
   completedCount: number;
   avgSubmissionTime: string;
+  // Enhanced LeetCode fields
+  leetcodeUsername?: string;
+  leetcodeCookieStatus?: string;
+  leetcodeTotalSolved?: number;
+  leetcodeEasySolved?: number;
+  leetcodeMediumSolved?: number;
+  leetcodeHardSolved?: number;
 }
 
 export interface AuthState {
@@ -124,5 +138,6 @@ export interface AuthContextType extends AuthState {
     leetcodeUsername?: string;
     gfgUsername?: string;
   }) => Promise<void>;
+  refreshUser: () => Promise<void>;
   clearError: () => void;
 }

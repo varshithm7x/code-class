@@ -16,6 +16,7 @@ export const AuthContext = createContext<AuthContextType>({
   signup: async () => {},
   logout: () => {},
   updateProfile: async () => {},
+  refreshUser: async () => {},
   clearError: () => {},
 });
 
@@ -159,6 +160,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setAuthState(prev => ({ ...prev, error: null }));
   };
 
+  const refreshUser = async () => {
+    try {
+      setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
+      
+      const user = await authApi.getCurrentUser();
+      
+      localStorage.setItem('user', JSON.stringify(user));
+      
+      setAuthState(prev => ({
+        ...prev,
+        user: user as User,
+        isLoading: false,
+      }));
+    } catch (error: any) {
+      setAuthState(prev => ({
+        ...prev,
+        isLoading: false,
+        error: error.response?.data?.message || "Failed to refresh user data.",
+      }));
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -167,6 +190,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signup,
         logout,
         updateProfile,
+        refreshUser,
         clearError,
       }}
     >

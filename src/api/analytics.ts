@@ -17,8 +17,12 @@ export const getDifficultyData = async (classId: string) => {
   return response.data as DifficultyData[];
 };
 
-export const getLeaderboard = async (classId?: string) => {
-  const url = classId ? `/analytics/leaderboard?classId=${classId}` : '/analytics/leaderboard';
+export const getLeaderboard = async (classId?: string, sortBy?: string) => {
+  const params = new URLSearchParams();
+  if (classId) params.append('classId', classId);
+  if (sortBy) params.append('sortBy', sortBy);
+  
+  const url = params.toString() ? `/analytics/leaderboard?${params.toString()}` : '/analytics/leaderboard';
   const response = await api.get(url);
   return response.data as LeaderboardEntry[];
 };

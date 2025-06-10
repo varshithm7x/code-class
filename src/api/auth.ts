@@ -24,3 +24,8 @@ export const updateUserProfile = async (data: {
   const response = await api.patch('/auth/profile', data);
   return response.data;
 };
+
+export const linkLeetCodeCredentials = async (leetcodeCookie: string) => {
+  const response = await api.post('/auth/leetcode-credentials', { leetcodeCookie });
+  return response.data;
+};

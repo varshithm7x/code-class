@@ -5,13 +5,15 @@ import { deleteAssignment } from '../../api/assignments';
 import { ClassWithStudents, Assignment, Student } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../hooks/use-toast';
+import { triggerDataRefresh, DATA_REFRESH_EVENTS } from '../../utils/dataRefresh';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import AssignmentList from '../../components/assignments/AssignmentList';
 import CompletionGrid from '../../components/assignments/CompletionGrid';
 import LoadingScreen from '../../components/ui/LoadingScreen';
-import { Plus, Users, BookOpen, Award, Copy } from 'lucide-react';
+import LeetCodeStats from '../../components/ui/LeetCodeStats';
+import { Plus, Users, BookOpen, Award, Copy, Code, TrendingUp } from 'lucide-react';
 
 const ClassDetailsPage: React.FC = () => {
   const { classId } = useParams<{ classId: string }>();
@@ -72,7 +74,30 @@ const ClassDetailsPage: React.FC = () => {
   const handleDeleteAssignment = async (assignmentId: string) => {
     try {
       await deleteAssignment(assignmentId);
+      
+      // Update local state immediately for better UX
       setAssignments(assignments.filter(a => a.id !== assignmentId));
+      
+      // Refresh class details to ensure all counts are updated
+      if (classId) {
+        try {
+          const [refreshedClassData, refreshedAssignments] = await Promise.all([
+            getClassDetails(classId),
+            getClassAssignments(classId),
+          ]);
+          setClassDetails(refreshedClassData);
+          setAssignments(refreshedAssignments);
+        } catch (refreshError) {
+          console.error('Error refreshing data after deletion:', refreshError);
+          // Don't show error toast for refresh failure since main operation succeeded
+        }
+      }
+      
+      // Trigger refresh events for other pages
+      triggerDataRefresh(DATA_REFRESH_EVENTS.ASSIGNMENTS_UPDATED, { classId, deletedAssignmentId: assignmentId });
+      triggerDataRefresh(DATA_REFRESH_EVENTS.CLASSES_UPDATED);
+      triggerDataRefresh(DATA_REFRESH_EVENTS.LEADERBOARD_UPDATED);
+      
       toast({
         title: 'Assignment deleted',
         description: 'The assignment has been successfully removed.',
@@ -175,34 +200,81 @@ const ClassDetailsPage: React.FC = () => {
         </TabsList>
         
         <TabsContent value="overview" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Class Information</CardTitle>
-              <CardDescription>Details about this class</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <h3 className="font-medium">Class Name</h3>
-                <p>{classDetails.name}</p>
-              </div>
-              <div>
-                <h3 className="font-medium">Teacher</h3>
-                <p>{classDetails.teacherName}</p>
-              </div>
-              <div>
-                <h3 className="font-medium">Created On</h3>
-                <p>{new Date(classDetails.createdAt).toLocaleDateString()}</p>
-              </div>
-              <div>
-                <h3 className="font-medium">Students</h3>
-                <p>{classDetails.students.length} enrolled</p>
-              </div>
-              <div>
-                <h3 className="font-medium">Assignments</h3>
-                <p>{assignments.length} total</p>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Class Information</CardTitle>
+                <CardDescription>Details about this class</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <h3 className="font-medium">Class Name</h3>
+                  <p>{classDetails.name}</p>
+                </div>
+                <div>
+                  <h3 className="font-medium">Teacher</h3>
+                  <p>{classDetails.teacherName}</p>
+                </div>
+                <div>
+                  <h3 className="font-medium">Created On</h3>
+                  <p>{new Date(classDetails.createdAt).toLocaleDateString()}</p>
+                </div>
+                <div>
+                  <h3 className="font-medium">Students</h3>
+                  <p>{classDetails.students.length} enrolled</p>
+                </div>
+                <div>
+                  <h3 className="font-medium">Assignments</h3>
+                  <p>{assignments.length} total</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <TrendingUp className="h-5 w-5" />
+                  <span>Class Statistics</span>
+                </CardTitle>
+                <CardDescription>LeetCode integration overview</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {(() => {
+                  const linkedStudents = classDetails.students.filter(s => s.leetcodeCookieStatus === 'LINKED');
+                  const expiredStudents = classDetails.students.filter(s => s.leetcodeCookieStatus === 'EXPIRED');
+                  const totalSolved = linkedStudents.reduce((sum, s) => sum + (s.leetcodeTotalSolved || 0), 0);
+                  const avgSolved = linkedStudents.length > 0 ? Math.round(totalSolved / linkedStudents.length) : 0;
+                  
+                  return (
+                    <>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="text-center p-3 bg-green-50 rounded-lg">
+                          <div className="text-2xl font-bold text-green-600">{linkedStudents.length}</div>
+                          <div className="text-sm text-green-600">Linked Accounts</div>
+                        </div>
+                        <div className="text-center p-3 bg-orange-50 rounded-lg">
+                          <div className="text-2xl font-bold text-orange-600">{avgSolved}</div>
+                          <div className="text-sm text-orange-600">Avg. Problems</div>
+                        </div>
+                      </div>
+                      
+                      {expiredStudents.length > 0 && (
+                        <div className="p-3 bg-red-50 rounded-lg">
+                          <div className="text-sm text-red-600">
+                            {expiredStudents.length} student(s) have expired LeetCode links
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div className="text-sm text-muted-foreground">
+                        {classDetails.students.length - linkedStudents.length - expiredStudents.length} students haven't linked LeetCode yet
+                      </div>
+                    </>
+                  );
+                })()}
+              </CardContent>
+            </Card>
+          </div>
           
           <Card>
             <CardHeader>
@@ -250,7 +322,7 @@ const ClassDetailsPage: React.FC = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Enrolled Students</CardTitle>
-                <CardDescription>Students in this class</CardDescription>
+                <CardDescription>Students in this class with their LeetCode stats</CardDescription>
               </CardHeader>
               <CardContent>
                 {classDetails.students.length === 0 ? (
@@ -258,50 +330,46 @@ const ClassDetailsPage: React.FC = () => {
                     No students enrolled yet. Share the join code to invite students.
                   </p>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Platforms</th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {classDetails.students.map((student: Student) => (
-                          <tr key={student.id}>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              {student.name}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              {student.email}
-                            </td>
-                            <td className="px-6 py-4">
-                              <div className="flex flex-wrap gap-2">
-                                {student.profiles?.hackerrank && (
-                                  <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
-                                    HackerRank
-                                  </span>
-                                )}
-                                {student.profiles?.leetcode && (
-                                  <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">
-                                    LeetCode
-                                  </span>
-                                )}
-                                {student.profiles?.gfg && (
-                                  <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                                    GeeksForGeeks
-                                  </span>
-                                )}
-                                {!student.profiles?.hackerrank && !student.profiles?.leetcode && !student.profiles?.gfg && (
-                                  <span className="text-gray-400 text-sm">None linked</span>
-                                )}
+                  <div className="space-y-4">
+                    {classDetails.students.map((student: Student) => (
+                      <div key={student.id} className="border rounded-lg p-4">
+                        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-3">
+                              <div>
+                                <p className="font-semibold text-lg">{student.name}</p>
+                                <p className="text-sm text-muted-foreground">{student.email}</p>
                               </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                            </div>
+                            
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              {student.leetcodeUsername && (
+                                <div className="flex items-center space-x-1 text-sm">
+                                  <Code className="h-4 w-4 text-orange-500" />
+                                  <span className="text-muted-foreground">@{student.leetcodeUsername}</span>
+                                </div>
+                              )}
+                              {student.gfgUsername && (
+                                <div className="flex items-center space-x-1 text-sm">
+                                  <span className="text-green-600 font-bold">GFG</span>
+                                  <span className="text-muted-foreground">@{student.gfgUsername}</span>
+                                </div>
+                              )}
+                              {student.hackerrankUsername && (
+                                <div className="flex items-center space-x-1 text-sm">
+                                  <span className="text-blue-600 font-bold">HR</span>
+                                  <span className="text-muted-foreground">@{student.hackerrankUsername}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          
+                          <div className="flex-shrink-0 min-w-[200px]">
+                            <LeetCodeStats user={student} compact={true} showDetails={false} />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </CardContent>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getClasses } from '../../api/classes';
+import { getClasses, deleteClass as apiDeleteClass } from '../../api/classes';
 import { useAuth } from '../../context/AuthContext';
 import { Class } from '../../types';
 import ClassList from '../../components/classes/ClassList';
@@ -7,28 +7,58 @@ import { Button } from '../../components/ui/button';
 import { Link } from 'react-router-dom';
 import { Plus, Users, BookOpen } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { useToast } from '../../hooks/use-toast';
+import { useDataRefresh, DATA_REFRESH_EVENTS } from '../../utils/dataRefresh';
 
 const ClassesPage: React.FC = () => {
   const { user } = useAuth();
   const [classes, setClasses] = useState<Class[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const isTeacher = user?.role === 'TEACHER';
+  const { toast } = useToast();
+
+  const fetchClasses = async () => {
+    setIsLoading(true);
+    try {
+      const response = await getClasses();
+      setClasses(response);
+    } catch (error) {
+      console.error('Error fetching classes:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchClasses = async () => {
-      setIsLoading(true);
-      try {
-        const response = await getClasses();
-        setClasses(response);
-      } catch (error) {
-        console.error('Error fetching classes:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchClasses();
   }, []);
+
+  // Listen for data refresh events to update classes when assignments are modified
+  useDataRefresh(DATA_REFRESH_EVENTS.CLASSES_UPDATED, () => {
+    fetchClasses();
+  }, []);
+
+  const handleDeleteClass = async (classId: string) => {
+    if (!window.confirm('Are you sure you want to delete this class? This action is permanent and will delete all associated assignments and submissions.')) {
+      return;
+    }
+
+    try {
+      await apiDeleteClass(classId);
+      setClasses(classes.filter((c) => c.id !== classId));
+      toast({
+        title: 'Class Deleted',
+        description: 'The class has been successfully deleted.',
+      });
+    } catch (error) {
+      console.error('Error deleting class:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete class. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
 
   const totalStudents = classes.reduce((acc, curr) => acc + (curr.studentCount || 0), 0);
   const totalAssignments = classes.reduce((acc, curr) => acc + (curr.assignmentCount || 0), 0);
@@ -90,7 +120,7 @@ const ClassesPage: React.FC = () => {
         </div>
       )}
 
-      <ClassList classes={classes} isLoading={isLoading} />
+      <ClassList classes={classes} isLoading={isLoading} onDelete={handleDeleteClass} />
     </div>
   );
 };

@@ -2,8 +2,9 @@
 import React, { useState } from 'react';
 import { LeaderboardEntry } from '../../types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
-import { Award, ChevronDown, ChevronUp } from 'lucide-react';
+import { Award, ChevronDown, ChevronUp, Code, Trophy } from 'lucide-react';
 import { Button } from '../ui/button';
+import { Badge } from '../ui/badge';
 import { cn } from '../../lib/utils';
 
 interface LeaderboardTableProps {
@@ -110,7 +111,7 @@ const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ entries }) => {
               onClick={() => handleSort('completedCount')}
               className="font-medium flex items-center -ml-3"
             >
-              Completed
+              Assignments
               <SortIcon active={sortKey === 'completedCount'} />
             </Button>
           </TableHead>
@@ -124,6 +125,12 @@ const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ entries }) => {
               Avg. Speed
               <SortIcon active={sortKey === 'avgSubmissionTime'} />
             </Button>
+          </TableHead>
+          <TableHead className="text-center">
+            <div className="flex items-center justify-center">
+              <Code className="h-4 w-4 mr-1 text-orange-500" />
+              LeetCode
+            </div>
           </TableHead>
         </TableRow>
       </TableHeader>
@@ -139,9 +146,44 @@ const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ entries }) => {
                 )}
               </div>
             </TableCell>
-            <TableCell>{entry.name}</TableCell>
+            <TableCell>
+              <div>
+                <div className="font-medium">{entry.name}</div>
+                {entry.leetcodeUsername && (
+                  <div className="text-sm text-muted-foreground">
+                    @{entry.leetcodeUsername}
+                  </div>
+                )}
+              </div>
+            </TableCell>
             <TableCell>{entry.completedCount}</TableCell>
             <TableCell>{entry.avgSubmissionTime}</TableCell>
+            <TableCell className="text-center">
+              {entry.leetcodeCookieStatus === 'LINKED' && entry.leetcodeTotalSolved ? (
+                <div className="space-y-1">
+                  <div className="font-medium text-primary">
+                    {entry.leetcodeTotalSolved} solved
+                  </div>
+                  <div className="flex justify-center space-x-1">
+                    <Badge variant="outline" className="text-xs bg-green-50 text-green-700">
+                      E: {entry.leetcodeEasySolved || 0}
+                    </Badge>
+                    <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700">
+                      M: {entry.leetcodeMediumSolved || 0}
+                    </Badge>
+                    <Badge variant="outline" className="text-xs bg-red-50 text-red-700">
+                      H: {entry.leetcodeHardSolved || 0}
+                    </Badge>
+                  </div>
+                </div>
+              ) : entry.leetcodeCookieStatus === 'EXPIRED' ? (
+                <Badge variant="destructive" className="text-xs">
+                  Expired
+                </Badge>
+              ) : (
+                <span className="text-muted-foreground text-sm">Not linked</span>
+              )}
+            </TableCell>
           </TableRow>
         ))}
       </TableBody>

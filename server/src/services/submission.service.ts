@@ -1,52 +1,9 @@
 import axios from 'axios';
 import { PrismaClient, Submission, User, Problem } from '@prisma/client';
-import { LeetCodeGraphQLResponse, GfgAPIResponse, LeetCodeRecentACResponse } from '../types';
+import { GfgAPIResponse } from '../types';
 import prisma from '../lib/prisma';
 import { groupBy } from '../utils/array.utils';
-
-const LEETCODE_API_ENDPOINT = 'https://leetcode.com/graphql';
-
-/**
- * Fetches all recently accepted LeetCode problem slugs for a user.
- * @param username - The LeetCode username.
- * @returns A Set containing the titleSlugs of all accepted problems.
- */
-export const getAllLeetCodeSolvedSlugs = async (username: string): Promise<Set<string>> => {
-    console.log(`Fetching all solved LeetCode problems for user: ${username}`);
-    const query = `
-      query recentAcSubmissionList($username: String!, $limit: Int!) {
-        recentAcSubmissionList(username: $username, limit: $limit) {
-          titleSlug
-        }
-      }
-    `;
-
-    try {
-        const response = await axios.post<LeetCodeGraphQLResponse<LeetCodeRecentACResponse>>(LEETCODE_API_ENDPOINT, {
-            query,
-            variables: { username, limit: 2000 }, // Fetch a large number of accepted submissions
-        });
-
-        const submissions = response.data.data.recentAcSubmissionList;
-        if (!submissions) {
-            console.log(`Could not find any accepted submissions for LeetCode user ${username}.`);
-            return new Set();
-        }
-
-        const solvedSlugs = new Set<string>(submissions.map((s: { titleSlug: string }) => s.titleSlug));
-        
-        console.log(`Found ${solvedSlugs.size} unique accepted LeetCode submissions for ${username}.`);
-        return solvedSlugs;
-    } catch (error: any) {
-        if (error.response) {
-            const errorMessages = error.response.data.errors ? JSON.stringify(error.response.data.errors) : JSON.stringify(error.response.data);
-            console.error(`Error fetching LeetCode solved list for ${username}. Status: ${error.response.status}, Data:`, errorMessages);
-        } else {
-            console.error(`Error fetching LeetCode solved list for ${username}:`, error.message);
-        }
-        return new Set();
-    }
-};
+import { syncAllLinkedLeetCodeUsers, forceCheckLeetCodeSubmissionsForAssignment } from './enhanced-leetcode.service';
 
 /**
  * Fetches all solved GeeksForGeeks problem slugs for a user.
@@ -57,14 +14,14 @@ export const getAllGfgSolvedSlugs = async (username: string): Promise<Set<string
     console.log(`Fetching all solved GFG problems for user: ${username}`);
     const GFG_API_URL = `https://geeks-for-geeks-api.vercel.app/${username}`;
     try {
-        const { data } = await axios.get<GfgAPIResponse>(GFG_API_URL);
+        const response = await axios.get<GfgAPIResponse>(GFG_API_URL);
 
-        if (data.error || !data.solvedStats) {
-            console.error(`GFG API error for user ${username}: ${data.error || 'No solved stats found'}`);
+        if (response.data.error || !response.data.solvedStats) {
+            console.error(`GFG API error for user ${username}: ${response.data.error || 'No solved stats found'}`);
             return new Set();
         }
 
-        const solvedStats = data.solvedStats;
+        const solvedStats = response.data.solvedStats;
         const allSolved = [
             ...(solvedStats.school?.questions || []),
             ...(solvedStats.basic?.questions || []),
@@ -73,148 +30,186 @@ export const getAllGfgSolvedSlugs = async (username: string): Promise<Set<string
             ...(solvedStats.hard?.questions || []),
         ];
         
-        const allSolvedSlugs = new Set<string>(
+        const solvedSlugs = new Set<string>(
             allSolved.map((q: { questionUrl: string }) => getGfgProblemSlug(q.questionUrl)).filter(Boolean)
         );
-        console.log(`Found ${allSolvedSlugs.size} unique solved GFG submissions for ${username}.`);
-        return allSolvedSlugs;
+        
+        console.log(`Found ${solvedSlugs.size} solved GFG problems for ${username}.`);
+        return solvedSlugs;
     } catch (error: any) {
         if (error.response) {
-            console.error(`Error fetching GFG data for user ${username}. Status: ${error.response.status}, Data:`, error.response.data);
+            console.error(`Error fetching GFG solved list for ${username}. Status: ${error.response.status}, Data:`, error.response.data);
         } else {
-            console.error(`Error during GFG check for user ${username}:`, error.message);
+            console.error(`Error fetching GFG solved list for ${username}:`, error.message);
         }
         return new Set();
     }
 };
 
 /**
- * Extracts the problem slug from a GeeksForGeeks URL for robust matching.
- * e.g., "https://practice.geeksforgeeks.org/problems/two-sum/1" -> "two-sum"
- * @param url - The GFG problem URL.
- * @returns The problem slug.
+ * Extracts the problem slug from a GeeksForGeeks problem URL.
+ * @param url - The full URL of the problem.
+ * @returns The problem slug or the original URL if extraction fails.
  */
 export const getGfgProblemSlug = (url: string): string => {
     try {
-        const urlObject = new URL(url);
-        // Path will be like '/problems/problem-name/1' or '/problems/problem-name/'
-        const pathParts = urlObject.pathname.split('/').filter(p => p.length > 0);
-        const problemsIndex = pathParts.indexOf('problems');
-        if (problemsIndex !== -1 && pathParts.length > problemsIndex + 1) {
-            return pathParts[problemsIndex + 1];
-        }
-        return '';
-    } catch (e) {
-        console.error(`Could not parse GFG URL: ${url}`, e);
-        return '';
+        const match = url.match(/\/problems\/([^\/]+)/);
+        return match ? match[1] : url;
+    } catch (error) {
+        console.error(`Error extracting slug from GFG URL: ${url}`, error);
+        return url;
     }
-}
+};
 
 /**
- * Extracts the problem identifier (slug or name) from a URL.
+ * Extracts the problem slug from a LeetCode problem URL.
+ * @param url - The full URL of the problem.
+ * @returns The problem slug or null if extraction fails.
+ */
+export const getLeetCodeProblemSlug = (url: string): string | null => {
+    try {
+        const match = url.match(/\/problems\/([^\/]+)/);
+        return match ? match[1] : null;
+    } catch (error) {
+        console.error(`Error extracting slug from LeetCode URL: ${url}`, error);
+        return null;
+    }
+};
+
+/**
+ * Gets the problem identifier based on platform and URL.
+ * @param platform - The platform name.
+ * @param url - The problem URL.
+ * @returns The problem identifier.
  */
 const getProblemIdentifier = (platform: string, url: string): string => {
-    try {
-        const urlObject = new URL(url);
-        if (platform.toLowerCase() === 'leetcode') {
-            const pathParts = urlObject.pathname.split('/problems/');
-            if (pathParts.length > 1) {
-                // Extracts 'two-sum' from '/problems/two-sum/description/' or '/problems/two-sum/'
-                return pathParts[1].split('/')[0];
-            }
-        }
-        // For GFG, the full URL is used for parsing within the checker.
-        return url;
-    } catch (error) {
-        console.error(`Invalid problem URL: ${url}`);
-        return '';
+    if (platform.toLowerCase() === 'leetcode') {
+        return getLeetCodeProblemSlug(url) || url;
+    } else if (platform.toLowerCase() === 'gfg') {
+        return getGfgProblemSlug(url);
     }
-}
+    return url;
+};
 
-const processSubmissionsInBulk = async (submissions: (Submission & { user: User, problem: Problem })[]) => {
-    if (submissions.length === 0) {
-        console.log('No pending submissions to process.');
+/**
+ * Process only GFG submissions - LeetCode is handled by the enhanced service
+ */
+const processGfgSubmissions = async (submissions: (Submission & { user: User, problem: Problem })[]) => {
+    // Filter to only GFG submissions
+    const gfgSubmissions = submissions.filter(s => s.problem.platform.toLowerCase() === 'gfg');
+    
+    if (gfgSubmissions.length === 0) {
+        console.log('📚 No GFG submissions to process.');
         return;
     }
 
+    console.log(`📚 Processing ${gfgSubmissions.length} GFG submissions`);
+
     // Group submissions by user to process one user at a time
-    const submissionsByUser = groupBy(submissions, 'userId');
+    const submissionsByUser = groupBy(gfgSubmissions, 'userId');
 
     for (const userId in submissionsByUser) {
         const userSubmissions = submissionsByUser[userId];
         const user = userSubmissions[0].user;
-        console.log(`Processing ${userSubmissions.length} submissions for user: ${user.name} (${user.email})`);
-
-        // Fetch all solved problems ONCE per user for each platform they use
-        let leetCodeSolved = new Set<string>();
-        if (user.leetcodeUsername && userSubmissions.some(s => s.problem.platform.toLowerCase() === 'leetcode')) {
-            leetCodeSolved = await getAllLeetCodeSolvedSlugs(user.leetcodeUsername);
+        
+        if (!user.gfgUsername) {
+            console.log(`⚠️ User ${user.name} has no GFG username - skipping ${userSubmissions.length} GFG problems`);
+            continue;
         }
+        
+        console.log(`👤 Processing ${userSubmissions.length} GFG submissions for user: ${user.name} (${user.email})`);
 
-        let gfgSolved = new Set<string>();
-        if (user.gfgUsername && userSubmissions.some(s => s.problem.platform.toLowerCase() === 'gfg')) {
-            gfgSolved = await getAllGfgSolvedSlugs(user.gfgUsername);
-        }
+        // Fetch all solved GFG problems for this user
+        console.log(`📚 Fetching GFG solved problems for ${user.name} (${user.gfgUsername})`);
+        const gfgSolved = await getAllGfgSolvedSlugs(user.gfgUsername);
 
-        // Now, check each of this user's submissions against the cached data
+        // Process each GFG submission
+        let updatedCount = 0;
         for (const submission of userSubmissions) {
             const { problem } = submission;
-            let isCompleted = false;
+            const problemIdentifier = getProblemIdentifier('gfg', problem.url);
+            console.log(`📝 Checking GFG problem: '${problem.title}' (slug: '${problemIdentifier}')`);
             
-            const platform = problem.platform.toLowerCase();
-            const problemIdentifier = getProblemIdentifier(platform, problem.url);
-            
-            if (platform === 'leetcode' && problemIdentifier) {
-                console.log(`[Debug] Checking LeetCode problem: '${problem.title}' (DB slug: '${problemIdentifier}')`);
-                isCompleted = leetCodeSolved.has(problemIdentifier);
-                if (!isCompleted) {
-                    // Log details only on failure to avoid spamming the console
-                    console.log(`[Debug] Match not found. Comparing DB slug against ${leetCodeSolved.size} fetched slugs:`, Array.from(leetCodeSolved));
-                }
-            } else if (platform === 'gfg' && problemIdentifier) {
-                const targetSlug = getGfgProblemSlug(problem.url);
-                console.log(`[Debug] Checking GFG problem: '${problem.title}' (DB slug: '${targetSlug}')`);
-                isCompleted = gfgSolved.has(targetSlug);
-                 if (!isCompleted) {
-                    console.log(`[Debug] Match not found. Comparing DB slug against ${gfgSolved.size} fetched slugs:`, Array.from(gfgSolved));
-                }
-            }
+            const isCompleted = gfgSolved.has(problemIdentifier);
 
             if (isCompleted) {
-                console.log(`SUCCESS: Marking submission as completed for ${user.name} on ${problem.title}`);
+                console.log(`✅ Marking GFG submission as completed for ${user.name} on ${problem.title}`);
                 await prisma.submission.update({
                     where: { id: submission.id },
                     data: { completed: true, submissionTime: new Date() },
                 });
+                updatedCount++;
             } else {
-                console.log(`PENDING: Submission for ${user.name} on ${problem.title} is not yet accepted.`);
+                console.log(`❌ GFG problem '${problem.title}' not found in solved list`);
             }
         }
+        
+        console.log(`✅ Updated ${updatedCount}/${userSubmissions.length} GFG submissions for ${user.name}`);
     }
-    console.log('Finished processing all pending submissions.');
+    
+    console.log('✅ Finished processing all GFG submissions');
 };
 
-
 /**
- * Iterates through all pending submissions and updates their status.
+ * Check all pending submissions - uses enhanced LeetCode service + GFG processing
  */
 export const checkAllSubmissions = async () => {
-    console.log('Checking all pending submissions with optimized logic...');
+    console.log('🚀 Starting comprehensive submission check...');
+    
+    // Step 1: Sync all LeetCode users with enhanced integration
+    console.log('📱 Step 1: Syncing LeetCode users with enhanced integration...');
+    await syncAllLinkedLeetCodeUsers();
+    
+    // Step 2: Process remaining GFG submissions  
+    console.log('📝 Step 2: Processing GFG submissions...');
     const pendingSubmissions = await prisma.submission.findMany({
         where: { completed: false },
         include: { user: true, problem: true },
     });
-    console.log(`Found ${pendingSubmissions.length} total pending submissions.`);
+    
+    console.log(`Found ${pendingSubmissions.length} total pending submissions`);
+    await processGfgSubmissions(pendingSubmissions);
 
-    await processSubmissionsInBulk(pendingSubmissions);
+    console.log('✅ Comprehensive submission check completed');
 };
 
 /**
- * Iterates through all pending submissions for a specific assignment and updates their status.
- * @param assignmentId - The ID of the assignment to check.
+ * Check submissions for a specific assignment - uses enhanced LeetCode service + GFG processing
  */
 export const checkSubmissionsForAssignment = async (assignmentId: string) => {
-    console.log(`Checking submissions for assignment ID: ${assignmentId} with optimized logic...`);
+    console.log(`🎯 Starting submission check for assignment: ${assignmentId}...`);
+    
+    // Get assignment details for better logging
+    const assignment = await prisma.assignment.findUnique({
+        where: { id: assignmentId },
+        include: { problems: true }
+    });
+    
+    if (!assignment) {
+        console.log(`❌ Assignment ${assignmentId} not found`);
+        return;
+    }
+    
+    console.log(`📋 Assignment: "${assignment.title}" with ${assignment.problems.length} problems`);
+    
+    // Show platform breakdown
+    const leetcodeProblems = assignment.problems.filter(p => p.platform.toLowerCase() === 'leetcode');
+    const gfgProblems = assignment.problems.filter(p => p.platform.toLowerCase() === 'gfg');
+    const otherProblems = assignment.problems.filter(p => !['leetcode', 'gfg'].includes(p.platform.toLowerCase()));
+    
+    console.log(`📊 Platform breakdown: ${leetcodeProblems.length} LeetCode, ${gfgProblems.length} GFG, ${otherProblems.length} other`);
+    
+    // Step 1: Force check LeetCode submissions for this specific assignment
+    if (leetcodeProblems.length > 0) {
+        console.log('📱 Step 1: Force checking LeetCode submissions for assignment...');
+        await forceCheckLeetCodeSubmissionsForAssignment(assignmentId);
+    } else {
+        console.log('⏭️ No LeetCode problems in this assignment - skipping LeetCode sync');
+    }
+    
+    // Step 2: Process GFG submissions for this assignment
+    if (gfgProblems.length > 0) {
+        console.log('📝 Step 2: Processing GFG submissions for assignment...');
     const pendingSubmissions = await prisma.submission.findMany({
         where: {
             problem: {
@@ -224,7 +219,12 @@ export const checkSubmissionsForAssignment = async (assignmentId: string) => {
         },
         include: { user: true, problem: true },
     });
-    console.log(`Found ${pendingSubmissions.length} pending submissions for assignment ${assignmentId}.`);
-
-    await processSubmissionsInBulk(pendingSubmissions);
+        
+        console.log(`Found ${pendingSubmissions.length} pending submissions for assignment ${assignmentId}`);
+        await processGfgSubmissions(pendingSubmissions);
+    } else {
+        console.log('⏭️ No GFG problems in this assignment - skipping GFG processing');
+    }
+    
+    console.log(`✅ Assignment "${assignment.title}" submission check completed`);
 };

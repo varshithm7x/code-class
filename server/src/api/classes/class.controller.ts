@@ -227,12 +227,100 @@ export const getClassDetails = async (req: Request, res: Response): Promise<void
     const result = {
       ...classData,
       teacherName: teacher.name,
-      students: students.map((s) => s.user),
+      students: students.map(({ user }) => {
+        let platformCount = 0;
+        if (user.hackerrankUsername) platformCount++;
+        if (user.gfgUsername) platformCount++;
+        if (user.leetcodeUsername) platformCount++;
+        
+        const { password, ...userWithoutPassword } = user;
+        return {
+          ...userWithoutPassword,
+          platformCount,
+        };
+      }),
     };
 
     res.status(200).json(result);
   } catch (error) {
     console.error('Error fetching class details:', error);
     res.status(500).json({ message: 'Error fetching class details', error });
+  }
+};
+
+export const deleteClass = async (req: Request, res: Response): Promise<void> => {
+  const { classId } = req.params;
+  // @ts-ignore
+  const { userId, role } = req.user;
+
+  if (role !== 'TEACHER') {
+    res.status(403).json({ message: 'Only teachers can delete classes.' });
+    return;
+  }
+
+  try {
+    const classToDelete = await prisma.class.findUnique({
+      where: { id: classId },
+    });
+
+    if (!classToDelete) {
+      res.status(404).json({ message: 'Class not found.' });
+      return;
+    }
+
+    if (classToDelete.teacherId !== userId) {
+      res.status(403).json({ message: 'You are not authorized to delete this class.' });
+      return;
+    }
+
+    // Use a transaction to ensure all related data is deleted
+    await prisma.$transaction(async (tx) => {
+      // Manually delete related data in the correct order to avoid foreign key constraints
+
+      // 1. Find all assignments in the class
+      const assignments = await tx.assignment.findMany({
+        where: { classId: classId },
+        include: { problems: true }
+      });
+
+      const assignmentIds = assignments.map(a => a.id);
+      const problemIds = assignments.flatMap(a => a.problems.map(p => p.id));
+
+      // 2. Delete all submissions for the problems in those assignments
+      if (problemIds.length > 0) {
+        await tx.submission.deleteMany({
+          where: { problemId: { in: problemIds } }
+        });
+      }
+
+      // 3. Delete all problems in those assignments
+      if (assignmentIds.length > 0) {
+        await tx.problem.deleteMany({
+          where: { assignmentId: { in: assignmentIds } }
+        });
+      }
+
+      // 4. Delete all assignments in the class
+      if (assignmentIds.length > 0) {
+        await tx.assignment.deleteMany({
+          where: { id: { in: assignmentIds } }
+        });
+      }
+
+      // 5. Delete all student enrollments (UsersOnClasses)
+      await tx.usersOnClasses.deleteMany({
+        where: { classId: classId }
+      });
+
+      // 6. Finally, delete the class itself
+      await tx.class.delete({
+        where: { id: classId }
+      });
+    });
+
+    res.status(200).json({ message: 'Class and all related data deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting class:', error);
+    res.status(500).json({ message: 'Error deleting class', error });
   }
 }; 

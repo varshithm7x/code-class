@@ -1,4 +1,4 @@
-an # 🤖 LLM Context Document: DSA Learning Management System
+# 🤖 LLM Context Document: DSA Learning Management System
 
 *This document provides comprehensive technical context for LLM assistants to understand and work with this codebase efficiently.*
 
@@ -9,6 +9,10 @@ code-class/
 ├── src/                          # Frontend React application
 │   ├── api/                      # API client functions
 │   ├── components/               # Reusable UI components
+│   │   ├── assignments/          # Assignment-related components
+│   │   ├── classes/              # Class management components
+│   │   ├── leaderboard/          # Leaderboard components
+│   │   └── ui/                   # Reusable UI components
 │   ├── pages/                    # Route-based page components
 │   ├── context/                  # React context providers
 │   ├── hooks/                    # Custom React hooks
@@ -17,19 +21,24 @@ code-class/
 ├── server/                       # Backend Node.js application
 │   ├── src/
 │   │   ├── api/                  # API route handlers
+│   │   │   ├── analytics/        # Analytics and leaderboard endpoints
+│   │   │   ├── assignments/      # Assignment management
+│   │   │   ├── auth/             # Authentication and user management
+│   │   │   └── classes/          # Class management
 │   │   ├── services/             # Business logic services
+│   │   │   ├── submission.service.ts           # Core submission tracking
+│   │   │   └── enhanced-leetcode.service.ts   # LeetCode integration
 │   │   ├── lib/                  # Database and utility libs
 │   │   ├── cron/                 # Scheduled job handlers
-│   │   ├── types/                # Backend type definitions
-│   │   └── utils/                # Backend utility functions
+│   │   └── scripts/              # Database and API scripts
 │   ├── prisma/                   # Database schema and migrations
-│   └── scripts/                  # Utility scripts
+│   └── scripts/                  # Utility scripts (minimal)
 └── Configuration files (.env, package.json, etc.)
 ```
 
 ## 🗄️ Database Schema (PostgreSQL + Prisma)
 
-### Core Models:
+### Enhanced User Model with LeetCode Integration:
 ```typescript
 User {
   id: string (primary key)
@@ -37,9 +46,21 @@ User {
   name: string
   password: string (hashed)
   role: 'STUDENT' | 'TEACHER'
-  hackerrankUsername?: string    # Platform usernames for submission tracking
+  
+  // Platform Usernames
+  hackerrankUsername?: string
   leetcodeUsername?: string
   gfgUsername?: string
+  
+  // Enhanced LeetCode Integration Fields
+  leetcodeCookie?: string        # Encrypted session cookie for authenticated API calls
+  leetcodeCookieStatus: string   # 'LINKED', 'EXPIRED', 'NOT_LINKED'
+  leetcodeTotalSolved?: number   # Cached total problems solved
+  leetcodeEasySolved?: number    # Cached easy problems solved
+  leetcodeMediumSolved?: number  # Cached medium problems solved
+  leetcodeHardSolved?: number    # Cached hard problems solved
+  
+  // Relationships
   classes: UsersOnClasses[]      # Many-to-many with classes
   submissions: Submission[]      # User's problem submissions
   taughtClasses: Class[]         # Classes taught (if teacher)
@@ -52,6 +73,8 @@ Class {
   teacherId: string (foreign key)
   students: UsersOnClasses[]     # Many-to-many with users
   assignments: Assignment[]
+  createdAt: DateTime
+  updatedAt: DateTime
 }
 
 Assignment {
@@ -83,55 +106,48 @@ Submission {
 }
 ```
 
-### Key Relationships:
-- Users ↔ Classes (many-to-many via UsersOnClasses)
-- Assignments → Problems (one-to-many)
-- Users → Submissions (one-to-many)
-- Problems → Submissions (one-to-many)
-
 ## 🔌 Backend API Structure
-
-### File Locations:
-- **Main server**: `server/src/index.ts`
-- **Route definitions**: `server/src/api/*/index.ts`
-- **Controllers**: `server/src/api/*/[module].controller.ts`
-- **Core service**: `server/src/services/submission.service.ts`
 
 ### API Endpoints by Module:
 
 **Authentication** (`/api/v1/auth`):
 ```typescript
-POST /login                    # User authentication
-POST /signup                   # User registration
-GET /me                        # Get current user (requires auth)
-GET /profile                   # Get user profile (requires auth)
-PATCH /profile                 # Update platform usernames (requires auth)
+POST /login                           # User authentication
+POST /signup                          # User registration
+GET /me                               # Get current user (requires auth)
+GET /profile                          # Get user profile (requires auth)
+PATCH /profile                        # Update platform usernames (requires auth)
+POST /leetcode-credentials            # Link LeetCode account with cookies (requires auth)
 ```
 
 **Classes** (`/api/v1/classes`):
 ```typescript
-POST /                         # Create class (teacher only)
-GET /my                        # Get user's classes
-POST /join                     # Join class with code (student)
-GET /:id                       # Get class details
-GET /:id/assignments           # Get class assignments
+POST /                                # Create class (teacher only)
+GET /                                 # Get user's classes (role-based)
+POST /join                            # Join class with code (student)
+GET /:id                              # Get class details
+GET /:id/assignments                  # Get class assignments
+DELETE /:id                           # Delete class (teacher only)
 ```
 
 **Assignments** (`/api/v1/assignments`):
 ```typescript
-POST /                         # Create assignment (teacher only)
-GET /:id                       # Get assignment with submissions
-PUT /:id                       # Update assignment (teacher only)
-POST /check-submissions        # Check all submissions (teacher only)
-POST /:id/check-submissions    # Check specific assignment (teacher only)
+POST /                                # Create assignment (teacher only)
+GET /:id                              # Get assignment with submissions
+PUT /:id                              # Update assignment (teacher only)
+DELETE /:id                           # Delete assignment (teacher only)
+POST /check-submissions               # Check all submissions (teacher only)
+POST /:id/check-submissions           # Check specific assignment (teacher only)
+POST /:id/check-leetcode-submissions  # Force LeetCode sync for assignment
+GET /my                               # Get user's assignments
 ```
 
 **Analytics** (`/api/v1/analytics`):
 ```typescript
-GET /leaderboard               # Global/class leaderboard
-GET /:classId/completion       # Class completion over time
-GET /:classId/platforms        # Platform usage distribution
-GET /:classId/difficulty       # Difficulty distribution
+GET /leaderboard                      # Global/class leaderboard with enhanced sorting
+GET /:classId/completion              # Class completion over time
+GET /:classId/platforms               # Platform usage distribution
+GET /:classId/difficulty              # Difficulty distribution
 ```
 
 ### Authentication Middleware:
@@ -139,265 +155,197 @@ GET /:classId/difficulty       # Difficulty distribution
 - **isTeacher**: Checks teacher role
 - **isStudent**: Checks student role
 
-## 🔄 Core Business Logic
+## 🔄 Enhanced Core Business Logic
 
-### Submission Verification Service (`server/src/services/submission.service.ts`)
+### 1. Enhanced LeetCode Service (`server/src/services/enhanced-leetcode.service.ts`)
 
-**Key Functions:**
+**Key Features:**
+- **Authenticated API Access**: Uses `leetcode-query` package with session cookies
+- **Cookie Management**: Validates and manages LeetCode session cookies
+- **Automatic Syncing**: Scheduled and manual sync capabilities
+- **Error Handling**: Comprehensive error handling for expired sessions
+
+**Core Functions:**
+```typescript
+validateLeetCodeCredentials(cookie)      # Validate session cookie
+fetchAuthenticatedSubmissions(cookie)    # Get user submissions with auth
+syncUserLeetCodeData(userId)            # Sync individual user data
+syncAllLinkedLeetCodeUsers()            # Sync all users with linked accounts
+forceCheckLeetCodeSubmissionsForAssignment(assignmentId) # Force sync for assignment
+```
+
+### 2. Refactored Submission Service (`server/src/services/submission.service.ts`)
+
+**Major Changes:**
+- **Removed**: In-memory caching (`userSubmissionCache` Map)
+- **Removed**: Progressive discovery strategies
+- **Removed**: Old GraphQL LeetCode functions
+- **Enhanced**: Cookie-based LeetCode integration
+- **Maintained**: GeeksforGeeks support
+
+**Core Functions:**
 ```typescript
 checkAllSubmissions()                    # Check all pending submissions
 checkSubmissionsForAssignment(id)       # Check specific assignment
-getAllLeetCodeSolvedSlugs(username)     # Fetch LeetCode solved problems
-getAllGfgSolvedSlugs(username)          # Fetch GFG solved problems
-processSubmissionsInBulk(submissions)   # Bulk process submissions
+processGfgSubmissions(submissions)      # Process GFG submissions
 ```
 
-**Algorithm Flow:**
-1. Group submissions by user (minimize API calls)
-2. Fetch solved problems once per user per platform
-3. Compare database problems against solved problems using slug matching
-4. Update submission status and timestamp if completed
+### 3. Advanced Analytics & Leaderboard (`server/src/api/analytics/analytics.controller.ts`)
 
-**Platform Integration:**
-- **LeetCode**: GraphQL API (`https://leetcode.com/graphql`)
-- **GeeksforGeeks**: Custom API (`https://geeks-for-geeks-api.vercel.app/`)
+**Enhanced Features:**
+- **Dual Sorting**: Assignment progress vs LeetCode performance
+- **Smart Filtering**: Shows all students for assignment progress, filtered for LeetCode
+- **Real-time Updates**: Fresh calculation on each request
+- **Class-specific**: Global and class-specific leaderboards
+
+**Sorting Logic:**
+```typescript
+// Assignment Progress: Shows ALL students (including 0 completed)
+if (sortBy === 'assignments') {
+  // Sort by completed count (desc), then by avg time (asc)
+  // Students with 0 assignments sorted alphabetically
+}
+
+// LeetCode Performance: Shows only students with completed assignments
+if (sortBy === 'leetcode') {
+  // Sort by LeetCode total solved (desc), then assignments (desc), then time (asc)
+}
+```
+
+### 4. Automated Scheduling (`server/src/cron/index.ts`)
+- **Enhanced Frequency**: Runs every 4 hours for LeetCode sync
+- **Dual Processing**: Handles both traditional and LeetCode submissions
+- **Error Recovery**: Robust error handling and logging
+
+## 🎨 Enhanced Frontend Architecture
+
+### Key Frontend Features:
+
+**1. Enhanced User Profiles (`src/pages/user/ProfilePage.tsx`)**:
+- LeetCode Integration section with cookie management
+- Real-time status indicators (LINKED/EXPIRED/NOT_LINKED)
+- Statistics display with problem counts
+- Browser instructions for cookie extraction
+
+**2. Advanced Leaderboard (`src/pages/leaderboard/LeaderboardPage.tsx`)**:
+- Dual sorting: Assignment Progress vs LeetCode Performance
+- Class filtering with proper dropdown state management
+- Real-time refresh capability
+- Cross-page data synchronization
+
+**3. Cross-Page Data Synchronization (`src/utils/dataRefresh.ts`)**:
+```typescript
+// Event-driven data refresh system
+triggerDataRefresh(DATA_REFRESH_EVENTS.ASSIGNMENTS_UPDATED)
+triggerDataRefresh(DATA_REFRESH_EVENTS.CLASSES_UPDATED)
+triggerDataRefresh(DATA_REFRESH_EVENTS.LEADERBOARD_UPDATED)
+
+// Pages listen for relevant events and refresh data automatically
+useDataRefresh(DATA_REFRESH_EVENTS.CLASSES_UPDATED, () => fetchClasses())
+```
+
+**4. Enhanced Assignment Management**:
+- Real-time submission status updates
+- Manual LeetCode sync triggers for teachers
+- Improved deletion with cross-page refresh
+- Better error handling and user feedback
+
+## 🔧 Platform Integration Details
+
+### LeetCode Integration:
+- **Method**: Authenticated session cookies via `leetcode-query` package
+- **Authentication**: User-provided session cookies stored encrypted
+- **Submission Tracking**: Real-time fetching of user submission history
+- **Status Management**: Active monitoring of cookie validity
+- **Data Sync**: Scheduled and manual synchronization
+
+### GeeksforGeeks Integration:
+- **Method**: Public API via `https://geeks-for-geeks-api.vercel.app/`
+- **Rate Limiting**: Implemented to avoid API throttling
 - **Problem Matching**: URL slug extraction and normalization
 
-### Automated Scheduling (`server/src/cron/index.ts`)
-- **Daily cron job**: Runs at 7:30 AM to check all submissions
-- **Manual triggers**: Teachers can force submission checks
-
-### Leaderboard Algorithm (`server/src/api/analytics/analytics.controller.ts`)
+### Problem Matching Algorithm:
 ```typescript
-// Ranking logic:
-1. Count completed submissions per student
-2. Calculate average submission time (assignment date → submission date)
-3. Sort by: completed count (desc), then avg time (asc)
-4. Assign ranks with proper tie-breaking
+// URL slug extraction for different platforms
+LeetCode: "/problems/two-sum/" → "two-sum"
+GFG: "/problems/problem-name/1" → "problem-name"
+HackerRank: Custom parsing based on URL structure
 ```
 
-## 🎨 Frontend Architecture
+## 🚀 Development Workflow
 
-### Key Directories:
-- **API clients**: `src/api/*.ts`
-- **Pages**: `src/pages/[module]/[Page]Page.tsx`
-- **Components**: `src/components/[module]/[Component].tsx`
-- **Types**: `src/types/index.ts`
-
-### Important Components:
-
-**Authentication**:
-- `src/context/AuthContext.tsx` - Global auth state
-- `src/pages/auth/` - Login/signup pages
-
-**Class Management**:
-- `src/pages/classes/ClassesPage.tsx` - Class overview
-- `src/pages/classes/JoinClassPage.tsx` - Student class joining
-- `src/components/classes/` - Class-related components
-
-**Assignment Management**:
-- `src/pages/assignments/AssignmentDetailsPage.tsx` - Main assignment view
-- `src/components/assignments/SubmissionStatusGrid.tsx` - Progress visualization
-- Manual submission check triggers
-
-**Leaderboard**:
-- `src/pages/leaderboard/LeaderboardPage.tsx` - Main leaderboard
-- `src/components/leaderboard/LeaderboardTable.tsx` - Ranking display
-- Class filtering and global/local views
-
-**User Profile**:
-- `src/pages/user/ProfilePage.tsx` - Platform username management
-
-### State Management:
-- **Auth Context**: Global authentication state
-- **React Hook Form**: Form validation with Zod schemas
-- **Local state**: useState for component-specific data
-
-## ⚙️ Configuration & Environment
-
-### Environment Variables:
+### Backend Development:
 ```bash
-# Frontend (.env.local)
-VITE_API_URL=http://localhost:4000/api/v1    # Local dev
-VITE_API_URL=https://your-backend.com/api/v1  # Production
-
-# Backend (server/.env)
-DATABASE_URL="postgresql://..."              # Postgres connection
-JWT_SECRET="your-jwt-secret"                 # Auth token secret
-PORT=4000                                    # Server port
+cd server && npm run dev          # Development server (port 4000)
+npx prisma generate              # Regenerate Prisma client
+npx prisma db push              # Push schema changes
+npx prisma studio               # Database GUI
 ```
 
-### Key Dependencies:
-**Backend**:
-- `@prisma/client` - Database ORM
-- `express` - Web server
-- `jsonwebtoken` - Authentication
-- `bcryptjs` - Password hashing
-- `node-cron` - Scheduled jobs
-- `axios` - External API calls
-
-**Frontend**:
-- `react` + `typescript` - UI framework
-- `react-router-dom` - Routing
-- `axios` - API client
-- `react-hook-form` + `zod` - Form handling
-- `tailwindcss` - Styling
-
-## 🔍 Common Patterns & Conventions
-
-### Backend Patterns:
-```typescript
-// Controller pattern
-export const controllerName = async (req: Request, res: Response): Promise<void> => {
-  try {
-    // Business logic
-    res.status(200).json(result);
-  } catch (error) {
-    res.status(500).json({ message: 'Error message', error });
-  }
-};
-
-// Service pattern
-export const serviceName = async (params: Type): Promise<ReturnType> => {
-  // Business logic implementation
-};
-```
-
-### Frontend Patterns:
-```typescript
-// Page component pattern
-const PageName: React.FC = () => {
-  const [data, setData] = useState<Type | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  
-  useEffect(() => {
-    fetchData();
-  }, []);
-  
-  return (
-    <div className="py-6">
-      <h1 className="text-3xl font-bold">Page Title</h1>
-      {/* Content */}
-    </div>
-  );
-};
-
-// API client pattern
-export const apiFunction = async (params: Type): Promise<ReturnType> => {
-  const response = await api.get/post/put/delete(endpoint, data);
-  return response.data;
-};
-```
-
-### Database Query Patterns:
-```typescript
-// Include related data
-const result = await prisma.model.findMany({
-  include: {
-    relatedModel: true,
-    anotherRelation: {
-      select: { field1: true, field2: true }
-    }
-  }
-});
-
-// Complex filtering
-const filtered = await prisma.model.findMany({
-  where: {
-    field: condition,
-    relatedModel: {
-      some: { field: value }
-    }
-  }
-});
-```
-
-## 🚨 Important Implementation Details
-
-### Problem URL Parsing:
-```typescript
-// LeetCode: "/problems/two-sum/" → "two-sum"
-// GFG: "/problems/problem-name/1" → "problem-name"
-```
-
-### Submission Status Flow:
-```
-Assignment Created → Auto-create Submissions (completed: false)
-↓
-External API Check → Update if solved (completed: true, submissionTime: now)
-↓
-Leaderboard Calculation → Real-time ranking updates
-```
-
-### Authentication Flow:
-```
-Login → JWT Token → localStorage → API Headers → Protected Routes
-```
-
-### File Upload/Problem Addition:
-- Teachers add problems via URL input
-- System auto-detects platform from URL
-- Auto-creates submission records for all class students
-
-## 🔧 Development Workflow
-
-### Starting the Application:
+### Frontend Development:
 ```bash
-# Backend
-cd server && npm run dev    # Runs on port 4000
-
-# Frontend  
-npm run dev                 # Runs on port 5173 (Vite default)
+npm run dev                     # Development server (port 5173)
+npm run build                   # Production build
+npm run preview                 # Preview production build
 ```
 
 ### Database Operations:
 ```bash
 cd server
-npx prisma generate        # Generate Prisma client
-npx prisma db push         # Push schema changes
-npx prisma studio          # Database GUI
+npx prisma migrate dev          # Create new migration
+npx prisma migrate deploy       # Deploy migrations
+npx prisma reset               # Reset database
 ```
 
-### Key Scripts:
-- `server/scripts/test-submission-checkers.ts` - Test external API integration
-- Manual submission checks via API endpoints or frontend buttons
+## 🐛 Common Debugging Patterns
 
-## 📝 When Implementing New Features
+### LeetCode Integration Issues:
+1. **Cookie Validation**: Check `leetcodeCookieStatus` field
+2. **API Limits**: Monitor for 403/429 errors in enhanced service
+3. **Data Sync**: Use manual sync triggers in admin interfaces
 
-### Adding New API Endpoints:
-1. Create controller in `server/src/api/[module]/[module].controller.ts`
-2. Add route in `server/src/api/[module]/index.ts`
-3. Import route in `server/src/index.ts`
-4. Add frontend API client in `src/api/[module].ts`
+### Submission Tracking Issues:
+1. **URL Parsing**: Verify slug extraction logic
+2. **Platform Detection**: Check URL pattern matching
+3. **Timing Issues**: Monitor submission timestamp logic
 
-### Adding New Pages:
-1. Create page component in `src/pages/[module]/[Page]Page.tsx`
-2. Add route in main router configuration
-3. Add navigation links if needed
+### Cross-Page Updates:
+1. **Event Firing**: Check `triggerDataRefresh` calls
+2. **Event Listening**: Verify `useDataRefresh` hooks
+3. **State Management**: Monitor form state synchronization
 
-### Database Changes:
-1. Update `server/prisma/schema.prisma`
-2. Run `npx prisma db push` for development
-3. Generate migration for production: `npx prisma migrate dev`
+## 🔒 Security Considerations
 
-### External Platform Integration:
-1. Add API functions in `server/src/services/submission.service.ts`
-2. Update problem identifier extraction logic
-3. Add platform-specific URL patterns
-4. Test with `server/scripts/test-submission-checkers.ts`
+### Authentication:
+- JWT tokens for API access
+- Password hashing with bcrypt
+- Protected routes with middleware
 
-## 🎯 Project Goals & Vision
+### LeetCode Cookies:
+- Encrypted storage of session cookies
+- Regular validation and cleanup
+- Secure transmission between client and server
 
-### Primary Objectives:
-- **Automated Progress Tracking**: Eliminate manual submission verification
-- **Multi-Platform Support**: LeetCode, GeeksforGeeks, HackerRank integration
-- **Real-Time Analytics**: Live leaderboards and progress monitoring
-- **Scalable Architecture**: Support multiple classes and thousands of students
+### API Security:
+- Role-based access control
+- Input validation and sanitization
+- Rate limiting for external APIs
 
-### Key Success Metrics:
-- **Accuracy**: >95% submission verification accuracy
-- **Performance**: <2s API response times
-- **User Experience**: Intuitive interface for both teachers and students
-- **Reliability**: 99.9% uptime with automated recovery
+## 📊 Performance Optimizations
 
-This context document should provide sufficient information for any LLM to understand the codebase structure and implement new features efficiently. 
+### Database:
+- Efficient queries with proper includes/selects
+- Minimal data transfer with specific field selection
+- Optimized leaderboard calculations
+
+### Frontend:
+- React hooks for efficient re-renders
+- Selective component updates
+- Cross-page event system for data freshness
+
+### Backend:
+- Bulk processing for submissions
+- Caching of LeetCode statistics
+- Efficient error handling and recovery
+
+This document serves as the comprehensive guide for understanding and working with the enhanced DSA Learning Management System, particularly focusing on the advanced LeetCode integration and improved user experience features. 

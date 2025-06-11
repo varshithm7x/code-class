@@ -8,7 +8,8 @@ import {
   Award, 
   BookOpen, 
   UserPlus, 
-  Plus 
+  Plus,
+  Code
 } from 'lucide-react';
 
 type NavItem = {
@@ -27,6 +28,11 @@ const Sidebar: React.FC = () => {
       title: 'My Classes',
       href: '/classes',
       icon: <BookOpen className="h-5 w-5" />,
+    },
+    {
+      title: 'Practice',
+      href: '/practice',
+      icon: <Code className="h-5 w-5" />,
     },
     {
       title: 'Join Class',

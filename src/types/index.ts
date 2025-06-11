@@ -141,3 +141,28 @@ export interface AuthContextType extends AuthState {
   refreshUser: () => Promise<void>;
   clearError: () => void;
 }
+
+export interface PracticeQuestion {
+  id: number;
+  title: string;
+  url: string;
+  isPremium: boolean;
+  acceptance: string;
+  difficulty: 'Easy' | 'Medium' | 'Hard';
+  frequency: string;
+  topics: string[];
+  company: string;
+}
+
+export interface QuestionStats {
+  totalSolved: number;
+  easy: number;
+  medium: number;
+  hard: number;
+  total: number;
+}
+
+export interface CompanyData {
+  name: string;
+  questions: PracticeQuestion[];
+}

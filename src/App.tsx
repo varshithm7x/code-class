@@ -28,6 +28,7 @@ import LeaderboardPage from "./pages/leaderboard/LeaderboardPage";
 import NotFoundPage from "./pages/NotFound";
 import ClassSettingsPage from './pages/classes/ClassSettingsPage';
 import EditAssignmentPage from './pages/assignments/EditAssignmentPage';
+import PracticeQuestionsPage from './pages/practice/PracticeQuestionsPage';
 
 const queryClient = new QueryClient();
 
@@ -70,6 +71,7 @@ function App() {
                 <Route path="/join-class" element={<JoinClassPage />} />
                 <Route path="/leaderboard" element={<LeaderboardPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
+                <Route path="/practice" element={<PracticeQuestionsPage />} />
                 <Route path="/" element={<Navigate to="/classes" replace />} />
               </Route>
               <Route path="*" element={<NotFoundPage />} />

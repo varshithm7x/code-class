@@ -31,30 +31,42 @@ export const fetchPublicLeetCodeStats = async (username: string): Promise<LeetCo
       return null;
     }
 
-    // Extract stats from the user object - adjusting based on actual API structure
-    const profile = (user as any).profile;
-    const recentSubmissions = (user as any).recentSubmissions || [];
-    
-    // Count unique accepted submissions from recent submissions
-    const acceptedSubmissions = recentSubmissions.filter((sub: any) => 
-      sub.statusDisplay === 'Accepted'
-    );
-    const uniqueSolved = new Set(acceptedSubmissions.map((sub: any) => sub.titleSlug));
-    const totalSolved = uniqueSolved.size;
-    
-    // For now, we can't categorize by difficulty from public API
-    const easySolved = 0;
-    const mediumSolved = 0;
-    const hardSolved = 0;
-    
-    console.log(`📈 User ${username} public stats: Total=${totalSolved}, Easy=${easySolved}, Medium=${mediumSolved}, Hard=${hardSolved}`);
-    
-    return {
-      totalSolved,
-      easySolved,
-      mediumSolved,
-      hardSolved
+    // Extract accurate stats from matchedUser.submitStats.acSubmissionNum
+    const matchedUser = (user as any).matchedUser;
+    if (!matchedUser || !matchedUser.submitStats || !matchedUser.submitStats.acSubmissionNum) {
+      console.log(`❌ No submission stats found for ${username}`);
+      return null;
+    }
+
+    const stats = matchedUser.submitStats.acSubmissionNum;
+    const result: LeetCodeStats = {
+      totalSolved: 0,
+      easySolved: 0,
+      mediumSolved: 0,
+      hardSolved: 0
     };
+
+    // Parse the accurate difficulty breakdown from the API
+    stats.forEach((stat: any) => {
+      switch (stat.difficulty) {
+        case 'All':
+          result.totalSolved = stat.count;
+          break;
+        case 'Easy':
+          result.easySolved = stat.count;
+          break;
+        case 'Medium':
+          result.mediumSolved = stat.count;
+          break;
+        case 'Hard':
+          result.hardSolved = stat.count;
+          break;
+      }
+    });
+    
+    console.log(`📈 User ${username} public stats: Total=${result.totalSolved}, Easy=${result.easySolved}, Medium=${result.mediumSolved}, Hard=${result.hardSolved}`);
+    
+    return result;
     
   } catch (error: any) {
     console.error(`❌ Error fetching public stats for ${username}:`, error.message);
@@ -114,39 +126,56 @@ export const fetchAuthenticatedStats = async (cookie: string): Promise<LeetCodeS
     
     const leetcode = new LeetCode(credential);
     
-    // Fetch all submissions to calculate stats
-    // Note: limit 0 might not work as expected, let's use a large number
-    const submissionsResponse = await leetcode.submissions({ limit: 1000, offset: 0 });
-    
-    // Based on our testing, the API returns an array directly
-    if (!submissionsResponse || !Array.isArray(submissionsResponse)) {
-      console.log(`❌ Could not fetch authenticated submissions for stats - invalid response format`);
+    // Get the current user's username to fetch their profile with accurate stats
+    const whoAmI = await leetcode.whoami();
+    if (!whoAmI || !whoAmI.username) {
+      console.log(`❌ Could not determine current user`);
       return null;
     }
 
-    // Filter accepted submissions and count by difficulty
-    const acceptedSubmissions = submissionsResponse.filter((sub: any) => 
-      sub.statusDisplay === 'Accepted'
-    );
-    
-    // Get unique problems solved
-    const uniqueSolved = new Set(acceptedSubmissions.map((sub: any) => sub.titleSlug));
-    const totalSolved = uniqueSolved.size;
-    
-    // For now, we can't easily categorize by difficulty without additional API calls
-    // We'll use the total count and estimate breakdown
-    const easySolved = Math.floor(totalSolved * 0.4); // Rough estimation
-    const mediumSolved = Math.floor(totalSolved * 0.4);
-    const hardSolved = totalSolved - easySolved - mediumSolved;
-    
-    console.log(`📈 Authenticated stats: Total=${totalSolved}, Easy=${easySolved}, Medium=${mediumSolved}, Hard=${hardSolved}`);
-    
-    return {
-      totalSolved,
-      easySolved,
-      mediumSolved,
-      hardSolved
+    // Fetch the user's profile with accurate difficulty stats
+    const userProfile = await leetcode.user(whoAmI.username);
+    if (!userProfile) {
+      console.log(`❌ Could not fetch user profile for ${whoAmI.username}`);
+      return null;
+    }
+
+    // Extract accurate stats from matchedUser.submitStats.acSubmissionNum
+    const matchedUser = (userProfile as any).matchedUser;
+    if (!matchedUser || !matchedUser.submitStats || !matchedUser.submitStats.acSubmissionNum) {
+      console.log(`❌ No submission stats found for authenticated user ${whoAmI.username}`);
+      return null;
+    }
+
+    const stats = matchedUser.submitStats.acSubmissionNum;
+    const result: LeetCodeStats = {
+      totalSolved: 0,
+      easySolved: 0,
+      mediumSolved: 0,
+      hardSolved: 0
     };
+
+    // Parse the accurate difficulty breakdown from the API
+    stats.forEach((stat: any) => {
+      switch (stat.difficulty) {
+        case 'All':
+          result.totalSolved = stat.count;
+          break;
+        case 'Easy':
+          result.easySolved = stat.count;
+          break;
+        case 'Medium':
+          result.mediumSolved = stat.count;
+          break;
+        case 'Hard':
+          result.hardSolved = stat.count;
+          break;
+      }
+    });
+    
+    console.log(`📈 Authenticated stats for ${whoAmI.username}: Total=${result.totalSolved}, Easy=${result.easySolved}, Medium=${result.mediumSolved}, Hard=${result.hardSolved}`);
+    
+    return result;
     
   } catch (error: any) {
     console.error(`❌ Error fetching authenticated stats:`, error.message);

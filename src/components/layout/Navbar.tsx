@@ -29,7 +29,7 @@ const Navbar: React.FC = () => {
       <div className="container mx-auto px-4 md:px-6">
         <div className="flex h-16 items-center justify-between">
           <div className="flex">
-            <Link to="/dashboard" className="flex items-center space-x-2">
+            <Link to="/classes" className="flex items-center space-x-2">
               <div className="h-8 w-8 rounded-full bg-brand-blue flex items-center justify-center">
                 <span className="text-white text-sm font-bold">CC</span>
               </div>

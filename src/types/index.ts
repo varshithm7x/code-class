@@ -37,6 +37,23 @@ export interface Student extends User {
   platformCount?: number; // Number of platforms linked
 }
 
+export interface StudentProfile extends Student {
+  submissions: {
+    completed: boolean;
+    submissionTime: string | null;
+    problem: {
+      id: string;
+      title: string;
+      difficulty: string;
+      platform: string;
+      assignment: {
+        id: string;
+        title: string;
+      }
+    }
+  }[];
+}
+
 export enum Platform {
   LeetCode = 'LeetCode',
   HackerRank = 'HackerRank',

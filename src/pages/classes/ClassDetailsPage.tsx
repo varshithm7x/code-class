@@ -13,7 +13,8 @@ import AssignmentList from '../../components/assignments/AssignmentList';
 import CompletionGrid from '../../components/assignments/CompletionGrid';
 import LoadingScreen from '../../components/ui/LoadingScreen';
 import LeetCodeStats from '../../components/ui/LeetCodeStats';
-import { Plus, Users, BookOpen, Award, Copy, Code, TrendingUp } from 'lucide-react';
+import { Plus, Users, BookOpen, Award, Copy, Code, TrendingUp, Search } from 'lucide-react';
+import { Input } from '../../components/ui/input';
 
 const ClassDetailsPage: React.FC = () => {
   const { classId } = useParams<{ classId: string }>();
@@ -26,6 +27,7 @@ const ClassDetailsPage: React.FC = () => {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState('overview');
+  const [studentSearch, setStudentSearch] = useState('');
   
   // Mock data for the completion grid
   const [completionData, setCompletionData] = useState<Record<string, Record<string, boolean>>>({});
@@ -322,17 +324,34 @@ const ClassDetailsPage: React.FC = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Enrolled Students</CardTitle>
-                <CardDescription>Students in this class with their LeetCode stats</CardDescription>
+                <CardDescription>Search for students and view their profiles</CardDescription>
               </CardHeader>
               <CardContent>
+                <div className="mb-6">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search by name or email..."
+                      value={studentSearch}
+                      onChange={(e) => setStudentSearch(e.target.value)}
+                      className="pl-10 w-full"
+                    />
+                  </div>
+                </div>
+
                 {classDetails.students.length === 0 ? (
                   <p className="py-4 text-muted-foreground text-center">
                     No students enrolled yet. Share the join code to invite students.
                   </p>
                 ) : (
                   <div className="space-y-4">
-                    {classDetails.students.map((student: Student) => (
-                      <div key={student.id} className="border rounded-lg p-4">
+                    {classDetails.students
+                      .filter(s => 
+                        s.name.toLowerCase().includes(studentSearch.toLowerCase()) || 
+                        s.email.toLowerCase().includes(studentSearch.toLowerCase())
+                      )
+                      .map((student: Student) => (
+                      <Link to={`/students/${student.id}`} key={student.id} className="block border rounded-lg p-4 hover:bg-muted/50 transition-colors">
                         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                           <div className="flex-1">
                             <div className="flex items-center space-x-3">
@@ -368,7 +387,7 @@ const ClassDetailsPage: React.FC = () => {
                             <LeetCodeStats user={student} compact={true} showDetails={false} />
                           </div>
                         </div>
-                      </div>
+                      </Link>
                     ))}
                   </div>
                 )}

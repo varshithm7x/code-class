@@ -8,6 +8,7 @@ import authRoutes from './api/auth';
 import classRoutes from './api/classes';
 import assignmentRoutes from './api/assignments';
 import analyticsRoutes from './api/analytics';
+import studentRoutes from './api/students';
 import { initializeScheduledJobs } from './cron';
 
 const app: Express = express();
@@ -34,6 +35,7 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/classes', classRoutes);
 app.use('/api/v1/assignments', assignmentRoutes);
 app.use('/api/v1/analytics', analyticsRoutes);
+app.use('/api/v1/students', studentRoutes);
 
 // Initialize all scheduled jobs
 initializeScheduledJobs();

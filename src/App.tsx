@@ -29,6 +29,7 @@ import NotFoundPage from "./pages/NotFound";
 import ClassSettingsPage from './pages/classes/ClassSettingsPage';
 import EditAssignmentPage from './pages/assignments/EditAssignmentPage';
 import PracticeQuestionsPage from './pages/practice/PracticeQuestionsPage';
+import StudentProfilePage from './pages/students/StudentProfilePage';
 
 const queryClient = new QueryClient();
 
@@ -72,6 +73,7 @@ function App() {
                 <Route path="/leaderboard" element={<LeaderboardPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/practice" element={<PracticeQuestionsPage />} />
+                <Route path="/students/:studentId" element={<TeacherRoute><StudentProfilePage /></TeacherRoute>} />
                 <Route path="/" element={<Navigate to="/classes" replace />} />
               </Route>
               <Route path="*" element={<NotFoundPage />} />

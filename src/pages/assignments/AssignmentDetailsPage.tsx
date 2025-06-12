@@ -7,6 +7,7 @@ import { Badge } from '../../components/ui/badge';
 import LoadingScreen from '../../components/ui/LoadingScreen';
 import { useAuth } from '../../context/AuthContext';
 import SubmissionStatusGrid from '../../components/assignments/SubmissionStatusGrid';
+import CompletionStats from '../../components/assignments/CompletionStats';
 import { Button } from '../../components/ui/button';
 import { toast } from 'sonner';
 import { RefreshCw, Pencil } from 'lucide-react';
@@ -101,7 +102,10 @@ const AssignmentDetailsPage: React.FC = () => {
               {isTeacher ? 'Submission Status' : 'Problems'}
             </h3>
             {isTeacher ? (
-              <SubmissionStatusGrid assignment={assignment} />
+              <div className="space-y-6">
+                <CompletionStats assignment={assignment} />
+                <SubmissionStatusGrid assignment={assignment} />
+              </div>
             ) : (
               <div className="space-y-4">
                 {assignment.problems.map((problem) => (

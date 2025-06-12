@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { PracticeQuestion, CompanyData } from '../../types';
 import { 
-  loadAllCompanyData, 
+  getAllCompanyData, 
   getAllQuestions, 
   getQuestionStats, 
   getAllTopics, 
@@ -52,10 +52,10 @@ const PracticeQuestionsPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
-    const loadData = async () => {
+    const loadData = () => {
       setLoading(true);
       try {
-        const data = await loadAllCompanyData();
+        const data = getAllCompanyData();
         setCompanyData(data);
         setQuestions(getAllQuestions(data));
       } catch (error) {

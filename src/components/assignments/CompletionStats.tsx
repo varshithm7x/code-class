@@ -108,52 +108,9 @@ const CompletionStats: React.FC<CompletionStatsProps> = ({ assignment }) => {
             </Card>
         </div>
 
-        {submissionStats.length > 0 && (
-          <div className="border-t pt-6">
-            <h4 className="text-md font-medium mb-4 text-center text-muted-foreground">Submission Breakdown</h4>
-            <div className="space-y-2 max-w-lg mx-auto">
-              {submissionStats.map(({ completedCount, studentCount }) => (
-                <div key={completedCount} className="flex justify-between items-center text-sm p-3 rounded-lg bg-muted/50">
-                  <span>
-                      <span className="font-bold">{studentCount}</span> student{studentCount > 1 ? 's' : ''}
-                  </span>
-                  <Badge
-                    variant={
-                      completedCount === totalProblems && totalProblems > 0 ? "default" :
-                      completedCount > 0 ? "secondary" : "destructive"
-                    }
-                    className="font-mono px-3"
-                  >
-                    Solved {completedCount}/{totalProblems}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        
 
-        {problemStats.length > 0 && (
-          <div className="border-t pt-6 mt-6">
-            <h4 className="text-md font-medium mb-4 text-center text-muted-foreground">Problem Breakdown</h4>
-            <div className="space-y-3 max-w-lg mx-auto">
-              {problemStats.map(problem => (
-                <div key={problem.id} className="p-4 rounded-lg bg-muted/50">
-                  <p className="font-medium mb-2">{problem.title}</p>
-                  <div className="flex justify-start items-center gap-6 text-sm">
-                      <span className="flex items-center gap-2">
-                          <span className="h-2 w-2 rounded-full bg-green-500"></span>
-                          <span><span className="font-bold">{problem.solvedCount}</span> Solved</span>
-                      </span>
-                      <span className="flex items-center gap-2">
-                          <span className="h-2 w-2 rounded-full bg-red-500"></span>
-                          <span><span className="font-bold">{problem.notSolvedCount}</span> Not Solved</span>
-                      </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+       
 
         {studentProgress.length === 0 && (
            <p className="text-sm text-muted-foreground text-center pt-4">No submission data available.</p>

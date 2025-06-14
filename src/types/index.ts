@@ -25,6 +25,7 @@ export interface Class {
   studentCount?: number;
   assignmentCount?: number;
   assignments?: Assignment[];
+  announcements?: Announcement[];
 }
 
 export interface ClassWithStudents extends Class {
@@ -182,4 +183,14 @@ export interface QuestionStats {
 export interface CompanyData {
   name: string;
   questions: PracticeQuestion[];
+}
+
+export interface Announcement {
+  id: string;
+  content: string;
+  createdAt: string;
+  author: {
+    id: string;
+    name: string;
+  };
 }

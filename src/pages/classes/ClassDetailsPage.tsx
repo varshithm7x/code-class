@@ -13,7 +13,8 @@ import AssignmentList from '../../components/assignments/AssignmentList';
 import CompletionGrid from '../../components/assignments/CompletionGrid';
 import LoadingScreen from '../../components/ui/LoadingScreen';
 import LeetCodeStats from '../../components/ui/LeetCodeStats';
-import { Plus, Users, BookOpen, Award, Copy, Code, TrendingUp, Search } from 'lucide-react';
+import AnnouncementList from '../../components/announcements/AnnouncementList';
+import { Plus, Users, BookOpen, Award, Copy, Code, TrendingUp, Search, Megaphone } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 
 const ClassDetailsPage: React.FC = () => {
@@ -187,6 +188,10 @@ const ClassDetailsPage: React.FC = () => {
             <Award className="h-4 w-4 mr-2" />
             Assignments
           </TabsTrigger>
+          <TabsTrigger value="announcements">
+            <Megaphone className="h-4 w-4 mr-2" />
+            Announcements
+          </TabsTrigger>
           {isTeacher && (
             <TabsTrigger value="students">
               <Users className="h-4 w-4 mr-2" />
@@ -317,6 +322,10 @@ const ClassDetailsPage: React.FC = () => {
               />
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="announcements">
+          {classId && <AnnouncementList classId={classId} />}
         </TabsContent>
         
         {isTeacher && (

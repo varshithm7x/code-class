@@ -6,6 +6,7 @@ import {
   checkSubmissionsForAssignment as checkSubmissionsForAssignmentService,
 } from '../../services/submission.service';
 import { getLeetCodeProblemDetails } from '../../services/leetcode.service';
+import { sendAssignmentEmail } from '../../services/email.service';
 
 
 const getPlatformFromUrl = (url: string): string => {
@@ -26,17 +27,19 @@ const getPlatformFromUrl = (url: string): string => {
 
 export const createAssignment = async (req: Request, res: Response): Promise<void> => {
   const { title, description, classId, assignDate, dueDate, problems } = req.body;
+  // @ts-expect-error: req.user is added by the protect middleware
+  const { userId } = req.user;
 
   try {
     // Pre-validate LeetCode problems OUTSIDE the transaction
-    let validatedProblems = problems || [];
+    const validatedProblems = [...(problems || [])];
     
     if (problems && problems.length > 0) {
       for (let i = 0; i < problems.length; i++) {
         const problem = problems[i];
         const platform = getPlatformFromUrl(problem.url);
         
-        let problemData = {
+        const problemData = {
           title: problem.title,
           difficulty: problem.difficulty,
           url: problem.url,
@@ -48,18 +51,23 @@ export const createAssignment = async (req: Request, res: Response): Promise<voi
           try {
             const officialDetails = await getLeetCodeProblemDetails(problem.url);
             if (officialDetails) {
-              problemData.title = officialDetails.title;
-              problemData.difficulty = officialDetails.difficulty;
+              validatedProblems[i] = {
+                ...problemData,
+                title: officialDetails.title,
+                difficulty: officialDetails.difficulty,
+              };
             } else {
               console.warn(`Could not verify LeetCode problem with URL: ${problem.url}. Falling back to user-provided details.`);
+              validatedProblems[i] = problemData;
             }
           } catch (error) {
             console.warn(`Error validating LeetCode problem ${problem.url}:`, error);
             // Continue with user-provided data if API fails
+            validatedProblems[i] = problemData;
           }
+        } else {
+          validatedProblems[i] = problemData;
         }
-        
-        validatedProblems[i] = problemData;
       }
     }
 
@@ -120,8 +128,16 @@ export const createAssignment = async (req: Request, res: Response): Promise<voi
       return createdAssignment;
     });
 
+    // Send email notification (don't await to avoid blocking the response)
+    const teacher = await prisma.user.findUnique({ where: { id: userId } });
+    if (teacher && teacher.name) {
+      sendAssignmentEmail(classId, title, teacher.name).catch(error => {
+        console.error('Failed to send assignment email:', error);
+      });
+    }
+
     res.status(201).json(newAssignment);
-  } catch (error: any) {
+  } catch (error: unknown) {
     // This is the new, more detailed catch block
     console.error('--- DETAILED ERROR LOG: CREATE ASSIGNMENT ---');
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -131,12 +147,13 @@ export const createAssignment = async (req: Request, res: Response): Promise<voi
     console.error('Full Error Object:', JSON.stringify(error, null, 2));
     console.error('--- END DETAILED ERROR LOG ---');
     
+    const err = error as Error;
     res.status(500).json({ 
       message: 'Error creating assignment', 
       error: {
-        name: error.name,
-        message: error.message,
-        stack: error.stack,
+        name: err.name,
+        message: err.message,
+        stack: err.stack,
         ...(error instanceof Prisma.PrismaClientKnownRequestError && { code: error.code, meta: error.meta }),
       } 
     });
@@ -217,7 +234,7 @@ export const getAssignmentById = async (req: Request, res: Response): Promise<vo
     };
     
     // We don't need to send the full class details back
-    // @ts-ignore
+    // @ts-expect-error: Removing class property from response
     delete response.class;
 
     res.status(200).json(response);
@@ -231,7 +248,7 @@ export const checkSubmissions = async (req: Request, res: Response): Promise<voi
   console.log('🔄 [DEBUG] checkSubmissions endpoint called');
   console.log('🔄 [DEBUG] Request method:', req.method);
   console.log('🔄 [DEBUG] Request URL:', req.url);
-  console.log('🔄 [DEBUG] Request user:', (req as any).user);
+  console.log('🔄 [DEBUG] Request user:', (req as { user?: unknown }).user);
   
   try {
     console.log('🚀 [DEBUG] Manual submission check triggered for all assignments...');
@@ -250,7 +267,7 @@ export const checkAssignmentSubmissions = async (req: Request, res: Response): P
   console.log('🎯 [DEBUG] Assignment ID:', assignmentId);
   console.log('🎯 [DEBUG] Request method:', req.method);
   console.log('🎯 [DEBUG] Request URL:', req.url);
-  console.log('🎯 [DEBUG] Request user:', (req as any).user);
+  console.log('🎯 [DEBUG] Request user:', (req as { user?: unknown }).user);
   
   try {
     console.log(`🚀 [DEBUG] Manual submission check triggered for assignment ${assignmentId}...`);
@@ -265,7 +282,7 @@ export const checkAssignmentSubmissions = async (req: Request, res: Response): P
 
 export const deleteAssignment = async (req: Request, res: Response): Promise<void> => {
     const { assignmentId } = req.params;
-    // @ts-ignore
+    // @ts-expect-error: req.user is added by the protect middleware
     const { userId, role } = req.user;
 
     if (role !== 'TEACHER') {
@@ -413,7 +430,7 @@ export const checkLeetCodeSubmissionsForAssignment = async (req: Request, res: R
   console.log('📱 [DEBUG] Request method:', req.method);
   console.log('📱 [DEBUG] Request URL:', req.url);
   
-  // @ts-ignore
+  // @ts-expect-error: req.user is added by the protect middleware
   const userId = req.user?.userId;
   console.log('📱 [DEBUG] User ID:', userId);
 
@@ -463,7 +480,7 @@ export const checkLeetCodeSubmissionsForAssignment = async (req: Request, res: R
 };
 
 export const getMyAssignments = async (req: Request, res: Response): Promise<void> => {
-  // @ts-ignore
+  // @ts-expect-error: req.user is added by the protect middleware
   const userId = req.user.userId;
 
   try {
@@ -499,14 +516,14 @@ export const getMyAssignments = async (req: Request, res: Response): Promise<voi
       },
     });
 
-    // Calculate status for each assignment
-    const assignmentsWithStatus = allAssignments.map((assignment: any) => {
+    // Calculate status for each assignment  
+    const assignmentsWithStatus = allAssignments.map((assignment) => {
       const assignmentSubmissions = userSubmissions.filter(
-        s => assignment.problems.some((p: { id: string }) => p.id === s.problemId)
+        s => (assignment as typeof assignment & { problems: { id: string }[] }).problems.some((p: { id: string }) => p.id === s.problemId)
       );
       
       const completedCount = assignmentSubmissions.filter(s => s.completed).length;
-      const totalProblems = assignment.problems.length;
+      const totalProblems = (assignment as typeof assignment & { problems: { id: string }[] }).problems.length;
       const now = new Date();
       const dueDate = new Date(assignment.dueDate);
       

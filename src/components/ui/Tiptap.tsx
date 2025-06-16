@@ -1,6 +1,7 @@
 'use client';
 
 import { useEditor, EditorContent } from '@tiptap/react';
+import { useEffect } from 'react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import { Toolbar } from './Toolbar';
@@ -27,6 +28,13 @@ export const Tiptap = ({
             onChange(editor.getHTML());
         },
     });
+
+    // Update editor content when description prop changes
+    useEffect(() => {
+        if (editor && description !== editor.getHTML()) {
+            editor.commands.setContent(description);
+        }
+    }, [editor, description]);
 
     return (
         <div className='flex flex-col justify-stretch min-h-[250px]'>

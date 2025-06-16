@@ -8,7 +8,11 @@
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "skipLibCheck": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
   },
   "include": ["src/**/*"],
   "exclude": [
@@ -19,4 +23,5 @@
     "**/*.test.ts",
     "**/*.spec.ts"
   ]
+  // Restarting TS server
 } 

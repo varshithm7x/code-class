@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { Request, Response } from 'express';
+import { sendAnnouncementEmail } from '../../services/email.service';
 
 const prisma = new PrismaClient();
 
@@ -25,6 +26,14 @@ export const createAnnouncement = async (req: Request, res: Response): Promise<v
                 },
             },
         });
+
+        // Send email notification (don't await to avoid blocking the response)
+        if (newAnnouncement.author.name) {
+            sendAnnouncementEmail(classId, content, newAnnouncement.author.name).catch(error => {
+                console.error('Failed to send announcement email:', error);
+            });
+        }
+
         res.status(201).json(newAnnouncement);
     } catch (error) {
         console.error('Error creating announcement:', error);

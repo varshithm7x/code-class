@@ -13,7 +13,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@getbrevo/brevo": "^2.2.0",
     "@prisma/extension-accelerate": "^2.0.1",
+    "@types/nodemailer": "^6.4.17",
     "axios": "^1.9.0",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
@@ -23,6 +25,7 @@
     "leetcode-query": "^2.0.0",
     "nanoid": "^3.3.7",
     "node-cron": "^4.1.0",
+    "nodemailer": "^7.0.3",
     "tsconfig-paths": "^4.2.0"
   },
   "devDependencies": {

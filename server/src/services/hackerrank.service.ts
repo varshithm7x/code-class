@@ -7,6 +7,7 @@ const HACKERRANK_API_URL = 'https://www.hackerrank.com/rest';
 interface HackerRankSubmission {
   id: number;
   challenge_name: string;
+  challenge_slug?: string | null;
   language: string;
   score: number;
   status: string;
@@ -55,12 +56,19 @@ export const fetchHackerRankSubmissions = async (sessionCookie: string, limit: n
 
     const submissions = response.data.models
       .filter((sub: unknown) => (sub as Record<string, unknown>).status === 'Accepted') // Only accepted submissions
-      .map((sub: unknown) => {
+      .map((sub: unknown, index: number) => {
         const submission = sub as Record<string, unknown>;
         const challenge = submission.challenge as Record<string, unknown>;
+        
+        // Debug: Log the full challenge object to see available fields (only for first submission)
+        if (index === 0) {
+          console.log(`🔍 DEBUG: Full challenge object:`, JSON.stringify(challenge, null, 2));
+        }
+        
         return {
           id: submission.id as number,
           challenge_name: challenge.name as string,
+          challenge_slug: challenge.slug as string || null, // Try to get slug if available
           language: submission.language as string,
           score: submission.score as number,
           status: submission.status as string,
@@ -162,7 +170,7 @@ const processHackerRankSubmissions = async (
     }
   });
 
-  // Create a map of problem slugs to problems
+  // Create a map of problem slugs to problems for HackerRank problems only
   const problemSlugMap = new Map<string, { problemId: string; submissionId: string }>();
   
   userProblems.forEach(submission => {
@@ -173,30 +181,44 @@ const processHackerRankSubmissions = async (
           problemId: submission.problem.id,
           submissionId: submission.id
         });
+        console.log(`🔍 Problem mapped: ${submission.problem.title} -> slug: ${slug}`);
       }
     }
   });
 
-  // Update submissions that match our problems
+  console.log(`🔍 Found ${problemSlugMap.size} HackerRank problems to check for user ${user.hackerrankUsername}`);
+  console.log(`🔍 Available challenge names in submissions: ${submissions.map(s => s.challenge_name).slice(0, 5).join(', ')}${submissions.length > 5 ? '...' : ''}`);
+
+  // Update submissions that match our problems using improved logic
   let updatedCount = 0;
-  const submissionSlugs = new Set(submissions.map(s => normalizeHackerRankChallengeName(s.challenge_name)));
   
   for (const [slug, data] of problemSlugMap) {
-    // Try both exact match and normalized match
-    const hasDirectMatch = submissions.some(s => s.challenge_name === slug);
-    const hasNormalizedMatch = submissionSlugs.has(slug) || submissionSlugs.has(normalizeHackerRankChallengeName(slug));
-    
-    if (hasDirectMatch || hasNormalizedMatch) {
-      // Find the corresponding submission to get timestamp
-      const submission = submissions.find(s => 
-        s.challenge_name === slug || 
-        normalizeHackerRankChallengeName(s.challenge_name) === slug ||
-        normalizeHackerRankChallengeName(s.challenge_name) === normalizeHackerRankChallengeName(slug)
-      );
+    // Try multiple matching strategies:
+    // 1. Direct slug match (if API provides slug)
+    // 2. Normalized challenge name match
+    const matchingSubmission = submissions.find(s => {
+      // Strategy 1: Direct slug comparison (if available)
+      if (s.challenge_slug === slug) {
+        return true;
+      }
       
-      const submissionTime = submission 
-        ? safeDateFromTimestamp(submission.created_at)
-        : new Date();
+      // Strategy 2: Normalize the challenge name and compare with URL slug
+      const normalizedChallengeName = normalizeHackerRankChallengeName(s.challenge_name);
+      if (normalizedChallengeName === slug) {
+        return true;
+      }
+      
+      // Strategy 3: Compare normalized versions of both
+      const normalizedSlug = normalizeHackerRankChallengeName(slug);
+      if (normalizedChallengeName === normalizedSlug) {
+        return true;
+      }
+      
+      return false;
+    });
+    
+    if (matchingSubmission) {
+      const submissionTime = safeDateFromTimestamp(matchingSubmission.created_at);
       
       await prisma.submission.update({
         where: { id: data.submissionId },
@@ -208,10 +230,13 @@ const processHackerRankSubmissions = async (
       
       updatedCount++;
       console.log(`🔶 HackerRank: Marked ${slug} as completed for ${user.hackerrankUsername}`);
+      console.log(`   Matched via: ${matchingSubmission.challenge_slug ? 'slug' : 'normalized name'} (${matchingSubmission.challenge_name})`);
+    } else {
+      console.log(`🔶 HackerRank: No submission found for ${slug} by ${user.hackerrankUsername}`);
     }
   }
 
-  console.log(`✅ HackerRank: Updated ${updatedCount} problem submissions out of ${submissions.length} fetched submissions`);
+  console.log(`✅ HackerRank: Updated ${updatedCount} problem submissions out of ${submissions.length} fetched submissions for ${user.hackerrankUsername}`);
 };
 
 /**
@@ -351,6 +376,11 @@ export const forceCheckHackerRankSubmissionsForAssignment = async (assignmentId:
       try {
         submissions = await fetchHackerRankSubmissions(user.hackerrankCookie!, 100);
         console.log(`📥 Fetched ${submissions.length} recent submissions for ${user.hackerrankUsername}`);
+        
+        // Debug: Log all challenge names from submissions
+        if (submissions.length > 0) {
+          console.log(`🔍 DEBUG: Challenge names in submissions:`, submissions.map(s => s.challenge_name).slice(0, 10));
+        }
       } catch (error: unknown) {
         console.error(`❌ Failed to fetch HackerRank submissions for ${user.hackerrankUsername}:`, (error as Error).message);
         errorCount++;
@@ -367,26 +397,37 @@ export const forceCheckHackerRankSubmissionsForAssignment = async (assignmentId:
           continue;
         }
 
-        console.log(`🔍 Checking problem: ${assignmentSubmission.problem.title} (slug: ${problemSlug})`);
+        console.log(`🔍 Checking problem: ${assignmentSubmission.problem.title}`);
+        console.log(`   URL: ${assignmentSubmission.problem.url}`);
+        console.log(`   Extracted slug: ${problemSlug}`);
 
-        // Check if we have a submission for this problem
-        const hasSubmission = submissions.some(s => 
-          s.challenge_name === problemSlug || 
-          normalizeHackerRankChallengeName(s.challenge_name) === problemSlug ||
-          normalizeHackerRankChallengeName(s.challenge_name) === normalizeHackerRankChallengeName(problemSlug)
-        );
-
-        if (hasSubmission) {
-          // Find the submission for timestamp
-          const submission = submissions.find(s => 
-            s.challenge_name === problemSlug || 
-            normalizeHackerRankChallengeName(s.challenge_name) === problemSlug ||
-            normalizeHackerRankChallengeName(s.challenge_name) === normalizeHackerRankChallengeName(problemSlug)
-          );
+        // IMPROVED MATCHING: Try multiple strategies to match the problem
+        const matchingSubmission = submissions.find(s => {
+          // Strategy 1: Direct slug comparison (if API provides slug)
+          if (s.challenge_slug === problemSlug) {
+            console.log(`   🎯 Direct slug match: ${s.challenge_slug} === ${problemSlug}`);
+            return true;
+          }
           
-          const submissionTime = submission 
-            ? safeDateFromTimestamp(submission.created_at)
-            : new Date();
+          // Strategy 2: Normalize the challenge name and compare with URL slug
+          const normalizedChallengeName = normalizeHackerRankChallengeName(s.challenge_name);
+          if (normalizedChallengeName === problemSlug) {
+            console.log(`   🎯 Normalized name match: "${s.challenge_name}" -> "${normalizedChallengeName}" === "${problemSlug}"`);
+            return true;
+          }
+          
+          // Strategy 3: Compare normalized versions of both
+          const normalizedSlug = normalizeHackerRankChallengeName(problemSlug);
+          if (normalizedChallengeName === normalizedSlug) {
+            console.log(`   🎯 Both normalized match: "${normalizedChallengeName}" === "${normalizedSlug}"`);
+            return true;
+          }
+          
+          return false;
+        });
+
+        if (matchingSubmission) {
+          const submissionTime = safeDateFromTimestamp(matchingSubmission.created_at);
 
           await prisma.submission.update({
             where: { id: assignmentSubmission.id },
@@ -397,9 +438,12 @@ export const forceCheckHackerRankSubmissionsForAssignment = async (assignmentId:
           });
 
           console.log(`✅ Marked ${assignmentSubmission.problem.title} as completed for ${user.hackerrankUsername}`);
+          console.log(`   Matched via: ${matchingSubmission.challenge_slug ? 'slug' : 'normalized name'} (${matchingSubmission.challenge_name})`);
           updatedCount++;
         } else {
-          console.log(`❌ Problem ${assignmentSubmission.problem.title} not found in ${user.hackerrankUsername}'s submissions`);
+          console.log(`❌ Problem ${assignmentSubmission.problem.title} (slug: ${problemSlug}) not found in ${user.hackerrankUsername}'s submissions`);
+          console.log(`   Available challenge names: ${submissions.map(s => s.challenge_name).slice(0, 5).join(', ')}${submissions.length > 5 ? '...' : ''}`);
+          console.log(`   Tried normalizing "${problemSlug}" and looking for matches...`);
         }
       }
 
@@ -416,4 +460,4 @@ export const forceCheckHackerRankSubmissionsForAssignment = async (assignmentId:
   }
   
   console.log(`✅ Force check completed for assignment ${assignmentId}. Success: ${successCount}, Errors: ${errorCount}`);
-}; 
+};

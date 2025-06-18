@@ -437,23 +437,8 @@ export const getClassJudge0Status = async (req: Request, res: Response): Promise
           }
         }) as UserWithJudge0Fields;
 
-        // Try to get shared key pool information (handle case where table doesn't exist)
-        let poolKey = null;
-        try {
-          // @ts-expect-error: judge0KeyPool table may not exist in current schema
-          poolKey = await prisma.judge0KeyPool.findFirst({
-            where: { userId: user.id },
-            select: {
-              status: true,
-              dailyUsage: true,
-              dailyLimit: true,
-              lastUsed: true
-            }
-          });
-        } catch (error) {
-          // Table doesn't exist or other error, continue with null
-          console.log('Judge0KeyPool table not available:', error);
-        }
+        // Note: Judge0KeyPool functionality disabled due to schema compatibility
+        const poolKey = null;
 
         const judge0KeyStatus = userWithJudge0?.judge0KeyStatus || 'NOT_PROVIDED';
         const judge0QuotaUsed = userWithJudge0?.judge0QuotaUsed || 0;
@@ -467,11 +452,11 @@ export const getClassJudge0Status = async (req: Request, res: Response): Promise
           judge0QuotaUsed,
           judge0LastReset,
           hasKey: judge0KeyStatus !== 'NOT_PROVIDED',
-          isSharedWithClass: !!poolKey,
-          poolStatus: poolKey?.status || null,
-          dailyUsage: poolKey?.dailyUsage || 0,
-          dailyLimit: poolKey?.dailyLimit || 50,
-          lastUsed: poolKey?.lastUsed || null
+          isSharedWithClass: false, // Disabled until judge0KeyPool is available
+          poolStatus: null,
+          dailyUsage: 0,
+          dailyLimit: 50,
+          lastUsed: null
         };
       })
     );

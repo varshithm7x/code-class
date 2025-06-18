@@ -29,3 +29,8 @@ export const linkLeetCodeCredentials = async (leetcodeCookie: string) => {
   const response = await api.post('/auth/leetcode-credentials', { leetcodeCookie });
   return response.data;
 };
+
+export const linkHackerRankCredentials = async (hackerrankCookie: string) => {
+  const response = await api.post('/auth/hackerrank-credentials', { hackerrankCookie });
+  return response.data;
+};

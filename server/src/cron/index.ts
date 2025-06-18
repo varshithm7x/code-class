@@ -1,6 +1,7 @@
 import cron from 'node-cron';
 import { checkAllSubmissions } from '../services/submission.service';
 import { syncAllLinkedLeetCodeUsers } from '../services/enhanced-leetcode.service';
+import { syncAllLinkedHackerRankUsers } from '../services/hackerrank.service';
 
 /**
  * Schedules the submission check to run once every day at 7:30 AM.

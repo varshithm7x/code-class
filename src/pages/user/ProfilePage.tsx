@@ -23,6 +23,7 @@ import { linkLeetCodeCredentials } from '../../api/auth';
 import LeetCodeStats from '../../components/ui/LeetCodeStats';
 import Judge0KeySection from '../../components/profile/Judge0KeySection';
 import GeminiKeySection from '../../components/profile/GeminiKeySection';
+import HackerRankKeySection from '../../components/profile/HackerRankKeySection';
 
 const formSchema = z.object({
   hackerrankUsername: z.string().optional(),
@@ -273,6 +274,9 @@ const ProfilePage: React.FC = () => {
             </CardContent>
           </Card>
         )}
+
+        {/* HackerRank Account Integration */}
+        <HackerRankKeySection />
 
         {/* Judge0 API Key Section */}
         <Judge0KeySection onKeyUpdate={refreshUser} />

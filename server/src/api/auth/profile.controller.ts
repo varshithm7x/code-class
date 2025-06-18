@@ -513,4 +513,78 @@ async function encryptGeminiKey(apiKey: string): Promise<string> {
   const authTag = cipher.getAuthTag();
   
   return `${iv.toString('hex')}:${encrypted}:${authTag.toString('hex')}`;
-} 
+}
+
+export const linkHackerRankCredentials = async (req: Request, res: Response): Promise<void> => {
+  // @ts-ignore
+  const userId = req.user.userId;
+  const { hackerrankCookie } = req.body;
+
+  if (!hackerrankCookie) {
+    res.status(400).json({ message: 'HackerRank session cookie is required' });
+    return;
+  }
+
+  try {
+    console.log('🔐 Attempting to validate HackerRank session cookie...');
+    
+    // Test the cookie by trying to fetch submissions
+    const { fetchHackerRankSubmissions } = await import('../../services/hackerrank.service');
+    
+    try {
+      await fetchHackerRankSubmissions(hackerrankCookie, 1); // Just fetch 1 submission to test
+      console.log('✅ HackerRank session cookie validation successful');
+    } catch (error: any) {
+      console.error('❌ HackerRank session cookie validation failed:', error.message);
+      
+      if (error.message.includes('expired') || error.message.includes('invalid')) {
+        res.status(400).json({ 
+          message: 'Invalid or expired HackerRank session cookie. Please get a fresh cookie from your browser.' 
+        });
+        return;
+      }
+      
+      throw error;
+    }
+
+    // If successful, save the cookie and update status
+    const updatedUser = await (prisma as any).user.update({
+      where: { id: userId },
+      data: {
+        hackerrankCookie,
+        hackerrankCookieStatus: 'LINKED',
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        hackerrankUsername: true,
+        hackerrankCookieStatus: true,
+        gfgUsername: true,
+        leetcodeUsername: true,
+        leetcodeCookieStatus: true,
+        leetcodeTotalSolved: true,
+        leetcodeEasySolved: true,
+        leetcodeMediumSolved: true,
+        leetcodeHardSolved: true,
+        createdAt: true,
+      },
+    });
+
+    console.log(`✅ Successfully linked HackerRank account for user ${updatedUser.email}`);
+
+    res.status(200).json({ 
+      message: 'HackerRank account linked successfully! Submissions will be synced shortly.',
+      user: updatedUser
+    });
+    
+  } catch (error: any) {
+    console.error('❌ HackerRank credential validation error:', error);
+    
+    res.status(500).json({ 
+      message: 'Error validating HackerRank credentials. Please try again or contact support.', 
+      error: error.message 
+    });
+  }
+};

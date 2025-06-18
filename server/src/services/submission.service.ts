@@ -4,6 +4,7 @@ import { GfgAPIResponse } from '../types';
 import prisma from '../lib/prisma';
 import { groupBy } from '../utils/array.utils';
 import { syncAllLinkedLeetCodeUsers, forceCheckLeetCodeSubmissionsForAssignment } from './enhanced-leetcode.service';
+import { syncAllLinkedHackerRankUsers, forceCheckHackerRankSubmissionsForAssignment } from './hackerrank.service';
 
 /**
  * Fetches all solved GeeksForGeeks problem slugs for a user.
@@ -36,11 +37,12 @@ export const getAllGfgSolvedSlugs = async (username: string): Promise<Set<string
         
         console.log(`Found ${solvedSlugs.size} solved GFG problems for ${username}.`);
         return solvedSlugs;
-    } catch (error: any) {
-        if (error.response) {
-            console.error(`Error fetching GFG solved list for ${username}. Status: ${error.response.status}, Data:`, error.response.data);
+    } catch (error: unknown) {
+        const axiosError = error as { response?: { status: number; data: unknown }; message?: string };
+        if (axiosError.response) {
+            console.error(`Error fetching GFG solved list for ${username}. Status: ${axiosError.response.status}, Data:`, axiosError.response.data);
         } else {
-            console.error(`Error fetching GFG solved list for ${username}:`, error.message);
+            console.error(`Error fetching GFG solved list for ${username}:`, axiosError.message);
         }
         return new Set();
     }
@@ -53,7 +55,7 @@ export const getAllGfgSolvedSlugs = async (username: string): Promise<Set<string
  */
 export const getGfgProblemSlug = (url: string): string => {
     try {
-        const match = url.match(/\/problems\/([^\/]+)/);
+        const match = url.match(/\/problems\/([^/]+)/);
         return match ? match[1] : url;
     } catch (error) {
         console.error(`Error extracting slug from GFG URL: ${url}`, error);
@@ -68,7 +70,7 @@ export const getGfgProblemSlug = (url: string): string => {
  */
 export const getLeetCodeProblemSlug = (url: string): string | null => {
     try {
-        const match = url.match(/\/problems\/([^\/]+)/);
+        const match = url.match(/\/problems\/([^/]+)/);
         return match ? match[1] : null;
     } catch (error) {
         console.error(`Error extracting slug from LeetCode URL: ${url}`, error);
@@ -151,7 +153,7 @@ const processGfgSubmissions = async (submissions: (Submission & { user: User, pr
 };
 
 /**
- * Check all pending submissions - uses enhanced LeetCode service + GFG processing
+ * Check all pending submissions - uses enhanced LeetCode service + HackerRank service + GFG processing
  */
 export const checkAllSubmissions = async () => {
     console.log('🚀 Starting comprehensive submission check...');
@@ -160,8 +162,12 @@ export const checkAllSubmissions = async () => {
     console.log('📱 Step 1: Syncing LeetCode users with enhanced integration...');
     await syncAllLinkedLeetCodeUsers();
     
-    // Step 2: Process remaining GFG submissions  
-    console.log('📝 Step 2: Processing GFG submissions...');
+    // Step 2: Sync all HackerRank users with enhanced integration
+    console.log('🔶 Step 2: Syncing HackerRank users with enhanced integration...');
+    await syncAllLinkedHackerRankUsers();
+    
+    // Step 3: Process remaining GFG submissions  
+    console.log('📝 Step 3: Processing GFG submissions...');
     const pendingSubmissions = await prisma.submission.findMany({
         where: { completed: false },
         include: { user: true, problem: true },
@@ -194,10 +200,11 @@ export const checkSubmissionsForAssignment = async (assignmentId: string) => {
     
     // Show platform breakdown
     const leetcodeProblems = assignment.problems.filter(p => p.platform.toLowerCase() === 'leetcode');
+    const hackerrankProblems = assignment.problems.filter(p => p.platform.toLowerCase() === 'hackerrank');
     const gfgProblems = assignment.problems.filter(p => p.platform.toLowerCase() === 'gfg');
-    const otherProblems = assignment.problems.filter(p => !['leetcode', 'gfg'].includes(p.platform.toLowerCase()));
+    const otherProblems = assignment.problems.filter(p => !['leetcode', 'hackerrank', 'gfg'].includes(p.platform.toLowerCase()));
     
-    console.log(`📊 Platform breakdown: ${leetcodeProblems.length} LeetCode, ${gfgProblems.length} GFG, ${otherProblems.length} other`);
+    console.log(`📊 Platform breakdown: ${leetcodeProblems.length} LeetCode, ${hackerrankProblems.length} HackerRank, ${gfgProblems.length} GFG, ${otherProblems.length} other`);
     
     // Step 1: Force check LeetCode submissions for this specific assignment
     if (leetcodeProblems.length > 0) {
@@ -207,9 +214,17 @@ export const checkSubmissionsForAssignment = async (assignmentId: string) => {
         console.log('⏭️ No LeetCode problems in this assignment - skipping LeetCode sync');
     }
     
-    // Step 2: Process GFG submissions for this assignment
+    // Step 2: Force check HackerRank submissions for this specific assignment
+    if (hackerrankProblems.length > 0) {
+        console.log('🔶 Step 2: Force checking HackerRank submissions for assignment...');
+        await forceCheckHackerRankSubmissionsForAssignment(assignmentId);
+    } else {
+        console.log('⏭️ No HackerRank problems in this assignment - skipping HackerRank sync');
+    }
+    
+    // Step 3: Process GFG submissions for this assignment
     if (gfgProblems.length > 0) {
-        console.log('📝 Step 2: Processing GFG submissions for assignment...');
+        console.log('📝 Step 3: Processing GFG submissions for assignment...');
     const pendingSubmissions = await prisma.submission.findMany({
         where: {
             problem: {

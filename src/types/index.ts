@@ -4,6 +4,7 @@ export interface User {
   email: string;
   role: 'STUDENT' | 'TEACHER';
   hackerrankUsername?: string;
+  hackerrankCookieStatus?: string; // LINKED, EXPIRED, NOT_LINKED
   leetcodeUsername?: string;
   gfgUsername?: string;
   // Enhanced LeetCode Integration fields

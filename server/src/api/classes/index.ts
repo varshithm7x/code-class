@@ -7,6 +7,8 @@ import {
   getClassDetails,
   deleteClass,
   getClassJudge0Status,
+  leaveClass,
+  removeStudentFromClass,
 } from './class.controller';
 import { protect, isTeacher, isStudent } from '../auth/auth.middleware';
 
@@ -19,5 +21,7 @@ router.get('/:classId', protect, getClassDetails);
 router.get('/:classId/assignments', protect, getClassAssignments);
 router.get('/:classId/judge0-status', protect, isTeacher, getClassJudge0Status);
 router.delete('/:classId', protect, isTeacher, deleteClass);
+router.post('/:classId/leave', protect, isStudent, leaveClass);
+router.delete('/:classId/students/:studentId', protect, isTeacher, removeStudentFromClass);
 
 export default router; 

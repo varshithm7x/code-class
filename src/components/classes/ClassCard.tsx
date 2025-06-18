@@ -16,15 +16,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
-import { MoreVertical, Users, BookOpen, Settings, Trash2, Copy } from 'lucide-react';
+import { MoreVertical, Users, BookOpen, Settings, Trash2, Copy, LogOut } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 
 interface ClassCardProps {
   classData: Class;
   onDelete?: (classId: string) => void;
+  onLeave?: (classId: string) => void;
 }
 
-const ClassCard: React.FC<ClassCardProps> = ({ classData, onDelete }) => {
+const ClassCard: React.FC<ClassCardProps> = ({ classData, onDelete, onLeave }) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const isTeacher = user?.role === 'TEACHER';
@@ -46,33 +47,46 @@ const ClassCard: React.FC<ClassCardProps> = ({ classData, onDelete }) => {
           <div>
             <CardTitle className="text-xl font-bold">{classData.name}</CardTitle>
           </div>
-          {isTeacher && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem asChild>
-                  <Link to={`/classes/${classData.id}/settings`}>
-                    <Settings className="mr-2 h-4 w-4" />
-                    Class Settings
-                  </Link>
-                </DropdownMenuItem>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {isTeacher ? (
+                <>
+                  <DropdownMenuItem asChild>
+                    <Link to={`/classes/${classData.id}/settings`}>
+                      <Settings className="mr-2 h-4 w-4" />
+                      Class Settings
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="text-red-600"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete?.(classData.id);
+                    }}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete Class
+                  </DropdownMenuItem>
+                </>
+              ) : (
                 <DropdownMenuItem
                   className="text-red-600"
                   onClick={(e) => {
                     e.stopPropagation();
-                    onDelete?.(classData.id);
+                    onLeave?.(classData.id);
                   }}
                 >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete Class
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Leave Class
                 </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </CardHeader>
       <CardContent className="flex-grow">
@@ -98,6 +112,11 @@ const ClassCard: React.FC<ClassCardProps> = ({ classData, onDelete }) => {
             <div className="flex items-center text-sm text-gray-500">
               <BookOpen className="mr-2 h-4 w-4" />
               {classData.assignmentCount || 0} Assignments
+            </div>
+          )}
+          {!isTeacher && (
+            <div className="text-sm text-gray-500">
+              Teacher: {classData.teacherName}
             </div>
           )}
         </div>

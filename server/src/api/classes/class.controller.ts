@@ -489,3 +489,150 @@ export const getClassJudge0Status = async (req: Request, res: Response): Promise
     res.status(500).json({ message: 'Error fetching Judge0 key status', error });
   }
 }; 
+
+/**
+ * Allow a student to leave a class
+ */
+export const leaveClass = async (req: Request, res: Response): Promise<void> => {
+  const { classId } = req.params;
+  // @ts-expect-error: req.user is added by the protect middleware
+  const { userId, role } = req.user;
+
+  if (role !== 'STUDENT') {
+    res.status(403).json({ message: 'Only students can leave classes.' });
+    return;
+  }
+
+  try {
+    // Check if student is enrolled in the class
+    const enrollment = await prisma.usersOnClasses.findUnique({
+      where: {
+        userId_classId: {
+          userId,
+          classId,
+        },
+      },
+    });
+
+    if (!enrollment) {
+      res.status(404).json({ message: 'You are not enrolled in this class.' });
+      return;
+    }
+
+    // Use a transaction to remove student from class and clean up their data
+    await prisma.$transaction(async (tx) => {
+      // Get all assignments in the class
+      const assignments = await tx.assignment.findMany({
+        where: { classId },
+        include: { problems: true },
+      });
+
+      const problemIds = assignments.flatMap(a => a.problems.map(p => p.id));
+
+      // Delete all submissions for the problems in those assignments for this student
+      if (problemIds.length > 0) {
+        await tx.submission.deleteMany({
+          where: { 
+            userId,
+            problemId: { in: problemIds }
+          }
+        });
+      }
+
+      // Remove student from class
+      await tx.usersOnClasses.delete({
+        where: {
+          userId_classId: {
+            userId,
+            classId,
+          },
+        },
+      });
+    });
+
+    res.status(200).json({ message: 'Successfully left the class' });
+  } catch (error) {
+    console.error('Error leaving class:', error);
+    res.status(500).json({ message: 'Error leaving class', error });
+  }
+};
+
+/**
+ * Allow a teacher to remove a student from their class
+ */
+export const removeStudentFromClass = async (req: Request, res: Response): Promise<void> => {
+  const { classId, studentId } = req.params;
+  // @ts-expect-error: req.user is added by the protect middleware
+  const { userId, role } = req.user;
+
+  if (role !== 'TEACHER') {
+    res.status(403).json({ message: 'Only teachers can remove students from classes.' });
+    return;
+  }
+
+  try {
+    // Verify teacher owns this class
+    const classInfo = await prisma.class.findFirst({
+      where: { 
+        id: classId,
+        teacherId: userId 
+      }
+    });
+
+    if (!classInfo) {
+      res.status(404).json({ message: 'Class not found or access denied.' });
+      return;
+    }
+
+    // Check if student is enrolled in the class
+    const enrollment = await prisma.usersOnClasses.findUnique({
+      where: {
+        userId_classId: {
+          userId: studentId,
+          classId,
+        },
+      },
+    });
+
+    if (!enrollment) {
+      res.status(404).json({ message: 'Student is not enrolled in this class.' });
+      return;
+    }
+
+    // Use a transaction to remove student from class and clean up their data
+    await prisma.$transaction(async (tx) => {
+      // Get all assignments in the class
+      const assignments = await tx.assignment.findMany({
+        where: { classId },
+        include: { problems: true },
+      });
+
+      const problemIds = assignments.flatMap(a => a.problems.map(p => p.id));
+
+      // Delete all submissions for the problems in those assignments for this student
+      if (problemIds.length > 0) {
+        await tx.submission.deleteMany({
+          where: { 
+            userId: studentId,
+            problemId: { in: problemIds }
+          }
+        });
+      }
+
+      // Remove student from class
+      await tx.usersOnClasses.delete({
+        where: {
+          userId_classId: {
+            userId: studentId,
+            classId,
+          },
+        },
+      });
+    });
+
+    res.status(200).json({ message: 'Student successfully removed from class' });
+  } catch (error) {
+    console.error('Error removing student from class:', error);
+    res.status(500).json({ message: 'Error removing student from class', error });
+  }
+}; 

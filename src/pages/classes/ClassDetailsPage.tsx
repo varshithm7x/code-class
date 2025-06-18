@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { getClassDetails, getClassAssignments } from '../../api/classes';
+import { getClassDetails, getClassAssignments, removeStudentFromClass } from '../../api/classes';
 import { deleteAssignment } from '../../api/assignments';
 import { ClassWithStudents, Assignment, Student } from '../../types';
 import { useAuth } from '../../context/AuthContext';
@@ -16,7 +16,7 @@ import LeetCodeStats from '../../components/ui/LeetCodeStats';
 import AnnouncementList from '../../components/announcements/AnnouncementList';
 import TestList from '../../components/tests/TestList';
 import { CodingTest } from '../../components/tests/TestCard';
-import { Plus, Users, BookOpen, Award, Copy, Code, TrendingUp, Search, Megaphone, Terminal } from 'lucide-react';
+import { Plus, Users, BookOpen, Award, Copy, Code, TrendingUp, Search, Megaphone, Terminal, UserMinus } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 
 const ClassDetailsPage: React.FC = () => {
@@ -143,6 +143,42 @@ const ClassDetailsPage: React.FC = () => {
       toast({
         title: 'Join code copied!',
         description: 'The class join code has been copied to clipboard.',
+      });
+    }
+  };
+
+  const handleRemoveStudent = async (studentId: string, studentName: string) => {
+    if (!window.confirm(`Are you sure you want to remove ${studentName} from this class? This will delete all their progress and submissions.`)) {
+      return;
+    }
+
+    if (!classId) return;
+
+    try {
+      await removeStudentFromClass(classId, studentId);
+      
+      // Update local state immediately for better UX
+      if (classDetails) {
+        const updatedStudents = classDetails.students.filter(s => s.id !== studentId);
+        setClassDetails({
+          ...classDetails,
+          students: updatedStudents
+        });
+      }
+      
+      // Trigger refresh events
+      triggerDataRefresh(DATA_REFRESH_EVENTS.CLASSES_UPDATED);
+      
+      toast({
+        title: 'Student Removed',
+        description: `${studentName} has been successfully removed from the class.`,
+      });
+    } catch (error) {
+      console.error('Error removing student:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to remove student from class.',
+        variant: 'destructive',
       });
     }
   };
@@ -426,9 +462,9 @@ const ClassDetailsPage: React.FC = () => {
                         s.email.toLowerCase().includes(studentSearch.toLowerCase())
                       )
                       .map((student: Student) => (
-                      <Link to={`/students/${student.id}`} key={student.id} className="block border rounded-lg p-4 hover:bg-muted/50 transition-colors">
+                      <div key={student.id} className="border rounded-lg p-4 hover:bg-muted/50 transition-colors">
                         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                          <div className="flex-1">
+                          <Link to={`/students/${student.id}`} className="flex-1">
                             <div className="flex items-center space-x-3">
                               <div>
                                 <p className="font-semibold text-lg">{student.name}</p>
@@ -456,13 +492,27 @@ const ClassDetailsPage: React.FC = () => {
                                 </div>
                               )}
                             </div>
-                          </div>
+                          </Link>
                           
-                          <div className="flex-shrink-0 min-w-[200px]">
-                            <LeetCodeStats user={student} compact={true} showDetails={false} />
+                          <div className="flex items-center gap-4">
+                            <div className="flex-shrink-0 min-w-[200px]">
+                              <LeetCodeStats user={student} compact={true} showDetails={false} />
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                handleRemoveStudent(student.id, student.name);
+                              }}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                            >
+                              <UserMinus className="h-4 w-4 mr-1" />
+                              Remove
+                            </Button>
                           </div>
                         </div>
-                      </Link>
+                      </div>
                     ))}
                   </div>
                 )}

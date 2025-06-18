@@ -10,9 +10,10 @@ interface ClassListProps {
   classes: Class[];
   isLoading?: boolean;
   onDelete?: (classId: string) => void;
+  onLeave?: (classId: string) => void;
 }
 
-const ClassList: React.FC<ClassListProps> = ({ classes, isLoading, onDelete }) => {
+const ClassList: React.FC<ClassListProps> = ({ classes, isLoading, onDelete, onLeave }) => {
   const { user } = useAuth();
   const isTeacher = user?.role === 'TEACHER';
 
@@ -59,7 +60,12 @@ const ClassList: React.FC<ClassListProps> = ({ classes, isLoading, onDelete }) =
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {classes.map((classItem) => (
-        <ClassCard key={classItem.id} classData={classItem} onDelete={onDelete} />
+        <ClassCard 
+          key={classItem.id} 
+          classData={classItem} 
+          onDelete={onDelete} 
+          onLeave={onLeave}
+        />
       ))}
     </div>
   );

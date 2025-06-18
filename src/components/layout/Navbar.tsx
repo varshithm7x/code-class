@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useSidebar } from '../../context/SidebarContext';
 import { Button } from '../ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import {
@@ -11,10 +12,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
-import { LogOut, Settings, User } from 'lucide-react';
+import { LogOut, Settings, User, Menu } from 'lucide-react';
 
 const Navbar: React.FC = () => {
   const { user, logout } = useAuth();
+  const { toggleMobileSidebar } = useSidebar();
 
   const getInitials = (name: string) => {
     return name
@@ -28,7 +30,18 @@ const Navbar: React.FC = () => {
     <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
       <div className="container mx-auto px-4 md:px-6">
         <div className="flex h-16 items-center justify-between">
-          <div className="flex">
+          <div className="flex items-center gap-2">
+            {/* Mobile Menu Button - Only visible on mobile */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleMobileSidebar}
+              className="md:hidden h-9 w-9 hover:bg-gray-100"
+              title="Open menu"
+            >
+              <Menu className="h-4 w-4" />
+            </Button>
+            
             <Link to="/classes" className="flex items-center space-x-2">
               <div className="h-8 w-8 rounded-full bg-brand-blue flex items-center justify-center">
                 <span className="text-white text-sm font-bold">CC</span>

@@ -500,9 +500,14 @@ export const getMyAssignments = async (req: Request, res: Response): Promise<voi
       include: {
         problems: true,
       },
-      orderBy: {
-        dueDate: 'asc'
-      }
+      orderBy: [
+        {
+          updatedAt: 'desc', // Recently updated assignments first (for edited assignments)
+        },
+        {
+          createdAt: 'desc', // Then by actual creation/posting time
+        },
+      ]
     });
     
     // Get submission data for the user

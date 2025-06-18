@@ -6,9 +6,34 @@ import { Prisma } from '@prisma/client';
 // Generate a unique 6-character code for joining a class
 const nanoid = customAlphabet('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', 6);
 
+// Interface for class with counts and teacher info
+interface ClassWithCounts {
+  id: string;
+  name: string;
+  joinCode: string;
+  teacherId: string;
+  createdAt: Date;
+  updatedAt: Date;
+  teacher: { name: string };
+  _count: {
+    students: number;
+    assignments: number;
+  };
+}
+
+// Interface for user with potential Judge0 fields
+interface UserWithJudge0Fields {
+  id: string;
+  name: string;
+  email: string;
+  judge0KeyStatus?: string;
+  judge0QuotaUsed?: number;
+  judge0LastReset?: Date | null;
+}
+
 export const createClass = async (req: Request, res: Response): Promise<void> => {
   const { name } = req.body;
-  // @ts-ignore
+  // @ts-expect-error: req.user is added by the protect middleware
   const teacherId = req.user.userId;
 
   try {
@@ -27,7 +52,7 @@ export const createClass = async (req: Request, res: Response): Promise<void> =>
 
 export const joinClass = async (req: Request, res: Response): Promise<void> => {
   const { joinCode } = req.body;
-  // @ts-ignore
+  // @ts-expect-error: req.user is added by the protect middleware
   const { userId } = req.user;
 
   console.log(`[DEBUG] Student ${userId} attempting to join class with code: ${joinCode}`);
@@ -110,7 +135,7 @@ export const joinClass = async (req: Request, res: Response): Promise<void> => {
 
     console.log(`[DEBUG] Successfully completed enrollment for user ${userId} in class ${classToJoin.id}`);
     res.status(200).json({ message: 'Successfully joined class' });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('--- DETAILED ERROR LOG: JOIN CLASS ---');
     console.error('User ID:', userId);
     console.error('Join Code:', joinCode);
@@ -121,19 +146,21 @@ export const joinClass = async (req: Request, res: Response): Promise<void> => {
     console.error('Full Error Object:', JSON.stringify(error, null, 2));
     console.error('--- END DETAILED ERROR LOG ---');
     
+    const errorResponse = error instanceof Error ? {
+      name: error.name,
+      message: error.message,
+      ...(error instanceof Prisma.PrismaClientKnownRequestError && { code: error.code, meta: error.meta }),
+    } : { message: 'Unknown error occurred' };
+    
     res.status(500).json({ 
       message: 'Error joining class', 
-      error: {
-        name: error.name,
-        message: error.message,
-        ...(error instanceof Prisma.PrismaClientKnownRequestError && { code: error.code, meta: error.meta }),
-      } 
+      error: errorResponse
     });
   }
 };
 
 export const getClasses = async (req: Request, res: Response): Promise<void> => {
-  // @ts-ignore
+  // @ts-expect-error: req.user is added by the protect middleware
   const { userId, role } = req.user;
 
   try {
@@ -160,7 +187,7 @@ export const getClasses = async (req: Request, res: Response): Promise<void> => 
       },
     });
 
-    const formattedClasses = (classes as any[]).map(
+    const formattedClasses = (classes as ClassWithCounts[]).map(
       ({ _count, teacher, ...rest }) => ({
         ...rest,
         studentCount: _count.students,
@@ -190,10 +217,17 @@ export const getClassAssignments = async (req: Request, res: Response): Promise<
         assignDate: true,
         dueDate: true,
         problems: true,
+        createdAt: true,
+        updatedAt: true,
       },
-      orderBy: {
-        assignDate: 'desc',
-      },
+      orderBy: [
+        {
+          updatedAt: 'desc', // Recently updated assignments first (for edited assignments)
+        },
+        {
+          createdAt: 'desc', // Then by creation date (actual posting time)
+        },
+      ],
     });
     res.status(200).json(assignments);
   } catch (error) {
@@ -250,7 +284,7 @@ export const getClassDetails = async (req: Request, res: Response): Promise<void
 
 export const deleteClass = async (req: Request, res: Response): Promise<void> => {
   const { classId } = req.params;
-  // @ts-ignore
+  // @ts-expect-error: req.user is added by the protect middleware
   const { userId, role } = req.user;
 
   if (role !== 'TEACHER') {
@@ -330,7 +364,7 @@ export const deleteClass = async (req: Request, res: Response): Promise<void> =>
  */
 export const getClassJudge0Status = async (req: Request, res: Response): Promise<void> => {
   const { classId } = req.params;
-  // @ts-ignore
+  // @ts-expect-error: req.user is added by the protect middleware
   const { userId, role } = req.user;
 
   if (role !== 'TEACHER') {
@@ -352,8 +386,8 @@ export const getClassJudge0Status = async (req: Request, res: Response): Promise
       return;
     }
 
-    // Get all students in the class with their Judge0 key status
-    const studentsWithJudge0Status = await (prisma as any).class.findUnique({
+    // Get all students in the class
+    const studentsInClass = await prisma.class.findUnique({
       where: { id: classId },
       select: {
         students: {
@@ -363,9 +397,6 @@ export const getClassJudge0Status = async (req: Request, res: Response): Promise
                 id: true,
                 name: true,
                 email: true,
-                judge0KeyStatus: true,
-                judge0QuotaUsed: true,
-                judge0LastReset: true
               }
             }
           }
@@ -373,27 +404,69 @@ export const getClassJudge0Status = async (req: Request, res: Response): Promise
       }
     });
 
-    if (!studentsWithJudge0Status) {
+    if (!studentsInClass) {
       res.status(404).json({ message: 'Class not found.' });
       return;
     }
 
-    // Get shared key pool information for each student
-    const studentsWithPoolInfo = await Promise.all(
-      studentsWithJudge0Status.students.map(async (student: any) => {
-        const poolKey = await (prisma as any).judge0KeyPool.findFirst({
-          where: { userId: student.user.id },
+    interface ProcessedStudent {
+      id: string;
+      name: string;
+      email: string;
+      judge0KeyStatus: string;
+      judge0QuotaUsed: number;
+      judge0LastReset: Date | null;
+      hasKey: boolean;
+      isSharedWithClass: boolean;
+      poolStatus: string | null;
+      dailyUsage: number;
+      dailyLimit: number;
+      lastUsed: Date | null;
+    }
+
+    // Get Judge0 information for each student
+    const studentsWithJudge0Info: ProcessedStudent[] = await Promise.all(
+      studentsInClass.students.map(async ({ user }) => {
+        // Get user's Judge0 key status (using raw query to handle potential missing fields)
+        const userWithJudge0 = await prisma.user.findUnique({
+          where: { id: user.id },
           select: {
-            status: true,
-            dailyUsage: true,
-            dailyLimit: true,
-            lastUsed: true
+            id: true,
+            name: true,
+            email: true,
           }
-        });
+        }) as UserWithJudge0Fields;
+
+        // Try to get shared key pool information (handle case where table doesn't exist)
+        let poolKey = null;
+        try {
+          // @ts-expect-error: judge0KeyPool table may not exist in current schema
+          poolKey = await prisma.judge0KeyPool.findFirst({
+            where: { userId: user.id },
+            select: {
+              status: true,
+              dailyUsage: true,
+              dailyLimit: true,
+              lastUsed: true
+            }
+          });
+        } catch (error) {
+          // Table doesn't exist or other error, continue with null
+          console.log('Judge0KeyPool table not available:', error);
+        }
+
+        const judge0KeyStatus = userWithJudge0?.judge0KeyStatus || 'NOT_PROVIDED';
+        const judge0QuotaUsed = userWithJudge0?.judge0QuotaUsed || 0;
+        const judge0LastReset = userWithJudge0?.judge0LastReset || null;
 
         return {
-          ...student.user,
-          hasKey: student.user.judge0KeyStatus !== 'NOT_PROVIDED',
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          judge0KeyStatus,
+          judge0QuotaUsed,
+          judge0LastReset,
+          hasKey: judge0KeyStatus !== 'NOT_PROVIDED',
           isSharedWithClass: !!poolKey,
           poolStatus: poolKey?.status || null,
           dailyUsage: poolKey?.dailyUsage || 0,
@@ -404,16 +477,16 @@ export const getClassJudge0Status = async (req: Request, res: Response): Promise
     );
 
     // Calculate statistics
-    const totalStudents = studentsWithPoolInfo.length;
-    const studentsWithKeys = studentsWithPoolInfo.filter(s => s.hasKey).length;
-    const studentsSharing = studentsWithPoolInfo.filter(s => s.isSharedWithClass).length;
-    const totalDailyQuota = studentsWithPoolInfo.reduce((sum, s) => sum + (s.isSharedWithClass ? s.dailyLimit : 0), 0);
-    const totalUsedQuota = studentsWithPoolInfo.reduce((sum, s) => sum + (s.isSharedWithClass ? s.dailyUsage : 0), 0);
+    const totalStudents = studentsWithJudge0Info.length;
+    const studentsWithKeys = studentsWithJudge0Info.filter(s => s.hasKey).length;
+    const studentsSharing = studentsWithJudge0Info.filter(s => s.isSharedWithClass).length;
+    const totalDailyQuota = studentsWithJudge0Info.reduce((sum, s) => sum + (s.isSharedWithClass ? s.dailyLimit : 0), 0);
+    const totalUsedQuota = studentsWithJudge0Info.reduce((sum, s) => sum + (s.isSharedWithClass ? s.dailyUsage : 0), 0);
 
     res.status(200).json({
       classId,
       className: classInfo.name,
-      students: studentsWithPoolInfo,
+      students: studentsWithJudge0Info,
       statistics: {
         totalStudents,
         studentsWithKeys,

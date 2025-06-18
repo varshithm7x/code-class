@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '../../lib/utils';
 import { useAuth } from '../../context/AuthContext';
+import { useSidebar } from '../../context/SidebarContext';
 import { 
   BarChart, 
   Home, 
@@ -10,8 +11,18 @@ import {
   UserPlus, 
   Plus,
   Code,
-  Terminal
+  Terminal,
+  X,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '../ui/tooltip';
+import { Button } from '../ui/button';
 
 type NavItem = {
   title: string;
@@ -23,33 +34,34 @@ type NavItem = {
 const Sidebar: React.FC = () => {
   const location = useLocation();
   const { user } = useAuth();
+  const { isCollapsed, isMobileOpen, closeMobileSidebar, toggleSidebar } = useSidebar();
 
   const navItems: NavItem[] = [
     {
       title: 'My Classes',
       href: '/classes',
-      icon: <BookOpen className="h-5 w-5" />,
+      icon: <BookOpen className="h-4 w-4" />,
     },
     {
       title: 'Coding Tests',
       href: '/tests',
-      icon: <Terminal className="h-5 w-5" />,
+      icon: <Terminal className="h-4 w-4" />,
     },
     {
       title: 'Practice',
       href: '/practice',
-      icon: <Code className="h-5 w-5" />,
+      icon: <Code className="h-4 w-4" />,
     },
     {
       title: 'Join Class',
       href: '/join-class',
-      icon: <UserPlus className="h-5 w-5" />,
+      icon: <UserPlus className="h-4 w-4" />,
       roles: ['student'],
     },
     {
       title: 'Leaderboard',
       href: '/leaderboard',
-      icon: <Award className="h-5 w-5" />,
+      icon: <Award className="h-4 w-4" />,
     }
   ];
 
@@ -58,26 +70,168 @@ const Sidebar: React.FC = () => {
     (item) => !item.roles || item.roles.includes(user?.role.toLowerCase() as 'student' | 'teacher' || 'student')
   );
 
-  return (
-    <aside className="w-64 shrink-0 border-r border-gray-200 hidden md:block overflow-y-auto bg-white">
-      <nav className="flex flex-col gap-1 p-4">
-        {filteredNavItems.map((item) => (
-          <Link
-            key={item.href}
-            to={item.href}
-            className={cn(
-              'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors',
-              location.pathname === item.href || location.pathname.startsWith(`${item.href}/`)
-                ? 'bg-brand-blue text-white'
-                : 'text-gray-700 hover:bg-gray-100'
-            )}
-          >
-            {item.icon}
+  const NavLink: React.FC<{ item: NavItem; isMobile?: boolean }> = ({ item, isMobile = false }) => {
+    const isActive = location.pathname === item.href || location.pathname.startsWith(`${item.href}/`);
+    
+    const handleClick = () => {
+      if (isMobile) {
+        closeMobileSidebar();
+      }
+    };
+    
+    const linkContent = (
+      <Link
+        to={item.href}
+        onClick={handleClick}
+        className={cn(
+          'flex items-center rounded-md text-sm font-medium transition-all duration-200',
+          'hover:bg-gray-100 hover:scale-105',
+          isActive
+            ? 'bg-brand-blue text-white shadow-md'
+            : 'text-gray-700',
+          isCollapsed && !isMobile 
+            ? 'justify-center p-2 mx-1' // Smaller padding for collapsed state
+            : 'gap-3 px-3 py-2' // Normal padding for expanded state
+        )}
+      >
+        <span className={cn(
+          "flex-shrink-0",
+          isCollapsed && !isMobile && "w-4 h-4"
+        )}>
+          {item.icon}
+        </span>
+        {(!isCollapsed || isMobile) && (
+          <span className="truncate transition-opacity duration-200">
             {item.title}
-          </Link>
-        ))}
-      </nav>
-    </aside>
+          </span>
+        )}
+      </Link>
+    );
+
+    if (isCollapsed && !isMobile) {
+      return (
+        <TooltipProvider>
+          <Tooltip delayDuration={100}>
+            <TooltipTrigger asChild>
+              {linkContent}
+            </TooltipTrigger>
+            <TooltipContent side="right" className="ml-2">
+              <p>{item.title}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      );
+    }
+
+    return linkContent;
+  };
+
+  const ToggleButton: React.FC = () => {
+    const toggleButton = (
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={toggleSidebar}
+        className={cn(
+          'transition-all duration-200 hover:bg-gray-200',
+          isCollapsed 
+            ? 'h-8 w-8 p-0' // Smaller for collapsed state
+            : 'h-8 px-2' // Normal for expanded state
+        )}
+        title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+      >
+        {isCollapsed ? (
+          <ChevronRight className="h-3 w-3" />
+        ) : (
+          <ChevronLeft className="h-3 w-3" />
+        )}
+        {!isCollapsed && (
+          <span className="ml-1 text-xs">Collapse</span>
+        )}
+      </Button>
+    );
+
+    if (isCollapsed) {
+      return (
+        <TooltipProvider>
+          <Tooltip delayDuration={100}>
+            <TooltipTrigger asChild>
+              {toggleButton}
+            </TooltipTrigger>
+            <TooltipContent side="right" className="ml-2">
+              <p>Expand sidebar</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      );
+    }
+
+    return toggleButton;
+  };
+
+  return (
+    <>
+      {/* Mobile Overlay */}
+      {isMobileOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+          onClick={closeMobileSidebar}
+        />
+      )}
+
+      {/* Desktop Sidebar */}
+      <aside 
+        className={cn(
+          'shrink-0 border-r border-gray-200 hidden md:block overflow-y-auto bg-white transition-all duration-300 ease-in-out',
+          isCollapsed ? 'w-12' : 'w-64'
+        )}
+      >
+        <div className={cn(
+          'flex flex-col h-full',
+          isCollapsed ? 'p-1 py-2' : 'p-4'
+        )}>
+          {/* Toggle Button */}
+          <div className={cn(
+            'flex mb-2',
+            isCollapsed ? 'justify-center' : 'justify-end'
+          )}>
+            <ToggleButton />
+          </div>
+
+          {/* Navigation */}
+          <nav className="flex flex-col gap-1 flex-1">
+            {filteredNavItems.map((item) => (
+              <NavLink key={item.href} item={item} />
+            ))}
+          </nav>
+        </div>
+      </aside>
+
+      {/* Mobile Sidebar */}
+      <aside 
+        className={cn(
+          'fixed top-0 left-0 h-full w-64 bg-white border-r border-gray-200 z-50 md:hidden transition-transform duration-300 ease-in-out',
+          isMobileOpen ? 'translate-x-0' : '-translate-x-full'
+        )}
+      >
+        <div className="flex items-center justify-between p-4 border-b border-gray-200">
+          <span className="font-semibold text-lg">Menu</span>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={closeMobileSidebar}
+            className="h-8 w-8"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+        <nav className="flex flex-col gap-1 p-4">
+          {filteredNavItems.map((item) => (
+            <NavLink key={`mobile-${item.href}`} item={item} isMobile />
+          ))}
+        </nav>
+      </aside>
+    </>
   );
 };
 

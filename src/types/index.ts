@@ -86,6 +86,8 @@ export interface Assignment {
   assignDate: string;
   dueDate: string;
   problems: Problem[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface StudentAssignment extends Assignment {

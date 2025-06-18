@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { signup, login } from './auth.controller';
-import { getProfile, updateProfile, linkLeetCodeCredentials, updateJudge0Key, removeJudge0Key, getJudge0Status, updateGeminiKey, removeGeminiKey, getGeminiStatus } from './profile.controller';
+import { getProfile, updateProfile, linkLeetCodeCredentials, linkHackerRankCredentials, updateJudge0Key, removeJudge0Key, getJudge0Status, updateGeminiKey, removeGeminiKey, getGeminiStatus } from './profile.controller';
 import { protect } from './auth.middleware';
 
 const router = Router();
@@ -12,6 +12,7 @@ router.get('/me', protect, getProfile);
 router.get('/profile', protect, getProfile);
 router.patch('/profile', protect, updateProfile);
 router.post('/leetcode-credentials', protect, linkLeetCodeCredentials);
+router.post('/hackerrank-credentials', protect, linkHackerRankCredentials);
 
 // Judge0 API key management
 router.post('/judge0-key', protect, updateJudge0Key);

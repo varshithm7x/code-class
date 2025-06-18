@@ -21,9 +21,10 @@ const ClassesPage: React.FC = () => {
     setIsLoading(true);
     try {
       const response = await getClasses();
-      setClasses(response);
+      setClasses(Array.isArray(response) ? response : []);
     } catch (error) {
       console.error('Error fetching classes:', error);
+      setClasses([]); // Ensure classes is always an array
     } finally {
       setIsLoading(false);
     }
@@ -60,8 +61,8 @@ const ClassesPage: React.FC = () => {
     }
   };
 
-  const totalStudents = classes.reduce((acc, curr) => acc + (curr.studentCount || 0), 0);
-  const totalAssignments = classes.reduce((acc, curr) => acc + (curr.assignmentCount || 0), 0);
+  const totalStudents = Array.isArray(classes) ? classes.reduce((acc, curr) => acc + (curr.studentCount || 0), 0) : 0;
+  const totalAssignments = Array.isArray(classes) ? classes.reduce((acc, curr) => acc + (curr.assignmentCount || 0), 0) : 0;
 
   return (
     <div className="py-6">

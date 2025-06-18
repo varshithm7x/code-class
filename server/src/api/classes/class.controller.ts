@@ -169,7 +169,7 @@ export const getClasses = async (req: Request, res: Response): Promise<void> => 
       })
     );
 
-    res.status(200).json(formattedClasses);
+    res.status(200).json({ classes: formattedClasses });
   } catch (error) {
     console.error('Error fetching classes:', error);
     res.status(500).json({ message: 'Error fetching classes', error });
@@ -322,5 +322,112 @@ export const deleteClass = async (req: Request, res: Response): Promise<void> =>
   } catch (error) {
     console.error('Error deleting class:', error);
     res.status(500).json({ message: 'Error deleting class', error });
+  }
+}; 
+
+/**
+ * Get Judge0 API key status for all students in a class (Teachers only)
+ */
+export const getClassJudge0Status = async (req: Request, res: Response): Promise<void> => {
+  const { classId } = req.params;
+  // @ts-ignore
+  const { userId, role } = req.user;
+
+  if (role !== 'TEACHER') {
+    res.status(403).json({ message: 'Only teachers can view Judge0 key status.' });
+    return;
+  }
+
+  try {
+    // Verify teacher owns this class
+    const classInfo = await prisma.class.findFirst({
+      where: { 
+        id: classId,
+        teacherId: userId 
+      }
+    });
+
+    if (!classInfo) {
+      res.status(404).json({ message: 'Class not found or access denied.' });
+      return;
+    }
+
+    // Get all students in the class with their Judge0 key status
+    const studentsWithJudge0Status = await (prisma as any).class.findUnique({
+      where: { id: classId },
+      select: {
+        students: {
+          select: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                judge0KeyStatus: true,
+                judge0QuotaUsed: true,
+                judge0LastReset: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!studentsWithJudge0Status) {
+      res.status(404).json({ message: 'Class not found.' });
+      return;
+    }
+
+    // Get shared key pool information for each student
+    const studentsWithPoolInfo = await Promise.all(
+      studentsWithJudge0Status.students.map(async (student: any) => {
+        const poolKey = await (prisma as any).judge0KeyPool.findFirst({
+          where: { userId: student.user.id },
+          select: {
+            status: true,
+            dailyUsage: true,
+            dailyLimit: true,
+            lastUsed: true
+          }
+        });
+
+        return {
+          ...student.user,
+          hasKey: student.user.judge0KeyStatus !== 'NOT_PROVIDED',
+          isSharedWithClass: !!poolKey,
+          poolStatus: poolKey?.status || null,
+          dailyUsage: poolKey?.dailyUsage || 0,
+          dailyLimit: poolKey?.dailyLimit || 50,
+          lastUsed: poolKey?.lastUsed || null
+        };
+      })
+    );
+
+    // Calculate statistics
+    const totalStudents = studentsWithPoolInfo.length;
+    const studentsWithKeys = studentsWithPoolInfo.filter(s => s.hasKey).length;
+    const studentsSharing = studentsWithPoolInfo.filter(s => s.isSharedWithClass).length;
+    const totalDailyQuota = studentsWithPoolInfo.reduce((sum, s) => sum + (s.isSharedWithClass ? s.dailyLimit : 0), 0);
+    const totalUsedQuota = studentsWithPoolInfo.reduce((sum, s) => sum + (s.isSharedWithClass ? s.dailyUsage : 0), 0);
+
+    res.status(200).json({
+      classId,
+      className: classInfo.name,
+      students: studentsWithPoolInfo,
+      statistics: {
+        totalStudents,
+        studentsWithKeys,
+        studentsSharing,
+        totalDailyQuota,
+        totalUsedQuota,
+        availableQuota: totalDailyQuota - totalUsedQuota,
+        keyProvisionPercentage: Math.round((studentsWithKeys / totalStudents) * 100),
+        sharingPercentage: Math.round((studentsSharing / totalStudents) * 100)
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching Judge0 status for class:', error);
+    res.status(500).json({ message: 'Error fetching Judge0 key status', error });
   }
 }; 

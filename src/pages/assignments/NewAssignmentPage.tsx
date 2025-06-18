@@ -70,7 +70,7 @@ const NewAssignmentPage = () => {
       const fetchClasses = async () => {
         try {
           const classes = await getClasses(); // Fetches classes for the logged-in user
-          setTeacherClasses(classes);
+          setTeacherClasses(Array.isArray(classes) ? classes : []);
         } catch (error) {
           console.error('Failed to fetch classes', error);
           toast.error('Could not load your classes.');

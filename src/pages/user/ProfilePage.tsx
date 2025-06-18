@@ -21,6 +21,8 @@ import { useState } from 'react';
 import { Textarea } from '../../components/ui/textarea';
 import { linkLeetCodeCredentials } from '../../api/auth';
 import LeetCodeStats from '../../components/ui/LeetCodeStats';
+import Judge0KeySection from '../../components/profile/Judge0KeySection';
+import GeminiKeySection from '../../components/profile/GeminiKeySection';
 
 const formSchema = z.object({
   hackerrankUsername: z.string().optional(),
@@ -148,209 +150,223 @@ const ProfilePage: React.FC = () => {
             </CardContent>
           </Card>
 
-          {user && <LeetCodeStats user={user} showDetails={true} />}
+          {/* LeetCode Stats - Students only */}
+          {user && user.role === 'STUDENT' && <LeetCodeStats user={user} showDetails={true} />}
         </div>
 
-        {/* Enhanced LeetCode Integration Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Link className="h-5 w-5" />
-              LeetCode Integration
-            </CardTitle>
-            <CardDescription>
-              Link your LeetCode account for automatic submission tracking and enhanced progress monitoring.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {/* Current Status */}
-            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="font-medium text-sm">Connection Status</h3>
-                <div className="flex items-center gap-2">
-                  {getLeetCodeStatusIcon((user as any)?.leetcodeCookieStatus || 'NOT_LINKED')}
-                  <span className={`text-sm font-medium ${getLeetCodeStatusColor((user as any)?.leetcodeCookieStatus || 'NOT_LINKED')}`}>
-                    {getLeetCodeStatusText((user as any)?.leetcodeCookieStatus || 'NOT_LINKED')}
-                  </span>
+        {/* Enhanced LeetCode Integration Card - Students only */}
+        {user?.role === 'STUDENT' && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Link className="h-5 w-5" />
+                LeetCode Integration
+              </CardTitle>
+              <CardDescription>
+                Link your LeetCode account for automatic submission tracking and enhanced progress monitoring.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {/* Current Status */}
+              <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-medium text-sm">Connection Status</h3>
+                  <div className="flex items-center gap-2">
+                    {getLeetCodeStatusIcon((user as any)?.leetcodeCookieStatus || 'NOT_LINKED')}
+                    <span className={`text-sm font-medium ${getLeetCodeStatusColor((user as any)?.leetcodeCookieStatus || 'NOT_LINKED')}`}>
+                      {getLeetCodeStatusText((user as any)?.leetcodeCookieStatus || 'NOT_LINKED')}
+                    </span>
+                  </div>
                 </div>
+                
+                {/* Show stats if linked */}
+                {(user as any)?.leetcodeCookieStatus === 'LINKED' && (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-blue-600">{(user as any)?.leetcodeTotalSolved || 0}</div>
+                      <div className="text-xs text-gray-600">Total Solved</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-green-600">{(user as any)?.leetcodeEasySolved || 0}</div>
+                      <div className="text-xs text-gray-600">Easy</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-yellow-600">{(user as any)?.leetcodeMediumSolved || 0}</div>
+                      <div className="text-xs text-gray-600">Medium</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-red-600">{(user as any)?.leetcodeHardSolved || 0}</div>
+                      <div className="text-xs text-gray-600">Hard</div>
+                    </div>
+                  </div>
+                )}
               </div>
-              
-              {/* Show stats if linked */}
-              {(user as any)?.leetcodeCookieStatus === 'LINKED' && (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600">{(user as any)?.leetcodeTotalSolved || 0}</div>
-                    <div className="text-xs text-gray-600">Total Solved</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-green-600">{(user as any)?.leetcodeEasySolved || 0}</div>
-                    <div className="text-xs text-gray-600">Easy</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-yellow-600">{(user as any)?.leetcodeMediumSolved || 0}</div>
-                    <div className="text-xs text-gray-600">Medium</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-red-600">{(user as any)?.leetcodeHardSolved || 0}</div>
-                    <div className="text-xs text-gray-600">Hard</div>
-                  </div>
-                </div>
+
+              {/* Success/Error Messages */}
+              {leetCodeSuccess && (
+                <Alert className="mb-6 bg-green-50 border-green-200">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <AlertDescription className="text-green-700">{leetCodeSuccess}</AlertDescription>
+                </Alert>
               )}
-            </div>
 
-            {/* Success/Error Messages */}
-            {leetCodeSuccess && (
-              <Alert className="mb-6 bg-green-50 border-green-200">
-                <CheckCircle className="h-4 w-4 text-green-500" />
-                <AlertDescription className="text-green-700">{leetCodeSuccess}</AlertDescription>
-              </Alert>
-            )}
+              {leetCodeError && (
+                <Alert variant="destructive" className="mb-6">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{leetCodeError}</AlertDescription>
+                </Alert>
+              )}
 
-            {leetCodeError && (
-              <Alert variant="destructive" className="mb-6">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{leetCodeError}</AlertDescription>
-              </Alert>
-            )}
+              {/* Cookie Form */}
+              <div className="space-y-4">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h4 className="font-medium text-blue-900 mb-2">How to get your LeetCode session cookie:</h4>
+                  <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
+                    <li>Open your web browser and log in to your LeetCode account</li>
+                    <li>Open Developer Tools (F12 or Ctrl+Shift+I)</li>
+                    <li>Go to the "Application" (Chrome) or "Storage" (Firefox) tab</li>
+                    <li>Find "Cookies" → "https://leetcode.com"</li>
+                    <li>Copy the entire value of the "LEETCODE_SESSION" cookie</li>
+                  </ol>
+                </div>
 
-            {/* Cookie Form */}
-            <div className="space-y-4">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h4 className="font-medium text-blue-900 mb-2">How to get your LeetCode session cookie:</h4>
-                <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
-                  <li>Open your web browser and log in to your LeetCode account</li>
-                  <li>Open Developer Tools (F12 or Ctrl+Shift+I)</li>
-                  <li>Go to the "Application" (Chrome) or "Storage" (Firefox) tab</li>
-                  <li>Find "Cookies" → "https://leetcode.com"</li>
-                  <li>Copy the entire value of the "LEETCODE_SESSION" cookie</li>
-                </ol>
+                <Form {...leetCodeForm}>
+                  <form onSubmit={leetCodeForm.handleSubmit(onLeetCodeSubmit)} className="space-y-4">
+                    <FormField
+                      control={leetCodeForm.control}
+                      name="leetcodeCookie"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>LeetCode Session Cookie</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Paste your LEETCODE_SESSION cookie value here..."
+                              rows={3}
+                              className="font-mono text-sm"
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            This cookie will be stored securely and used to fetch your submission data.
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <Button type="submit" disabled={isLinkingLeetCode} className="w-full">
+                      {isLinkingLeetCode ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          Linking Account...
+                        </>
+                      ) : (
+                        <>
+                          <Link className="h-4 w-4 mr-2" />
+                          Link LeetCode Account
+                        </>
+                      )}
+                    </Button>
+                  </form>
+                </Form>
               </div>
+            </CardContent>
+          </Card>
+        )}
 
-              <Form {...leetCodeForm}>
-                <form onSubmit={leetCodeForm.handleSubmit(onLeetCodeSubmit)} className="space-y-4">
+        {/* Judge0 API Key Section */}
+        <Judge0KeySection onKeyUpdate={refreshUser} />
+
+        {/* Gemini API Key Section - Teachers only */}
+        {user?.role === 'TEACHER' && (
+          <GeminiKeySection onKeyUpdate={refreshUser} />
+        )}
+
+        {/* Platform Usernames - Students only */}
+        {user?.role === 'STUDENT' && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Platform Usernames</CardTitle>
+              <CardDescription>
+                Link your coding platform profiles to enable automatic submission tracking.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {successMessage && (
+                <Alert className="mb-6 bg-green-50 border-green-200">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <AlertDescription className="text-green-700">{successMessage}</AlertDescription>
+                </Alert>
+              )}
+
+              {error && (
+                <Alert variant="destructive" className="mb-6">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                   <FormField
-                    control={leetCodeForm.control}
-                    name="leetcodeCookie"
+                    control={form.control}
+                    name="hackerrankUsername"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>LeetCode Session Cookie</FormLabel>
+                        <FormLabel>HackerRank Username</FormLabel>
                         <FormControl>
-                          <Textarea 
-                            placeholder="Paste your LEETCODE_SESSION cookie value here..."
-                            rows={3}
-                            className="font-mono text-sm"
-                            {...field} 
-                          />
+                          <Input placeholder="e.g. johndoe123" {...field} />
                         </FormControl>
                         <FormDescription>
-                          This cookie will be stored securely and used to fetch your submission data.
+                          Used to track your HackerRank submissions
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
 
-                  <Button type="submit" disabled={isLinkingLeetCode} className="w-full">
-                    {isLinkingLeetCode ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Linking Account...
-                      </>
-                    ) : (
-                      <>
-                        <Link className="h-4 w-4 mr-2" />
-                        Link LeetCode Account
-                      </>
+                  <FormField
+                    control={form.control}
+                    name="leetcodeUsername"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>LeetCode Username</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g. johndoe123" {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          Your public LeetCode username (for fallback tracking)
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
                     )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="gfgUsername"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>GeeksForGeeks Username</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g. johndoe123" {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          Used to track your GeeksForGeeks submissions
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <Button type="submit" disabled={isLoading}>
+                    {isLoading ? 'Saving...' : 'Save Changes'}
                   </Button>
                 </form>
               </Form>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Platform Usernames</CardTitle>
-            <CardDescription>
-              Link your coding platform profiles to enable automatic submission tracking.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {successMessage && (
-              <Alert className="mb-6 bg-green-50 border-green-200">
-                <CheckCircle className="h-4 w-4 text-green-500" />
-                <AlertDescription className="text-green-700">{successMessage}</AlertDescription>
-              </Alert>
-            )}
-
-            {error && (
-              <Alert variant="destructive" className="mb-6">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <FormField
-                  control={form.control}
-                  name="hackerrankUsername"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>HackerRank Username</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g. johndoe123" {...field} />
-                      </FormControl>
-                      <FormDescription>
-                        Used to track your HackerRank submissions
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="leetcodeUsername"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>LeetCode Username</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g. johndoe123" {...field} />
-                      </FormControl>
-                      <FormDescription>
-                        Your public LeetCode username (for fallback tracking)
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="gfgUsername"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>GeeksForGeeks Username</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g. johndoe123" {...field} />
-                      </FormControl>
-                      <FormDescription>
-                        Used to track your GeeksForGeeks submissions
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <Button type="submit" disabled={isLoading}>
-                  {isLoading ? 'Saving...' : 'Save Changes'}
-                </Button>
-              </form>
-            </Form>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

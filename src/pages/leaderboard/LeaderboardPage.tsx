@@ -38,7 +38,7 @@ const LeaderboardPage: React.FC = () => {
       try {
         // Fetch classes first
         const classesData = await getClasses();
-        setClasses(classesData);
+        setClasses(Array.isArray(classesData) ? classesData : []);
         
         // Fetch initial leaderboard with default values
         await fetchLeaderboard('all', 'assignments');

@@ -30,6 +30,11 @@ import ClassSettingsPage from './pages/classes/ClassSettingsPage';
 import EditAssignmentPage from './pages/assignments/EditAssignmentPage';
 import PracticeQuestionsPage from './pages/practice/PracticeQuestionsPage';
 import StudentProfilePage from './pages/students/StudentProfilePage';
+import TestsPage from './pages/tests/TestsPage';
+import CreateTestPage from './pages/tests/CreateTestPage';
+import TestTakingPage from './pages/tests/TestTakingPage';
+import TestMonitoringPage from './pages/tests/TestMonitoringPage';
+import TestResultsPage from './pages/tests/TestResultsPage';
 
 const queryClient = new QueryClient();
 
@@ -74,8 +79,16 @@ function App() {
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/practice" element={<PracticeQuestionsPage />} />
                 <Route path="/students/:studentId" element={<TeacherRoute><StudentProfilePage /></TeacherRoute>} />
+                <Route path="/tests" element={<TestsPage />} />
+                <Route path="/tests/new" element={<TeacherRoute><CreateTestPage /></TeacherRoute>} />
+                <Route path="/classes/:classId/tests/new" element={<TeacherRoute><CreateTestPage /></TeacherRoute>} />
+                <Route path="/tests/:testId/monitor" element={<TeacherRoute><TestMonitoringPage /></TeacherRoute>} />
+                <Route path="/tests/:testId/results" element={<TestResultsPage />} />
                 <Route path="/" element={<Navigate to="/classes" replace />} />
               </Route>
+              
+              {/* Test taking route - outside AppLayout for fullscreen */}
+              <Route path="/tests/:testId/take" element={<TestTakingPage />} />
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </BrowserRouter>

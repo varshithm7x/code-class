@@ -39,11 +39,12 @@ const AnalyticsPage: React.FC = () => {
     const fetchClasses = async () => {
       try {
         const classesData = await getClasses();
-        setClasses(classesData);
+        const validClasses = Array.isArray(classesData) ? classesData : [];
+        setClasses(validClasses);
 
-        if (classesData.length > 0) {
-          form.setValue('selectedClass', classesData[0].id);
-          fetchAnalyticsData(classesData[0].id);
+        if (validClasses.length > 0) {
+          form.setValue('selectedClass', validClasses[0].id);
+          fetchAnalyticsData(validClasses[0].id);
         } else {
           setIsLoading(false);
         }

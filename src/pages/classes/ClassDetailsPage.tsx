@@ -14,7 +14,9 @@ import CompletionGrid from '../../components/assignments/CompletionGrid';
 import LoadingScreen from '../../components/ui/LoadingScreen';
 import LeetCodeStats from '../../components/ui/LeetCodeStats';
 import AnnouncementList from '../../components/announcements/AnnouncementList';
-import { Plus, Users, BookOpen, Award, Copy, Code, TrendingUp, Search, Megaphone } from 'lucide-react';
+import TestList from '../../components/tests/TestList';
+import { CodingTest } from '../../components/tests/TestCard';
+import { Plus, Users, BookOpen, Award, Copy, Code, TrendingUp, Search, Megaphone, Terminal } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 
 const ClassDetailsPage: React.FC = () => {
@@ -26,6 +28,7 @@ const ClassDetailsPage: React.FC = () => {
   
   const [classDetails, setClassDetails] = useState<ClassWithStudents | null>(null);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [tests, setTests] = useState<CodingTest[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [studentSearch, setStudentSearch] = useState('');
@@ -46,6 +49,25 @@ const ClassDetailsPage: React.FC = () => {
         
         setClassDetails(classData);
         setAssignments(assignmentsData);
+        
+        // Mock test data for now - will be replaced with API call
+        const mockTests: CodingTest[] = [
+          {
+            id: '1',
+            title: 'Data Structures Quiz',
+            description: 'Test covering arrays, linked lists, and stacks',
+            duration: 90,
+            startTime: new Date(Date.now() + 24 * 60 * 60 * 1000),
+            endTime: new Date(Date.now() + 24 * 60 * 60 * 1000 + 90 * 60 * 1000),
+            status: 'SCHEDULED',
+            classId: classId,
+            problems: [],
+            sessions: [],
+            createdAt: new Date(),
+            updatedAt: new Date()
+          }
+        ];
+        setTests(mockTests);
         
         // Generate mock completion data
         // In a real app, this would come from the API
@@ -161,6 +183,12 @@ const ClassDetailsPage: React.FC = () => {
                 Add Assignment
               </Link>
             </Button>
+            <Button asChild variant="outline">
+              <Link to={`/classes/${classId}/tests/new`}>
+                <Terminal className="mr-2 h-4 w-4" />
+                Create Test
+              </Link>
+            </Button>
             <div className="flex items-center space-x-2">
               <div className="bg-muted px-3 py-1 rounded font-mono text-sm">
                 {classDetails.joinCode}
@@ -187,6 +215,10 @@ const ClassDetailsPage: React.FC = () => {
           <TabsTrigger value="assignments">
             <Award className="h-4 w-4 mr-2" />
             Assignments
+          </TabsTrigger>
+          <TabsTrigger value="tests">
+            <Terminal className="h-4 w-4 mr-2" />
+            Tests
           </TabsTrigger>
           <TabsTrigger value="announcements">
             <Megaphone className="h-4 w-4 mr-2" />
@@ -321,6 +353,40 @@ const ClassDetailsPage: React.FC = () => {
                 onDelete={isTeacher ? handleDeleteAssignment : undefined}
               />
             </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="tests">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Coding Tests</CardTitle>
+                <CardDescription>
+                  {isTeacher 
+                    ? "Create and manage coding tests for this class" 
+                    : "View upcoming and completed coding tests"
+                  }
+                </CardDescription>
+              </div>
+              {isTeacher && (
+                <Button asChild>
+                  <Link to={`/classes/${classId}/tests/new`}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create Test
+                  </Link>
+                </Button>
+              )}
+            </CardHeader>
+                         <CardContent>
+               <TestList
+                 tests={tests}
+                 isTeacher={isTeacher}
+                 emptyMessage={isTeacher 
+                   ? "No tests created yet. Create your first coding test to get started." 
+                   : "Your teacher hasn't created any tests yet."
+                 }
+               />
+             </CardContent>
           </Card>
         </TabsContent>
 

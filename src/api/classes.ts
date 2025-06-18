@@ -10,7 +10,7 @@ export const getClassDetails = async (classId: string) => {
 
 export const getClasses = async (): Promise<Class[]> => {
   const response = await api.get('/classes');
-  return response.data;
+  return response.data.classes || [];
 };
 
 export const createClass = async (name: string): Promise<Class> => {

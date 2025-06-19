@@ -1,61 +1,102 @@
 import React, { useState, useMemo } from 'react';
-import { AssignmentWithSubmissions, ProblemWithSubmissions } from '../../types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
-import { CheckCircle2, XCircle, Clock } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
+import { Badge } from '../ui/badge';
+import { CheckCircle2, XCircle } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
+type StudentInfo = {
+  id: string;
+  name: string;
+  email: string;
+};
+
 interface SubmissionStatusGridProps {
-  assignment: AssignmentWithSubmissions;
+  assignment: {
+    problems: Array<{
+      id: string;
+      title: string;
+      url: string;
+      submissions: Array<{
+        id: string;
+        userId: string;
+        completed: boolean;
+        submissionTime?: string;
+        user: {
+          id: string;
+          name: string;
+          email: string;
+        };
+      }>;
+    }>;
+    class?: {
+      students: Array<{
+        id: string;
+        name: string;
+        email: string;
+      }>;
+    };
+  };
   onRefresh?: () => void;
 }
 
-const getVerificationUrl = (
-  platform: string,
-  problemUrl: string,
-  submission: {
-    leetcodeUsername?: string | null;
-    hackerrankUsername?: string | null;
-    gfgUsername?: string | null;
-  }
-): string | null => {
-  switch (platform.toLowerCase()) {
-    case 'leetcode':
-      return submission.leetcodeUsername ? `https://leetcode.com/${submission.leetcodeUsername}/` : null;
-    case 'hackerrank': {
-      const problemName = problemUrl.split('/challenges/')[1]?.split('/')[0];
-      return submission.hackerrankUsername && problemName
-        ? `https://www.hackerrank.com/challenges/${problemName}/submissions/username/${submission.hackerrankUsername}`
-        : null;
-    }
-    case 'geeksforgeeks':
-      return submission.gfgUsername ? `https://auth.geeksforgeeks.org/user/${submission.gfgUsername}/practice/` : null;
-    default:
-      return null;
-  }
-};
-
-const SubmissionStatusGrid: React.FC<SubmissionStatusGridProps> = ({ assignment }) => {
+const SubmissionStatusGrid: React.FC<SubmissionStatusGridProps> = ({ assignment, onRefresh }) => {
   const [unsolvedFilter, setUnsolvedFilter] = useState<string>('all');
 
+  // Extract unique students from submissions data (since class.students might not be available)
   const students = useMemo(() => {
     if (!assignment || !assignment.problems || assignment.problems.length === 0) {
       return [];
     }
-    return assignment.problems[0]?.submissions.map(s => ({
-      id: s.studentId,
-      name: s.studentName,
-    })) || [];
+
+    const studentMap = new Map<string, StudentInfo>();
+    
+    // Collect unique students from all submissions
+    assignment.problems.forEach(problem => {
+      if (problem.submissions && Array.isArray(problem.submissions)) {
+        problem.submissions.forEach(submission => {
+          if (submission?.user && 
+              submission.user.id && 
+              submission.user.name && 
+              !studentMap.has(submission.user.id)) {
+            studentMap.set(submission.user.id, {
+              id: submission.user.id,
+              name: submission.user.name,
+              email: submission.user.email || ''
+            });
+          }
+        });
+      }
+    });
+
+    // If we have class.students, use that as it might be more complete
+    if (assignment.class?.students && Array.isArray(assignment.class.students)) {
+      assignment.class.students.forEach(student => {
+        if (student?.id && student?.name && !studentMap.has(student.id)) {
+          studentMap.set(student.id, {
+            id: student.id,
+            name: student.name,
+            email: student.email || ''
+          });
+        }
+      });
+    }
+
+    return Array.from(studentMap.values())
+      .filter(student => student && student.name) // Extra safety check
+      .sort((a, b) => a.name.localeCompare(b.name));
   }, [assignment]);
 
   const totalProblems = assignment?.problems?.length ?? 0;
 
+  // Calculate unsolved counts for filter dropdown
   const unsolvedCounts = useMemo(() => {
     const counts: { [key: number]: number } = {};
-    if (totalProblems > 0) {
+    if (totalProblems > 0 && students.length > 0 && assignment?.problems) {
       students.forEach(student => {
+        if (!student?.id) return;
         const completedCount = assignment.problems.reduce((acc, problem) => {
-          const submission = problem.submissions.find(s => s.studentId === student.id);
+          if (!problem?.submissions || !Array.isArray(problem.submissions)) return acc;
+          const submission = problem.submissions.find(s => s?.userId === student.id);
           return acc + (submission?.completed ? 1 : 0);
         }, 0);
         const unsolved = totalProblems - completedCount;
@@ -65,51 +106,101 @@ const SubmissionStatusGrid: React.FC<SubmissionStatusGridProps> = ({ assignment 
     return counts;
   }, [students, assignment, totalProblems]);
 
+  // Filter students based on unsolved count
   const filteredStudents = useMemo(() => {
     if (unsolvedFilter === 'all') {
       return students;
     }
+    if (!assignment?.problems || !Array.isArray(assignment.problems)) {
+      return students;
+    }
     const unsolvedCount = parseInt(unsolvedFilter, 10);
     return students.filter(student => {
+      if (!student?.id) return false;
       const completedCount = assignment.problems.reduce((acc, problem) => {
-        const submission = problem.submissions.find(s => s.studentId === student.id);
+        if (!problem?.submissions || !Array.isArray(problem.submissions)) return acc;
+        const submission = problem.submissions.find(s => s?.userId === student.id);
         return acc + (submission?.completed ? 1 : 0);
       }, 0);
       return totalProblems - completedCount === unsolvedCount;
     });
   }, [students, assignment, unsolvedFilter, totalProblems]);
 
-  if (!assignment || !assignment.problems || assignment.problems.length === 0) {
-    return <p>No problems in this assignment.</p>;
-  }
-  
-  return (
-    <div>
-      <div className="flex justify-end mb-4">
-        <div className="flex items-center gap-2">
-          <label htmlFor="unsolved-filter" className="text-sm font-medium">
-            Filter by students with:
-          </label>
-          <Select value={unsolvedFilter} onValueChange={setUnsolvedFilter}>
-            <SelectTrigger className="w-[350px]" id="unsolved-filter">
-              <SelectValue placeholder="Show All Students" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Show All Students</SelectItem>
-              {[...Array(totalProblems + 1).keys()].map(i => {
-                const studentCount = unsolvedCounts[i];
-                const studentCountText = studentCount
-                  ? ` [${studentCount} student${studentCount > 1 ? 's' : ''}]`
-                  : '';
+  // Get student completion data - only automatic completion
+  const getStudentCompletion = (studentId: string, problemId: string) => {
+    const problem = assignment?.problems?.find(p => p?.id === problemId);
+    if (!problem || !problem.submissions) return { completed: false };
+    
+    const submission = problem.submissions.find(s => s?.userId === studentId);
+    return {
+      completed: submission?.completed || false,
+      submissionTime: submission?.submissionTime
+    };
+  };
 
-                return (
-                  <SelectItem key={i} value={String(i)}>
-                    {i} unsolved problem(s){studentCountText}
-                  </SelectItem>
-                );
-              })}
-            </SelectContent>
-          </Select>
+  // Calculate student progress based only on automatic completion
+  const getStudentProgress = (studentId: string) => {
+    if (!assignment?.problems || !Array.isArray(assignment.problems)) {
+      return { completed: 0, total: 0, percentage: 0 };
+    }
+    
+    const totalProblems = assignment.problems.length;
+    const completedProblems = assignment.problems.filter(problem => {
+      if (!problem?.submissions || !Array.isArray(problem.submissions)) return false;
+      const submission = problem.submissions.find(s => s?.userId === studentId);
+      return submission?.completed || false;
+    }).length;
+    
+    return {
+      completed: completedProblems,
+      total: totalProblems,
+      percentage: totalProblems > 0 ? Math.round((completedProblems / totalProblems) * 100) : 0
+    };
+  };
+
+  if (!assignment || !assignment.problems || assignment.problems.length === 0) {
+    return (
+      <div className="text-center py-10">
+        <p className="text-muted-foreground">No problems in this assignment.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h4 className="text-lg font-medium">Student Progress Overview</h4>
+        <div className="flex items-center gap-4">
+          <div className="text-sm text-muted-foreground">
+            Showing verified submissions only
+          </div>
+          
+          {/* Filter Dropdown */}
+          <div className="flex items-center gap-2">
+            <label htmlFor="unsolved-filter" className="text-sm font-medium">
+              Filter by students with:
+            </label>
+            <Select value={unsolvedFilter} onValueChange={setUnsolvedFilter}>
+              <SelectTrigger className="w-[350px]" id="unsolved-filter">
+                <SelectValue placeholder="Show All Students" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Show All Students</SelectItem>
+                {[...Array(totalProblems + 1).keys()].map(i => {
+                  const studentCount = unsolvedCounts[i];
+                  const studentCountText = studentCount
+                    ? ` [${studentCount} student${studentCount > 1 ? 's' : ''}]`
+                    : '';
+
+                  return (
+                    <SelectItem key={i} value={String(i)}>
+                      {i} unsolved problem(s){studentCountText}
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 
@@ -118,7 +209,7 @@ const SubmissionStatusGrid: React.FC<SubmissionStatusGridProps> = ({ assignment 
           <TableHeader>
             <TableRow>
               <TableHead className="sticky left-0 bg-background z-10 min-w-[150px]">Student</TableHead>
-              {assignment.problems.map((problem: ProblemWithSubmissions) => {
+              {assignment.problems.map((problem) => {
                 const solvedCount = problem.submissions.filter(s => s.completed).length;
                 const notSolvedCount = students.length - solvedCount;
                 return (
@@ -142,63 +233,71 @@ const SubmissionStatusGrid: React.FC<SubmissionStatusGridProps> = ({ assignment 
               <TableHead className="text-center">Completion</TableHead>
             </TableRow>
           </TableHeader>
+          
           <TableBody>
             {filteredStudents.length > 0 ? (
-              filteredStudents.map(student => {
-                let completedCount = 0;
+              filteredStudents.map((student) => {
+                const progress = getStudentProgress(student.id);
                 
                 return (
                   <TableRow key={student.id}>
-                    <TableCell className="sticky left-0 bg-background z-10 font-medium">{student.name}</TableCell>
-                    {assignment.problems.map((problem: ProblemWithSubmissions) => {
-                      const submission = problem.submissions.find(s => s.studentId === student.id);
-                      if (submission?.completed) {
-                        completedCount++;
-                      }
+                    <TableCell className="sticky left-0 bg-background z-10 font-medium">
+                      <div>
+                        <div className="font-medium">{student.name}</div>
+                        <div className="text-sm text-muted-foreground">{student.email}</div>
+                      </div>
+                    </TableCell>
+                    
+                    {assignment.problems.map((problem) => {
+                      const { completed, submissionTime } = getStudentCompletion(student.id, problem.id);
                       
-                      const verificationUrl = submission ? getVerificationUrl(problem.platform, problem.url, submission) : null;
-                      
-                      const cellContent = (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger>
-                              {submission?.completed ? (
-                                <CheckCircle2 className="h-5 w-5 text-green-500 mx-auto" />
-                              ) : (
-                                <Clock className="h-5 w-5 text-yellow-500 mx-auto" />
-                              )}
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              {submission?.completed
-                                ? `Completed on ${new Date(submission.submissionTime!).toLocaleDateString()}`
-                                : 'Pending'}
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      );
-
                       return (
-                        <TableCell key={problem.id} className="text-center">
-                          {verificationUrl ? (
-                            <a href={verificationUrl} target="_blank" rel="noopener noreferrer">
-                              {cellContent}
-                            </a>
-                          ) : (
-                            cellContent
-                          )}
+                        <TableCell key={`${student.id}-${problem.id}`} className="text-center">
+                          <div className="flex items-center justify-center">
+                            {completed ? (
+                              <div className="flex flex-col items-center gap-1">
+                                <CheckCircle2 className="h-5 w-5 text-green-500" />
+                                {submissionTime && (
+                                  <span className="text-xs text-muted-foreground">
+                                    {new Date(submissionTime).toLocaleDateString()}
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <XCircle className="h-5 w-5 text-red-500" />
+                            )}
+                          </div>
                         </TableCell>
                       );
                     })}
-                    <TableCell className="text-center font-medium">
-                      {Math.round((completedCount / assignment.problems.length) * 100)}%
-                    </TableCell>
+                    
+                                      <TableCell className="text-center">
+                    <div className="flex flex-col items-center gap-1">
+                      {progress.completed === progress.total && progress.total > 0 ? (
+                        <Badge className="bg-green-500 text-white">
+                          All Questions Completed
+                        </Badge>
+                      ) : progress.completed > 0 ? (
+                        <Badge className="bg-yellow-500 text-white">
+                          In Progress
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-gray-600 border-gray-300">
+                          Not Started
+                        </Badge>
+                      )}
+                      <span className="text-xs text-muted-foreground">
+                        {progress.completed}/{progress.total}
+                      </span>
+                    </div>
+                  </TableCell>
                   </TableRow>
                 );
               })
             ) : (
               <TableRow>
-                <TableCell colSpan={assignment.problems.length + 2} className="text-center">
-                  No students match the current filter.
+                <TableCell colSpan={assignment.problems.length + 2} className="text-center py-10">
+                  <p className="text-muted-foreground">No students match the current filter.</p>
                 </TableCell>
               </TableRow>
             )}

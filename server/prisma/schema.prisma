@@ -80,6 +80,7 @@ model Assignment {
   assignDate  DateTime
   dueDate     DateTime
   problems    Problem[]
+  lastSubmissionCheck DateTime? // When submissions were last checked
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 }
@@ -104,6 +105,7 @@ model Submission {
   problem        Problem   @relation(fields: [problemId], references: [id])
   problemId      String
   completed      Boolean   @default(false)
+  manuallyMarked Boolean   @default(false) // Student's manual completion marking
   submissionTime DateTime?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt

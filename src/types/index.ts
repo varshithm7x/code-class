@@ -86,19 +86,36 @@ export interface Assignment {
   assignDate: string;
   dueDate: string;
   problems: Problem[];
+  lastSubmissionCheck?: string;
   createdAt: string;
   updatedAt: string;
 }
 
+export interface TeacherAssignment extends Assignment {
+  progress: {
+    totalStudents: number;
+    totalProblems: number;
+    completedSubmissions: number;
+    averageCompletion: number;
+  };
+}
+
 export interface StudentAssignment extends Assignment {
   status: 'completed' | 'pending' | 'overdue';
+  progress: {
+    completed: number;
+    total: number;
+    percentage: number;
+  };
 }
 
 export interface Submission {
+  id: string;
   studentId: string;
   studentName: string;
   completed: boolean;
-  submissionTime: string | null;
+  manuallyMarked: boolean;
+  submissionTime?: string;
   leetcodeUsername?: string | null;
   hackerrankUsername?: string | null;
   gfgUsername?: string | null;
@@ -110,6 +127,21 @@ export interface ProblemWithSubmissions extends Problem {
 
 export interface AssignmentWithSubmissions extends Assignment {
   problems: ProblemWithSubmissions[];
+}
+
+export interface ProblemWithUserSubmission extends Problem {
+  completed: boolean;
+  manuallyMarked: boolean;
+  submissionTime?: string;
+}
+
+export interface StudentAssignmentDetails extends Assignment {
+  problems: ProblemWithUserSubmission[];
+  progress: {
+    completed: number;
+    total: number;
+    percentage: number;
+  };
 }
 
 export interface CompletionData {

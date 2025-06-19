@@ -94,7 +94,7 @@ const ClassesPage: React.FC = () => {
             {isTeacher ? 'My Classes' : 'Enrolled Classes'}
           </h1>
           <p className="text-muted-foreground mt-1">
-            {isTeacher 
+            {isTeacher
               ? 'Manage your classes and track student progress'
               : 'Access your enrolled classes and assignments'
             }

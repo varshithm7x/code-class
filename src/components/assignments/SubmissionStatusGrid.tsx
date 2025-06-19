@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 
 interface SubmissionStatusGridProps {
   assignment: AssignmentWithSubmissions;
+  onRefresh?: () => void;
 }
 
 const getVerificationUrl = (
@@ -145,6 +146,7 @@ const SubmissionStatusGrid: React.FC<SubmissionStatusGridProps> = ({ assignment 
             {filteredStudents.length > 0 ? (
               filteredStudents.map(student => {
                 let completedCount = 0;
+                
                 return (
                   <TableRow key={student.id}>
                     <TableCell className="sticky left-0 bg-background z-10 font-medium">{student.name}</TableCell>

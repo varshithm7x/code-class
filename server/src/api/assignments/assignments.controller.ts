@@ -162,6 +162,9 @@ export const createAssignment = async (req: Request, res: Response): Promise<voi
 
 export const getAssignmentById = async (req: Request, res: Response): Promise<void> => {
   const { assignmentId } = req.params;
+  // @ts-expect-error: req.user is added by the protect middleware
+  const { userId, role } = req.user;
+
   try {
     const assignment = await prisma.assignment.findUnique({
       where: { id: assignmentId },
@@ -193,51 +196,101 @@ export const getAssignmentById = async (req: Request, res: Response): Promise<vo
     }
 
     const problemIds = assignment.problems.map(p => p.id);
-    const submissions = await prisma.submission.findMany({
-      where: {
-        problemId: { in: problemIds },
-      },
-      select: {
-        problemId: true,
-        userId: true,
-        completed: true,
-        submissionTime: true,
-      },
-    });
 
-    const students = assignment.class.students.map(s => s.user);
+    if (role === 'TEACHER') {
+      // For teachers, return all submissions
+      const submissions = await prisma.submission.findMany({
+        where: {
+          problemId: { in: problemIds },
+        },
+        select: {
+          problemId: true,
+          userId: true,
+          completed: true,
+          submissionTime: true,
+        },
+      });
 
-    const problemsWithSubmissions = assignment.problems.map(problem => {
-      const problemSubmissions = students.map(student => {
-        const submission = submissions.find(
-          s => s.problemId === problem.id && s.userId === student.id
-        );
+      const students = assignment.class.students.map(s => s.user);
+
+      const problemsWithSubmissions = assignment.problems.map(problem => {
+        const problemSubmissions = students.map(student => {
+          const submission = submissions.find(
+            s => s.problemId === problem.id && s.userId === student.id
+          );
+          return {
+            studentId: student.id,
+            studentName: student.name,
+            leetcodeUsername: student.leetcodeUsername,
+            hackerrankUsername: student.hackerrankUsername,
+            gfgUsername: student.gfgUsername,
+            completed: submission?.completed || false,
+            submissionTime: submission?.submissionTime || null,
+          };
+        });
         return {
-          studentId: student.id,
-          studentName: student.name,
-          leetcodeUsername: student.leetcodeUsername,
-          hackerrankUsername: student.hackerrankUsername,
-          gfgUsername: student.gfgUsername,
-          completed: submission?.completed || false,
-          submissionTime: submission?.submissionTime || null,
+          ...problem,
+          submissions: problemSubmissions,
         };
       });
-      return {
-        ...problem,
-        submissions: problemSubmissions,
+
+      const response = {
+        ...assignment,
+        problems: problemsWithSubmissions,
       };
-    });
+      
+      // We don't need to send the full class details back
+      // @ts-expect-error: Removing class property from response
+      delete response.class;
 
-    const response = {
-      ...assignment,
-      problems: problemsWithSubmissions,
-    };
-    
-    // We don't need to send the full class details back
-    // @ts-expect-error: Removing class property from response
-    delete response.class;
+      res.status(200).json(response);
+    } else {
+      // For students, return only their own submissions
+      const userSubmissions = await prisma.submission.findMany({
+        where: {
+          problemId: { in: problemIds },
+          userId: userId,
+        },
+        select: {
+          id: true,
+          problemId: true,
+          completed: true,
+          submissionTime: true,
+        },
+      });
 
-    res.status(200).json(response);
+      const problemsWithUserSubmission = assignment.problems.map(problem => {
+        const userSubmission = userSubmissions.find(
+          s => s.problemId === problem.id
+        );
+        return {
+          ...problem,
+          submissionId: userSubmission?.id,
+          completed: userSubmission?.completed || false,
+          manuallyMarked: (userSubmission as { manuallyMarked?: boolean })?.manuallyMarked || false,
+          submissionTime: userSubmission?.submissionTime || null,
+        };
+      });
+
+      const completedCount = problemsWithUserSubmission.filter(p => p.completed).length;
+      const totalProblems = problemsWithUserSubmission.length;
+
+      const response = {
+        ...assignment,
+        problems: problemsWithUserSubmission,
+        progress: {
+          completed: completedCount,
+          total: totalProblems,
+          percentage: totalProblems > 0 ? Math.round((completedCount / totalProblems) * 100) : 0
+        }
+      };
+      
+      // We don't need to send the full class details back for students
+      // @ts-expect-error: Removing class property from response
+      delete response.class;
+
+      res.status(200).json(response);
+    }
   } catch (error) {
     console.error('Error fetching assignment:', error);
     res.status(500).json({ message: 'Error fetching assignment' });
@@ -253,8 +306,17 @@ export const checkSubmissions = async (req: Request, res: Response): Promise<voi
   try {
     console.log('🚀 [DEBUG] Manual submission check triggered for all assignments...');
     await checkAllSubmissionsService();
+    
+    // Update lastSubmissionCheck for all assignments
+    await prisma.assignment.updateMany({
+      data: { lastSubmissionCheck: new Date() }
+    });
+    
     console.log('✅ [DEBUG] checkAllSubmissionsService completed successfully');
-    res.status(200).json({ message: 'Submission check completed successfully.' });
+    res.status(200).json({ 
+      message: 'Submission check completed successfully.',
+      lastChecked: new Date().toISOString()
+    });
   } catch (error) {
     console.error('❌ [DEBUG] Error during manual submission check:', error);
     res.status(500).json({ message: 'Error during manual submission check', error });
@@ -272,8 +334,18 @@ export const checkAssignmentSubmissions = async (req: Request, res: Response): P
   try {
     console.log(`🚀 [DEBUG] Manual submission check triggered for assignment ${assignmentId}...`);
     await checkSubmissionsForAssignmentService(assignmentId);
+    
+    // Update the lastSubmissionCheck timestamp
+    await prisma.assignment.update({
+      where: { id: assignmentId },
+      data: { lastSubmissionCheck: new Date() }
+    });
+    
     console.log(`✅ [DEBUG] checkSubmissionsForAssignmentService completed for assignment ${assignmentId}`);
-    res.status(200).json({ message: 'Submission check completed successfully.' });
+    res.status(200).json({ 
+      message: 'Submission check completed successfully.',
+      lastChecked: new Date().toISOString()
+    });
   } catch (error) {
     console.error(`❌ [DEBUG] Error during manual submission check for assignment ${assignmentId}:`, error);
     res.status(500).json({ message: 'Error during manual submission check', error });
@@ -521,7 +593,7 @@ export const getMyAssignments = async (req: Request, res: Response): Promise<voi
       },
     });
 
-    // Calculate status for each assignment  
+    // Calculate status and progress for each assignment  
     const assignmentsWithStatus = allAssignments.map((assignment) => {
       const assignmentSubmissions = userSubmissions.filter(
         s => (assignment as typeof assignment & { problems: { id: string }[] }).problems.some((p: { id: string }) => p.id === s.problemId)
@@ -544,6 +616,11 @@ export const getMyAssignments = async (req: Request, res: Response): Promise<voi
       return {
         ...assignment,
         status,
+        progress: {
+          completed: completedCount,
+          total: totalProblems,
+          percentage: totalProblems > 0 ? Math.round((completedCount / totalProblems) * 100) : 0
+        }
       };
     });
 
@@ -551,5 +628,76 @@ export const getMyAssignments = async (req: Request, res: Response): Promise<voi
   } catch (error) {
     console.error('Error fetching user assignments:', error);
     res.status(500).json({ message: 'Error fetching assignments', error });
+  }
+};
+
+export const markAllAsCompleted = async (req: Request, res: Response): Promise<void> => {
+  const { assignmentId, studentId } = req.params;
+  // @ts-expect-error - req.user is added by auth middleware
+  const user = req.user as { userId: string; role: string };
+
+  try {
+    console.log(`🎯 [DEBUG] markAllAsCompleted called for assignment ${assignmentId}, student ${studentId} by user ${user?.userId || 'undefined'}`);
+
+    if (!user || !user.userId) {
+      res.status(401).json({ message: 'User not authenticated' });
+      return;
+    }
+
+    // Only allow students to mark their own work as manually completed
+    if (user.role !== 'STUDENT') {
+      res.status(403).json({ message: 'Only students can mark their own work as manually completed' });
+      return;
+    }
+
+    // Students can only mark their own submissions
+    if (user.userId !== studentId) {
+      res.status(403).json({ message: 'You can only mark your own submissions as manually completed' });
+      return;
+    }
+
+    // Get all problems for this assignment
+    const problems = await prisma.problem.findMany({
+      where: { assignmentId },
+      select: { id: true }
+    });
+
+    if (problems.length === 0) {
+      res.status(404).json({ message: 'No problems found for this assignment' });
+      return;
+    }
+
+    // Update all submissions for this student and assignment to be manually marked as completed
+    const submissions = await prisma.submission.updateMany({
+      where: {
+        userId: studentId,
+        problemId: { in: problems.map(p => p.id) }
+      },
+      data: {
+        manuallyMarked: true,
+        updatedAt: new Date()
+      }
+    });
+
+    console.log(`✅ [DEBUG] Marked ${submissions.count} submissions as manually completed for student ${studentId} in assignment ${assignmentId}`);
+
+    res.status(200).json({
+      message: `Successfully marked all ${submissions.count} problems as manually completed`,
+      updatedCount: submissions.count
+    });
+
+  } catch (dbError: unknown) {
+    const error = dbError as { code?: string; message?: string };
+    if (error.code === 'P2025' || error.message?.includes('manuallyMarked')) {
+      // Database field doesn't exist yet
+      res.status(501).json({ 
+        message: 'Manual completion feature requires database migration. Please run the migration first.',
+        migrationRequired: true
+      });
+      return;
+    }
+    
+    console.error(`❌ [DEBUG] Error marking all as manually completed for assignment ${assignmentId}, student ${studentId}:`, dbError);
+    res.status(500).json({ message: 'Error marking all problems as manually completed', error: dbError });
   }
 };

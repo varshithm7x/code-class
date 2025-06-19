@@ -80,10 +80,10 @@ const Sidebar: React.FC = () => {
     };
     
     const linkContent = (
-      <Link
-        to={item.href}
+          <Link
+            to={item.href}
         onClick={handleClick}
-        className={cn(
+            className={cn(
           'flex items-center rounded-md text-sm font-medium transition-all duration-200',
           'hover:bg-gray-100 hover:scale-105',
           isActive
@@ -92,20 +92,20 @@ const Sidebar: React.FC = () => {
           isCollapsed && !isMobile 
             ? 'justify-center p-2 mx-1' // Smaller padding for collapsed state
             : 'gap-3 px-3 py-2' // Normal padding for expanded state
-        )}
-      >
+            )}
+          >
         <span className={cn(
           "flex-shrink-0",
           isCollapsed && !isMobile && "w-4 h-4"
         )}>
-          {item.icon}
+            {item.icon}
         </span>
         {(!isCollapsed || isMobile) && (
           <span className="truncate transition-opacity duration-200">
             {item.title}
           </span>
         )}
-      </Link>
+          </Link>
     );
 
     if (isCollapsed && !isMobile) {
@@ -228,9 +228,9 @@ const Sidebar: React.FC = () => {
         <nav className="flex flex-col gap-1 p-4">
           {filteredNavItems.map((item) => (
             <NavLink key={`mobile-${item.href}`} item={item} isMobile />
-          ))}
-        </nav>
-      </aside>
+        ))}
+      </nav>
+    </aside>
     </>
   );
 };

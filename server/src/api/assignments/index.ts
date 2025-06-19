@@ -1,35 +1,32 @@
 import { Router } from 'express';
+import { protect } from '../auth/auth.middleware';
 import {
   createAssignment,
   getAssignmentById,
-  getMyAssignments,
+  deleteAssignment,
+  updateAssignment,
   checkSubmissions,
   checkAssignmentSubmissions,
-  updateAssignment,
-  deleteAssignment,
-  checkLeetCodeSubmissionsForAssignment,
+  getMyAssignments,
+  markAllAsCompleted,
 } from './assignments.controller';
-import { protect, isTeacher } from '../auth/auth.middleware';
 
 const router = Router();
 
-// Debug middleware to log all assignment API calls
-router.use((req, res, next) => {
-  console.log(`🔗 [DEBUG] Assignment API called: ${req.method} ${req.originalUrl}`);
-  console.log(`🔗 [DEBUG] Request params:`, req.params);
-  console.log(`🔗 [DEBUG] Request body:`, req.body);
-  console.log(`🔗 [DEBUG] User:`, (req as any).user?.userId);
-  next();
-});
-
-router.post('/', protect, isTeacher, createAssignment);
-router.post('/check-submissions', protect, isTeacher, checkSubmissions);
+// Student routes
 router.get('/my', protect, getMyAssignments);
+
+// Assignment CRUD
+router.post('/', protect, createAssignment);
 router.get('/:assignmentId', protect, getAssignmentById);
-router.put('/:assignmentId', protect, isTeacher, updateAssignment);
-router.patch('/:assignmentId', protect, isTeacher, updateAssignment);
-router.post('/:assignmentId/check-submissions', protect, isTeacher, checkAssignmentSubmissions);
-router.post('/:assignmentId/sync-leetcode', protect, isTeacher, checkLeetCodeSubmissionsForAssignment);
-router.delete('/:assignmentId', protect, isTeacher, deleteAssignment);
+router.patch('/:assignmentId', protect, updateAssignment);
+router.delete('/:assignmentId', protect, deleteAssignment);
+
+// Submission checking
+router.post('/check-submissions', protect, checkSubmissions);
+router.post('/:assignmentId/check-submissions', protect, checkAssignmentSubmissions);
+
+// Mark all as completed
+router.put('/:assignmentId/students/:studentId/mark-all-completed', protect, markAllAsCompleted);
 
 export default router; 

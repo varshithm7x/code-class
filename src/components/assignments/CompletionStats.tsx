@@ -1,122 +1,93 @@
 import React from 'react';
-import { AssignmentWithSubmissions } from '../../types';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
+import { AssignmentWithSubmissions } from '../../types';
+import { CheckCircle2, Clock, Users, UserCheck } from 'lucide-react';
 
 interface CompletionStatsProps {
   assignment: AssignmentWithSubmissions;
 }
 
-interface StudentProgress {
-  studentId: string;
-  studentName: string;
-  completedCount: number;
-}
-
 const CompletionStats: React.FC<CompletionStatsProps> = ({ assignment }) => {
-  const totalProblems = assignment.problems.length;
+  const totalStudents = assignment.problems?.[0]?.submissions?.length || 0;
+  const totalProblems = assignment.problems?.length || 0;
 
-  // Robustly get all unique students from across all problems
-  const studentsMap = new Map<string, { studentId: string; studentName: string }>();
-  assignment.problems.forEach(problem => {
-    problem.submissions.forEach(submission => {
-      if (!studentsMap.has(submission.studentId)) {
-        studentsMap.set(submission.studentId, {
-          studentId: submission.studentId,
-          studentName: submission.studentName,
-        });
-      }
-    });
-  });
-
-  const studentProgress: StudentProgress[] = Array.from(studentsMap.values()).map(student => ({
-    ...student,
-    completedCount: 0,
-  }));
-
-  // Calculate each student's progress
-  assignment.problems.forEach(problem => {
-    problem.submissions.forEach(submission => {
-      const student = studentProgress.find(p => p.studentId === submission.studentId);
-      if (student && submission.completed) {
-        student.completedCount++;
-      }
-    });
-  });
-  
-  const totalStudents = studentProgress.length;
-
-  if (totalProblems === 0 || totalStudents === 0) {
-    return null;
-  }
-
-  const completedAll = studentProgress.filter(p => p.completedCount === totalProblems).length;
-  const inProgress = studentProgress.filter(p => p.completedCount > 0 && p.completedCount < totalProblems).length;
-  const notStarted = studentProgress.filter(p => p.completedCount === 0).length;
-
-  // Aggregate the progress for the submission breakdown
-  const completionCounts = new Map<number, number>();
-  studentProgress.forEach(student => {
-    const count = completionCounts.get(student.completedCount) || 0;
-    completionCounts.set(student.completedCount, count + 1);
-  });
-
-  // Sort by number of problems solved
-  const submissionStats = Array.from(completionCounts.entries())
-    .sort(([countA], [countB]) => countB - countA)
-    .map(([completedCount, studentCount]) => ({
-      completedCount,
-      studentCount,
-    }));
-
-  // Calculate per-problem stats
-  const problemStats = assignment.problems.map(problem => {
-    const solvedCount = problem.submissions.filter(s => s.completed).length;
-    const notSolvedCount = totalStudents - solvedCount;
+  // Calculate completion statistics
+  const completionStats = assignment.problems?.map(problem => {
+    const autoCompleted = problem.submissions.filter(s => s.completed).length;
+    const manuallyMarked = problem.submissions.filter(s => s.manuallyMarked && !s.completed).length;
+    const totalCompleted = problem.submissions.filter(s => s.completed || s.manuallyMarked).length;
+    
     return {
-        id: problem.id,
-        title: problem.title,
-        solvedCount,
-        notSolvedCount
+      problemTitle: problem.title,
+      autoCompleted,
+      manuallyMarked,
+      totalCompleted,
+      pending: totalStudents - totalCompleted
     };
-  });
+  }) || [];
+
+  // Overall statistics
+  const totalAutoCompleted = completionStats.reduce((sum, stat) => sum + stat.autoCompleted, 0);
+  const totalManuallyMarked = completionStats.reduce((sum, stat) => sum + stat.manuallyMarked, 0);
+  const totalCompleted = completionStats.reduce((sum, stat) => sum + stat.totalCompleted, 0);
+  const totalPossible = totalStudents * totalProblems;
+  
+  const completionPercentage = totalPossible > 0 ? Math.round((totalCompleted / totalPossible) * 100) : 0;
+  const autoCompletionPercentage = totalPossible > 0 ? Math.round((totalAutoCompleted / totalPossible) * 100) : 0;
+  const manualCompletionPercentage = totalPossible > 0 ? Math.round((totalManuallyMarked / totalPossible) * 100) : 0;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Completion Statistics</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-            <Card>
-                <CardContent className="p-4">
-                    <p className="text-2xl font-bold text-green-500">{completedAll}</p>
-                    <p className="text-sm text-muted-foreground">Completed All</p>
-                </CardContent>
-            </Card>
-            <Card>
-                <CardContent className="p-4">
-                    <p className="text-2xl font-bold text-yellow-500">{inProgress}</p>
-                    <p className="text-sm text-muted-foreground">In Progress</p>
-                </CardContent>
-            </Card>
-            <Card>
-                <CardContent className="p-4">
-                    <p className="text-2xl font-bold text-red-500">{notStarted}</p>
-                    <p className="text-sm text-muted-foreground">Not Started</p>
-                </CardContent>
-            </Card>
-        </div>
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Total Students</CardTitle>
+          <Users className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{totalStudents}</div>
+        </CardContent>
+      </Card>
 
-        
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Overall Completion</CardTitle>
+          <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{completionPercentage}%</div>
+          <p className="text-xs text-muted-foreground">
+            {totalCompleted} of {totalPossible} submissions
+          </p>
+        </CardContent>
+      </Card>
 
-       
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Auto-Completed</CardTitle>
+          <CheckCircle2 className="h-4 w-4 text-green-600" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold text-green-600">{autoCompletionPercentage}%</div>
+          <p className="text-xs text-muted-foreground">
+            {totalAutoCompleted} detected submissions
+          </p>
+        </CardContent>
+      </Card>
 
-        {studentProgress.length === 0 && (
-           <p className="text-sm text-muted-foreground text-center pt-4">No submission data available.</p>
-        )}
-      </CardContent>
-    </Card>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Manually Marked</CardTitle>
+          <UserCheck className="h-4 w-4 text-blue-600" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold text-blue-600">{manualCompletionPercentage}%</div>
+          <p className="text-xs text-muted-foreground">
+            {totalManuallyMarked} manual markings
+          </p>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 

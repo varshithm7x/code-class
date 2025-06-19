@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getClassDetails, getClassAssignments, removeStudentFromClass } from '../../api/classes';
 import { deleteAssignment } from '../../api/assignments';
-import { ClassWithStudents, Assignment, Student } from '../../types';
+import { ClassWithStudents, Assignment, TeacherAssignment, StudentAssignment, Student } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../hooks/use-toast';
 import { triggerDataRefresh, DATA_REFRESH_EVENTS } from '../../utils/dataRefresh';
@@ -27,7 +27,7 @@ const ClassDetailsPage: React.FC = () => {
   const isTeacher = user?.role === 'TEACHER';
   
   const [classDetails, setClassDetails] = useState<ClassWithStudents | null>(null);
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [assignments, setAssignments] = useState<(Assignment | TeacherAssignment | StudentAssignment)[]>([]);
   const [tests, setTests] = useState<CodingTest[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState('overview');

@@ -243,3 +243,200 @@ export const checkSubmissionsForAssignment = async (assignmentId: string) => {
     
     console.log(`✅ Assignment "${assignment.title}" submission check completed`);
 };
+
+/**
+ * Check submission fetching status for all students in a class
+ * This verifies whether credentials/cookies are working properly for each platform
+ */
+export const checkClassSubmissionStatus = async (classId: string) => {
+    console.log(`🎯 Starting submission status check for class: ${classId}...`);
+    
+    try {
+        // Get all students in the class
+        const classData = await prisma.class.findUnique({
+            where: { id: classId },
+            include: {
+                students: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                                leetcodeUsername: true,
+                                leetcodeCookieStatus: true,
+                                hackerrankUsername: true,
+                                hackerrankCookieStatus: true,
+                                gfgUsername: true,
+                            }
+                        }
+                    }
+                },
+                assignments: {
+                    include: {
+                        problems: true
+                    }
+                }
+            }
+        });
+
+        if (!classData) {
+            throw new Error(`Class ${classId} not found`);
+        }
+
+        console.log(`📊 Found ${classData.students.length} students in class "${classData.name}"`);
+
+        const statusResults = [];
+
+        for (const studentEnrollment of classData.students) {
+            const student = studentEnrollment.user;
+            console.log(`\n👤 Checking submission status for: ${student.name} (${student.email})`);
+
+            const platformStatus = {
+                userId: student.id,
+                name: student.name,
+                email: student.email,
+                platforms: {
+                    leetcode: {
+                        hasUsername: !!student.leetcodeUsername,
+                        username: student.leetcodeUsername || null,
+                        cookieStatus: student.leetcodeCookieStatus || 'NOT_LINKED',
+                        isWorking: false,
+                        lastError: null as string | null
+                    },
+                    hackerrank: {
+                        hasUsername: !!student.hackerrankUsername,
+                        username: student.hackerrankUsername || null,
+                        cookieStatus: student.hackerrankCookieStatus || 'NOT_LINKED',
+                        isWorking: false,
+                        lastError: null as string | null
+                    },
+                    gfg: {
+                        hasUsername: !!student.gfgUsername,
+                        username: student.gfgUsername || null,
+                        cookieStatus: 'N/A', // GFG doesn't use cookies
+                        isWorking: false,
+                        lastError: null as string | null
+                    }
+                }
+            };
+
+            // Test LeetCode status
+            if (student.leetcodeUsername && student.leetcodeCookieStatus === 'LINKED') {
+                try {
+                    console.log(`📱 Testing LeetCode for ${student.name}...`);
+                    // Get user with cookie for testing
+                    const userWithCookie = await prisma.user.findUnique({
+                        where: { id: student.id },
+                        select: { leetcodeCookie: true }
+                    });
+
+                    if (userWithCookie?.leetcodeCookie) {
+                        // Get full user object for the service
+                        const fullUser = await prisma.user.findUnique({
+                            where: { id: student.id }
+                        });
+                        
+                        if (fullUser) {
+                            // Import the function from enhanced-leetcode.service
+                            const { fetchLeetCodeStatsAndSubmissions } = await import('./enhanced-leetcode.service');
+                            const result = await fetchLeetCodeStatsAndSubmissions({
+                                ...fullUser,
+                                leetcodeCookieStatus: student.leetcodeCookieStatus,
+                                leetcodeTotalSolved: null
+                            });
+                            platformStatus.platforms.leetcode.isWorking = result;
+                            if (!result) {
+                                platformStatus.platforms.leetcode.lastError = 'Failed to fetch data - cookie may be expired';
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error(`❌ LeetCode test failed for ${student.name}:`, error);
+                    platformStatus.platforms.leetcode.isWorking = false;
+                    platformStatus.platforms.leetcode.lastError = (error as Error).message;
+                }
+            } else if (student.leetcodeUsername && student.leetcodeCookieStatus !== 'LINKED') {
+                platformStatus.platforms.leetcode.lastError = 'Cookie not linked or expired';
+            } else if (!student.leetcodeUsername) {
+                platformStatus.platforms.leetcode.lastError = 'No username provided';
+            }
+
+            // Test HackerRank status
+            if (student.hackerrankUsername && student.hackerrankCookieStatus === 'LINKED') {
+                try {
+                    console.log(`🔶 Testing HackerRank for ${student.name}...`);
+                    // Get user with cookie for testing
+                    const userWithCookie = await prisma.user.findUnique({
+                        where: { id: student.id },
+                        select: { hackerrankCookie: true }
+                    });
+
+                    if (userWithCookie?.hackerrankCookie) {
+                        // Get full user object for the service
+                        const fullUser = await prisma.user.findUnique({
+                            where: { id: student.id }
+                        });
+                        
+                        if (fullUser) {
+                            // Import the function from hackerrank.service
+                            const { fetchHackerRankStatsAndSubmissions } = await import('./hackerrank.service');
+                            const result = await fetchHackerRankStatsAndSubmissions({
+                                ...fullUser,
+                                hackerrankCookieStatus: student.hackerrankCookieStatus
+                            });
+                            platformStatus.platforms.hackerrank.isWorking = result;
+                            if (!result) {
+                                platformStatus.platforms.hackerrank.lastError = 'Failed to fetch data - cookie may be expired';
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error(`❌ HackerRank test failed for ${student.name}:`, error);
+                    platformStatus.platforms.hackerrank.isWorking = false;
+                    platformStatus.platforms.hackerrank.lastError = (error as Error).message;
+                }
+            } else if (student.hackerrankUsername && student.hackerrankCookieStatus !== 'LINKED') {
+                platformStatus.platforms.hackerrank.lastError = 'Cookie not linked or expired';
+            } else if (!student.hackerrankUsername) {
+                platformStatus.platforms.hackerrank.lastError = 'No username provided';
+            }
+
+            // Test GFG status (no cookies, just API)
+            if (student.gfgUsername) {
+                try {
+                    console.log(`📚 Testing GFG for ${student.name}...`);
+                    const gfgSolved = await getAllGfgSolvedSlugs(student.gfgUsername);
+                    platformStatus.platforms.gfg.isWorking = gfgSolved.size > 0;
+                    if (gfgSolved.size === 0) {
+                        platformStatus.platforms.gfg.lastError = 'No solved problems found or API error';
+                    }
+                } catch (error) {
+                    console.error(`❌ GFG test failed for ${student.name}:`, error);
+                    platformStatus.platforms.gfg.isWorking = false;
+                    platformStatus.platforms.gfg.lastError = (error as Error).message;
+                }
+            } else {
+                platformStatus.platforms.gfg.lastError = 'No username provided';
+            }
+
+            statusResults.push(platformStatus);
+
+            // Add delay between students to avoid rate limiting
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+
+        console.log(`✅ Submission status check completed for class "${classData.name}"`);
+        return {
+            classId,
+            className: classData.name,
+            studentCount: classData.students.length,
+            checkedAt: new Date().toISOString(),
+            students: statusResults
+        };
+
+    } catch (error) {
+        console.error(`❌ Error checking class submission status:`, error);
+        throw error;
+    }
+};

@@ -18,6 +18,7 @@ import TestList from '../../components/tests/TestList';
 import { CodingTest } from '../../components/tests/TestCard';
 import { Plus, Users, BookOpen, Award, Copy, Code, TrendingUp, Search, Megaphone, Terminal, UserMinus } from 'lucide-react';
 import { Input } from '../../components/ui/input';
+import SubmissionStatusChecker from '../../components/classes/SubmissionStatusChecker';
 
 const ClassDetailsPage: React.FC = () => {
   const { classId } = useParams<{ classId: string }>();
@@ -432,92 +433,98 @@ const ClassDetailsPage: React.FC = () => {
         
         {isTeacher && (
           <TabsContent value="students">
-            <Card>
-              <CardHeader>
-                <CardTitle>Enrolled Students</CardTitle>
-                <CardDescription>Search for students and view their profiles</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="mb-6">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search by name or email..."
-                      value={studentSearch}
-                      onChange={(e) => setStudentSearch(e.target.value)}
-                      className="pl-10 w-full"
-                    />
+            <div className="space-y-6">
+              {/* Submission Status Checker */}
+              <SubmissionStatusChecker classId={classId || ''} />
+              
+              {/* Student List */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Enrolled Students</CardTitle>
+                  <CardDescription>Search for students and view their profiles</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="mb-6">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search by name or email..."
+                        value={studentSearch}
+                        onChange={(e) => setStudentSearch(e.target.value)}
+                        className="pl-10 w-full"
+                      />
+                    </div>
                   </div>
-                </div>
 
-                {classDetails.students.length === 0 ? (
-                  <p className="py-4 text-muted-foreground text-center">
-                    No students enrolled yet. Share the join code to invite students.
-                  </p>
-                ) : (
-                  <div className="space-y-4">
-                    {classDetails.students
-                      .filter(s => 
-                        s.name.toLowerCase().includes(studentSearch.toLowerCase()) || 
-                        s.email.toLowerCase().includes(studentSearch.toLowerCase())
-                      )
-                      .map((student: Student) => (
-                      <div key={student.id} className="border rounded-lg p-4 hover:bg-muted/50 transition-colors">
-                        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                          <Link to={`/students/${student.id}`} className="flex-1">
-                            <div className="flex items-center space-x-3">
-                              <div>
-                                <p className="font-semibold text-lg">{student.name}</p>
-                                <p className="text-sm text-muted-foreground">{student.email}</p>
+                  {classDetails.students.length === 0 ? (
+                    <p className="py-4 text-muted-foreground text-center">
+                      No students enrolled yet. Share the join code to invite students.
+                    </p>
+                  ) : (
+                    <div className="space-y-4">
+                      {classDetails.students
+                        .filter(s => 
+                          s.name.toLowerCase().includes(studentSearch.toLowerCase()) || 
+                          s.email.toLowerCase().includes(studentSearch.toLowerCase())
+                        )
+                        .map((student: Student) => (
+                        <div key={student.id} className="border rounded-lg p-4 hover:bg-muted/50 transition-colors">
+                          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                            <Link to={`/students/${student.id}`} className="flex-1">
+                              <div className="flex items-center space-x-3">
+                                <div>
+                                  <p className="font-semibold text-lg">{student.name}</p>
+                                  <p className="text-sm text-muted-foreground">{student.email}</p>
+                                </div>
                               </div>
-                            </div>
+                              
+                              <div className="mt-3 flex flex-wrap gap-2">
+                                {student.leetcodeUsername && (
+                                  <div className="flex items-center space-x-1 text-sm">
+                                    <Code className="h-4 w-4 text-orange-500" />
+                                    <span className="text-muted-foreground">@{student.leetcodeUsername}</span>
+                                  </div>
+                                )}
+                                {student.gfgUsername && (
+                                  <div className="flex items-center space-x-1 text-sm">
+                                    <span className="text-green-600 font-bold">GFG</span>
+                                    <span className="text-muted-foreground">@{student.gfgUsername}</span>
+                                  </div>
+                                )}
+                                {student.hackerrankUsername && (
+                                  <div className="flex items-center space-x-1 text-sm">
+                                    <span className="text-blue-600 font-bold">HR</span>
+                                    <span className="text-muted-foreground">@{student.hackerrankUsername}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </Link>
                             
-                            <div className="mt-3 flex flex-wrap gap-2">
-                              {student.leetcodeUsername && (
-                                <div className="flex items-center space-x-1 text-sm">
-                                  <Code className="h-4 w-4 text-orange-500" />
-                                  <span className="text-muted-foreground">@{student.leetcodeUsername}</span>
-                                </div>
-                              )}
-                              {student.gfgUsername && (
-                                <div className="flex items-center space-x-1 text-sm">
-                                  <span className="text-green-600 font-bold">GFG</span>
-                                  <span className="text-muted-foreground">@{student.gfgUsername}</span>
-                                </div>
-                              )}
-                              {student.hackerrankUsername && (
-                                <div className="flex items-center space-x-1 text-sm">
-                                  <span className="text-blue-600 font-bold">HR</span>
-                                  <span className="text-muted-foreground">@{student.hackerrankUsername}</span>
-                                </div>
-                              )}
+                            <div className="flex items-center gap-4">
+                              <div className="flex-shrink-0 min-w-[200px]">
+                                <LeetCodeStats user={student} compact={true} showDetails={false} />
+                              </div>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  handleRemoveStudent(student.id, student.name);
+                                }}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                              >
+                                <UserMinus className="h-4 w-4 mr-1" />
+                                Remove
+                              </Button>
                             </div>
-                          </Link>
-                          
-                          <div className="flex items-center gap-4">
-                            <div className="flex-shrink-0 min-w-[200px]">
-                              <LeetCodeStats user={student} compact={true} showDetails={false} />
-                            </div>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                handleRemoveStudent(student.id, student.name);
-                              }}
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
-                            >
-                              <UserMinus className="h-4 w-4 mr-1" />
-                              Remove
-                            </Button>
                           </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         )}
         

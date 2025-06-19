@@ -40,3 +40,8 @@ export const removeStudentFromClass = async (classId: string, studentId: string)
   const response = await api.delete(`/classes/${classId}/students/${studentId}`);
   return response.data;
 };
+
+export const checkClassSubmissionStatus = async (classId: string) => {
+  const response = await api.get(`/classes/${classId}/check-submission-status`);
+  return response.data;
+};

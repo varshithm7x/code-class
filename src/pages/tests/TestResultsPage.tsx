@@ -93,7 +93,7 @@ const TestResultsPage: React.FC = () => {
         const token = localStorage.getItem('token');
         
         // Fetch test details
-        const testResponse = await fetch(`/api/v1/tests/${testId}`, {
+        const testResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api/v1'}/tests/${testId}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -105,7 +105,7 @@ const TestResultsPage: React.FC = () => {
         setTest(testData.test);
 
         // Fetch session results
-        const sessionResponse = await fetch(`/api/v1/test-execution/${testId}/status`, {
+        const sessionResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api/v1'}/test-sessions/${testId}/status`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         

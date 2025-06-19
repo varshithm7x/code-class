@@ -22,7 +22,8 @@ import {
   Eye,
   Link,
   Download,
-  Loader2
+  Loader2,
+  Terminal
 } from 'lucide-react';
 import {
   Select,
@@ -43,7 +44,6 @@ interface TestFormData {
   endTime: string;
   problems: TestProblem[];
   allowedLanguages: string[];
-  maxAttempts: number;
   isActive: boolean;
 }
 
@@ -66,12 +66,17 @@ const CreateTestPage: React.FC = () => {
     endTime: '',
     problems: [],
     allowedLanguages: ['python', 'cpp', 'java', 'javascript'],
-    maxAttempts: 1,
     isActive: false
   });
 
   // Real classes data from API
   const [classes, setClasses] = useState<Array<{ id: string; name: string }>>([]);
+  const [judge0Stats, setJudge0Stats] = useState<{
+    totalKeys: number;
+    availableKeys: number;
+    totalRequests: number;
+    usedRequests: number;
+  } | null>(null);
 
   // Function to import problem from LeetCode
   const importFromLeetCode = async () => {
@@ -163,7 +168,24 @@ const CreateTestPage: React.FC = () => {
       }
     };
 
+    const fetchJudge0Stats = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api/v1'}/judge0/pool-stats`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setJudge0Stats(data.stats);
+        }
+      } catch (error) {
+        console.error('Failed to fetch Judge0 stats:', error);
+      }
+    };
+
     fetchClasses();
+    fetchJudge0Stats();
 
     // Set default start time to current IST time and calculate end time
     const istStartTime = getCurrentLocalTime();
@@ -359,7 +381,6 @@ const CreateTestPage: React.FC = () => {
         description: formData.description,
         classId: formData.classId,
         duration: formData.duration,
-        maxAttempts: formData.maxAttempts,
         allowedLanguages: formData.allowedLanguages,
         // Convert datetime-local to proper ISO strings
         startTime: new Date(formData.startTime).toISOString(),
@@ -508,18 +529,6 @@ const CreateTestPage: React.FC = () => {
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="maxAttempts">Maximum Attempts *</Label>
-                    <Input
-                      id="maxAttempts"
-                      type="number"
-                      value={formData.maxAttempts}
-                      onChange={(e) => handleInputChange('maxAttempts', parseInt(e.target.value) || 1)}
-                      min="1"
-                      max="10"
-                    />
                   </div>
 
                   <div>
@@ -852,6 +861,44 @@ const CreateTestPage: React.FC = () => {
 
         {/* Sidebar */}
         <div className="space-y-4">
+          {/* Judge0 Pool Status */}
+          <Card className="border-blue-200 bg-blue-50/50">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Terminal className="h-5 w-5 text-blue-600" />
+                Judge0 Pool Status
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              {judge0Stats ? (
+                <>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Active API Keys:</span>
+                    <span className="font-medium">{judge0Stats.availableKeys} / {judge0Stats.totalKeys}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Pool Requests:</span>
+                    <span className="font-medium">{judge0Stats.totalRequests - judge0Stats.usedRequests} / {judge0Stats.totalRequests}</span>
+                  </div>
+                  <div className="pt-2 border-t">
+                    <div className={`text-xs px-2 py-1 rounded ${
+                      judge0Stats.availableKeys > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                    }`}>
+                      {judge0Stats.availableKeys > 0 
+                        ? `✅ ${judge0Stats.availableKeys} keys ready for execution`
+                        : '⚠️ No API keys available'
+                      }
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center text-muted-foreground">
+                  Loading pool status...
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Actions</CardTitle>

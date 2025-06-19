@@ -7,7 +7,9 @@ import {
   updateHeartbeat, 
   recordPenalty, 
   completeTestSession, 
-  runTestCases
+  runTestCases,
+  getTestSessionStatus,
+  submitSingleProblem
 } from './test-session.controller';
 
 const router = Router();
@@ -23,6 +25,12 @@ router.patch('/:testId/session/heartbeat', updateHeartbeat);
 router.post('/:testId/session/penalty', recordPenalty);
 router.post('/:testId/session/complete', completeTestSession);
 router.post('/:testId/run-tests', runTestCases);
+
+// Test session status (for results page)
+router.get('/:testId/status', getTestSessionStatus);
+
+// Submit individual problem (immediate execution)
+router.post('/:testId/submit', submitSingleProblem);
 
 // Join test endpoint (POST)
 router.post('/:testId/join', async (req, res) => {

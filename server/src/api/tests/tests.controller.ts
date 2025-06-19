@@ -10,7 +10,6 @@ const createTestSchema = z.object({
   description: z.string().optional(),
   classId: z.string().cuid(),
   duration: z.number().min(15).max(480), // 15 min to 8 hours
-  maxAttempts: z.number().min(1).max(10).default(1),
   allowedLanguages: z.array(z.string()).min(1),
   startTime: z.string().datetime(),
   endTime: z.string().datetime(),
@@ -96,7 +95,6 @@ export const createTest = async (req: Request, res: Response): Promise<void> => 
           description: validatedData.description,
           classId: validatedData.classId,
           duration: validatedData.duration,
-          maxAttempts: validatedData.maxAttempts,
           allowedLanguages: validatedData.allowedLanguages,
           startTime,
           endTime,
@@ -222,7 +220,10 @@ export const getTestById = async (req: Request, res: Response): Promise<void> =>
   try {
     const userId = (req as any).user.id;
     const userRole = (req as any).user.role;
-    const { id } = req.params;
+    const { testId } = req.params;
+    const id = testId; // Support both :id and :testId parameter names
+    
+    console.log('getTestById called with:', { userId, userRole, testId, id, params: req.params });
 
     let whereClause: any = { id };
 
@@ -263,7 +264,7 @@ export const getTestById = async (req: Request, res: Response): Promise<void> =>
               select: { id: true, name: true, email: true }
             },
             submissions: {
-              select: { id: true, problemId: true, status: true, score: true, submissionTime: true }
+              select: { id: true, problemId: true, status: true, score: true, createdAt: true }
             },
             penalties: {
               select: { id: true, type: true, description: true, timestamp: true }
@@ -273,7 +274,7 @@ export const getTestById = async (req: Request, res: Response): Promise<void> =>
           where: { userId },
           include: {
             submissions: {
-              select: { id: true, problemId: true, status: true, score: true, submissionTime: true }
+              select: { id: true, problemId: true, status: true, score: true, createdAt: true }
             }
           }
         }

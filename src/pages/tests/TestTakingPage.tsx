@@ -16,7 +16,8 @@ import {
   AlertTriangleIcon,
   SendIcon,
   ShieldIcon,
-  MaximizeIcon
+  MaximizeIcon,
+  UploadIcon
 } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 import { io, Socket } from 'socket.io-client';
@@ -90,6 +91,7 @@ const TestTakingPage: React.FC = () => {
   const [code, setCode] = useState<{ [problemId: string]: { [language: string]: string } }>({});
   const [selectedLanguage, setSelectedLanguage] = useState<string>('cpp');
   const [isExecuting, setIsExecuting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [executionResults, setExecutionResults] = useState<ExecutionResult | null>(null);
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
@@ -404,6 +406,51 @@ main();`
     }
   };
 
+  // Handle individual problem submission (for immediate feedback)
+  const handleSubmitCode = async () => {
+    if (!test || !code[currentProblem.id]?.[selectedLanguage] || isSubmitting) return;
+
+    setIsSubmitting(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api/v1'}/test-sessions/${testId}/submit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          problemId: currentProblem.id,
+          code: code[currentProblem.id][selectedLanguage],
+          language: selectedLanguage
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        toast({
+          title: 'Submission Successful',
+          description: `Problem ${currentProblemIndex + 1} submitted successfully. Score: ${result.submission?.score || 0}%`,
+          variant: 'default'
+        });
+        
+        // Mark as submitted for this problem
+        setHasSubmitted(true);
+      } else {
+        throw new Error('Submission failed');
+      }
+    } catch (error) {
+      console.error('Submission error:', error);
+      toast({
+        title: 'Submission Failed',
+        description: 'Failed to submit solution. Please try again.',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   // Handle final submission
   const handleFinalSubmit = async () => {
     if (!test || hasSubmitted) return;
@@ -642,18 +689,33 @@ main();`
                   </SelectContent>
                 </Select>
                 
-                <Button 
-                  onClick={handleExecuteCode} 
-                  disabled={isExecuting}
-                  variant="outline"
-                >
-                  {isExecuting ? (
-                    <PauseIcon className="h-4 w-4 mr-2" />
-                  ) : (
-                    <PlayIcon className="h-4 w-4 mr-2" />
-                  )}
-                  {isExecuting ? 'Running...' : 'Run Code'}
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={handleExecuteCode} 
+                    disabled={isExecuting}
+                    variant="outline"
+                  >
+                    {isExecuting ? (
+                      <PauseIcon className="h-4 w-4 mr-2" />
+                    ) : (
+                      <PlayIcon className="h-4 w-4 mr-2" />
+                    )}
+                    {isExecuting ? 'Running...' : 'Test Code'}
+                  </Button>
+                  
+                  <Button 
+                    onClick={handleSubmitCode} 
+                    disabled={isSubmitting || hasSubmitted}
+                    variant="default"
+                  >
+                    {isSubmitting ? (
+                      <PauseIcon className="h-4 w-4 mr-2" />
+                    ) : (
+                      <UploadIcon className="h-4 w-4 mr-2" />
+                    )}
+                    {isSubmitting ? 'Submitting...' : hasSubmitted ? 'Submitted' : 'Submit'}
+                  </Button>
+                </div>
               </div>
             </div>
           </div>

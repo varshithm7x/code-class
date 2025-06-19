@@ -37,13 +37,15 @@ const LeaderboardPage: React.FC = () => {
     const fetchInitialData = async () => {
       try {
         // Fetch classes first
-        const classesData = await getClasses();
-        setClasses(Array.isArray(classesData) ? classesData : []);
+        const classesResponse = await getClasses();
+        console.log('📚 Fetched classes for leaderboard:', classesResponse);
+        setClasses(classesResponse.classes || []);
         
         // Fetch initial leaderboard with default values
         await fetchLeaderboard('all', 'assignments');
       } catch (error) {
         console.error('Error fetching initial data:', error);
+        setClasses([]); // Ensure empty array on error
         setIsLoading(false);
       }
     };

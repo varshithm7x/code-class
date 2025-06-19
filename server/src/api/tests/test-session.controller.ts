@@ -483,4 +483,174 @@ export const getSessionStatus = async (req: Request, res: Response) => {
     console.error('Error getting session status:', error);
     res.status(500).json({ error: 'Failed to get session status' });
   }
+};
+
+/**
+ * Get test session status for results page
+ */
+export const getTestSessionStatus = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = (req as any).user.id;
+    const { testId } = req.params;
+
+    // Find the test session for this user and test
+    const session = await prisma.testSession.findFirst({
+      where: {
+        testId,
+        userId
+      },
+      include: {
+        test: {
+          include: {
+            problems: {
+              orderBy: { order: 'asc' }
+            }
+          }
+        },
+        submissions: {
+          include: {
+            problem: {
+              select: { id: true, title: true, difficulty: true }
+            }
+          },
+          orderBy: { createdAt: 'desc' }
+        }
+      }
+    });
+
+    if (!session) {
+      res.status(404).json({ error: 'Test session not found' });
+      return;
+    }
+
+    // Format the response
+    const formattedSession = {
+      id: session.id,
+      status: session.status,
+      startedAt: session.startedAt,
+      submittedAt: session.submittedAt,
+      submissions: session.submissions.map((sub: any) => ({
+        id: sub.id,
+        problemId: sub.problemId,
+        code: sub.code,
+        language: sub.language,
+        status: sub.status,
+        score: sub.score || 0,
+        executionTime: sub.executionTime || 0,
+        memoryUsed: sub.memoryUsed || 0,
+        submittedAt: sub.createdAt,
+        problem: sub.problem,
+        judgeResponse: sub.judgeResponse
+      }))
+    };
+
+    res.json({ session: formattedSession });
+
+  } catch (error) {
+    console.error('Error getting test session status:', error);
+    res.status(500).json({ error: 'Failed to get test session status' });
+  }
+};
+
+/**
+ * Submit a single problem solution for immediate evaluation
+ */
+export const submitSingleProblem = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = (req as any).user.id;
+    const { testId } = req.params;
+    const { problemId, code, language } = req.body;
+
+    if (!problemId || !code || !language) {
+      res.status(400).json({ error: 'Problem ID, code, and language are required' });
+      return;
+    }
+
+    // Verify test session
+    const session = await prisma.testSession.findUnique({
+      where: {
+        testId_userId: { testId, userId }
+      },
+      include: {
+        test: {
+          include: {
+            problems: {
+              where: { id: problemId },
+              include: {
+                testCases: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!session) {
+      res.status(404).json({ error: 'Test session not found' });
+      return;
+    }
+
+    if (session.status !== 'IN_PROGRESS') {
+      res.status(400).json({ error: 'Test session is not active' });
+      return;
+    }
+
+    const problem = session.test.problems[0];
+    if (!problem) {
+      res.status(404).json({ error: 'Problem not found' });
+      return;
+    }
+
+    // Check if language is allowed
+    if (!session.test.allowedLanguages.includes(language)) {
+      res.status(400).json({ error: 'Language not allowed for this test' });
+      return;
+    }
+
+    // Create submission in database
+    const submission = await prisma.testSubmission.create({
+      data: {
+        sessionId: session.id,
+        problemId: problem.id,
+        code: code,
+        language: language,
+        status: 'PROCESSING',
+        // submissionTime field doesn't exist - using createdAt instead
+      }
+    });
+
+    // Execute immediately using Judge0
+    try {
+      await judge0Service.processSubmission(submission.id);
+      
+      // Fetch updated submission with results
+      const updatedSubmission = await prisma.testSubmission.findUnique({
+        where: { id: submission.id }
+      });
+
+      res.json({
+        message: 'Submission processed successfully',
+        submission: updatedSubmission
+      });
+
+    } catch (executionError) {
+      // Update submission status to failed
+      await prisma.testSubmission.update({
+        where: { id: submission.id },
+        data: { 
+          status: 'SYSTEM_ERROR',
+          judgeResponse: { error: 'Execution failed' }
+        }
+      });
+
+      res.status(500).json({ 
+        error: 'Code execution failed',
+        submission: { id: submission.id, status: 'SYSTEM_ERROR', score: 0 }
+      });
+    }
+
+  } catch (error) {
+    console.error('Error submitting single problem:', error);
+    res.status(500).json({ error: 'Submission failed' });
+  }
 }; 

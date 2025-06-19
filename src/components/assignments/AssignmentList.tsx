@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Assignment, StudentAssignment } from '../../types';
+import { Assignment, StudentAssignment, TeacherAssignment } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
@@ -12,7 +12,8 @@ import {
   TableHeader, 
   TableRow 
 } from '../ui/table';
-import { Pencil, Trash2, ExternalLink } from 'lucide-react';
+import { Pencil, Trash2, ExternalLink, CheckCircle2, Clock, AlertCircle, Users, FileText } from 'lucide-react';
+import { Progress } from '../ui/progress';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,7 +28,7 @@ import {
 import { formatDate } from '../../utils/date';
 
 interface AssignmentListProps {
-  assignments: Assignment[] | StudentAssignment[];
+  assignments: Assignment[] | StudentAssignment[] | TeacherAssignment[];
   onDelete?: (id: string) => void;
   showStatus?: boolean;
   className?: string;
@@ -65,6 +66,19 @@ const AssignmentList: React.FC<AssignmentListProps> = ({
         return <Badge className="bg-red-500">Overdue</Badge>;
       default:
         return <Badge variant="outline">Unknown</Badge>;
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return <CheckCircle2 className="h-5 w-5 text-green-500" />;
+      case 'pending':
+        return <Clock className="h-5 w-5 text-amber-500" />;
+      case 'overdue':
+        return <AlertCircle className="h-5 w-5 text-red-500" />;
+      default:
+        return <Clock className="h-5 w-5 text-gray-400" />;
     }
   };
 
@@ -110,7 +124,9 @@ const AssignmentList: React.FC<AssignmentListProps> = ({
             <TableHead>Title</TableHead>
             <TableHead>Assigned Date</TableHead>
             <TableHead>Due Date</TableHead>
+            <TableHead>Progress</TableHead>
             {showStatus && <TableHead>Status</TableHead>}
+            {isTeacher && <TableHead>Last Check</TableHead>}
             {isTeacher && <TableHead className="text-right">Actions</TableHead>}
           </TableRow>
         </TableHeader>
@@ -124,8 +140,79 @@ const AssignmentList: React.FC<AssignmentListProps> = ({
               <TableCell className="font-medium">{assignment.title}</TableCell>
               <TableCell>{formatDate(assignment.assignDate)}</TableCell>
               <TableCell>{formatDate(assignment.dueDate)}</TableCell>
+              <TableCell>
+                {'progress' in assignment && (
+                  <div className="space-y-2">
+                    {/* Student Progress */}
+                    {'completed' in assignment.progress && (
+                      <>
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-2">
+                            {assignment.progress.percentage === 100 ? (
+                              <CheckCircle2 className="h-4 w-4 text-green-500" />
+                            ) : assignment.progress.completed > 0 ? (
+                              <Clock className="h-4 w-4 text-amber-500" />
+                            ) : (
+                              <AlertCircle className="h-4 w-4 text-gray-400" />
+                            )}
+                            <span>{assignment.progress.completed} / {assignment.progress.total} problems</span>
+                          </div>
+                          <span className="text-muted-foreground font-medium">{assignment.progress.percentage}%</span>
+                        </div>
+                        <Progress value={assignment.progress.percentage} className="h-2" />
+                        {assignment.progress.percentage === 100 && (
+                          <div className="flex items-center gap-1 text-xs text-green-600 mt-1">
+                            <CheckCircle2 className="h-3 w-3" />
+                            <span>All problems completed!</span>
+                          </div>
+                        )}
+                      </>
+                    )}
+                    {/* Teacher Progress */}
+                    {'totalStudents' in assignment.progress && (
+                      <>
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-1">
+                            <Users className="h-3 w-3" />
+                            <span>{assignment.progress.totalStudents} students</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <FileText className="h-3 w-3" />
+                            <span>{assignment.progress.totalProblems} problems</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span>{assignment.progress.completedSubmissions} submissions completed</span>
+                          <span className="text-muted-foreground">{assignment.progress.averageCompletion}% avg</span>
+                        </div>
+                        <Progress value={assignment.progress.averageCompletion} className="h-2" />
+                      </>
+                    )}
+                  </div>
+                )}
+                {!('progress' in assignment) && (
+                  <div className="text-sm text-muted-foreground">
+                    {assignment.problems?.length || 0} problems
+                  </div>
+                )}
+              </TableCell>
               {showStatus && 'status' in assignment && (
-                <TableCell>{getStatusBadge(assignment.status)}</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    {getStatusIcon(assignment.status)}
+                    {getStatusBadge(assignment.status)}
+                  </div>
+                </TableCell>
+              )}
+              {isTeacher && (
+                <TableCell>
+                  <div className="text-sm text-muted-foreground">
+                    {assignment.lastSubmissionCheck 
+                      ? new Date(assignment.lastSubmissionCheck).toLocaleDateString()
+                      : 'Never'
+                    }
+                  </div>
+                </TableCell>
               )}
               {isTeacher && (
                 <TableCell className="text-right">

@@ -1,5 +1,5 @@
 import api from './axios';
-import { Assignment, StudentAssignment, Problem, AssignmentWithSubmissions } from '../types';
+import { Assignment, StudentAssignment, TeacherAssignment, Problem, AssignmentWithSubmissions } from '../types';
 
 export interface AssignmentCreationData {
   title: string;
@@ -56,5 +56,10 @@ export const checkSubmissions = async () => {
 
 export const checkSubmissionsForAssignment = async (assignmentId: string) => {
   const response = await api.post(`/assignments/${assignmentId}/check-submissions`);
+  return response.data;
+};
+
+export const markAllAsCompleted = async (assignmentId: string, studentId: string) => {
+  const response = await api.put(`/assignments/${assignmentId}/students/${studentId}/mark-all-completed`);
   return response.data;
 };

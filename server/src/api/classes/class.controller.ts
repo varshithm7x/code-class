@@ -21,6 +21,22 @@ interface ClassWithCounts {
   };
 }
 
+// Interface for assignment with problems
+interface AssignmentWithProblems {
+  id: string;
+  classId: string;
+  title: string;
+  description: string | null;
+  assignDate: Date;
+  dueDate: Date;
+  lastSubmissionCheck: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  problems: {
+    id: string;
+  }[];
+}
+
 // Interface for user with potential Judge0 fields
 interface UserWithJudge0Fields {
   id: string;
@@ -205,20 +221,14 @@ export const getClasses = async (req: Request, res: Response): Promise<void> => 
 
 export const getClassAssignments = async (req: Request, res: Response): Promise<void> => {
   const { classId } = req.params;
+  // @ts-expect-error: req.user is added by the protect middleware
+  const { userId, role } = req.user;
 
   try {
     const assignments = await prisma.assignment.findMany({
       where: { classId },
-      select: {
-        id: true,
-        classId: true,
-        title: true,
-        description: true,
-        assignDate: true,
-        dueDate: true,
+      include: {
         problems: true,
-        createdAt: true,
-        updatedAt: true,
       },
       orderBy: [
         {
@@ -229,8 +239,92 @@ export const getClassAssignments = async (req: Request, res: Response): Promise<
         },
       ],
     });
-    res.status(200).json(assignments);
+
+    if (role === 'TEACHER') {
+      // For teachers, add submission statistics
+      const assignmentsWithStats = await Promise.all(
+        (assignments as AssignmentWithProblems[]).map(async (assignment) => {
+          const problemIds = assignment.problems.map((p: { id: string }) => p.id);
+          
+          // Get all students in the class
+          const classStudents = await prisma.usersOnClasses.findMany({
+            where: { classId },
+            select: { userId: true },
+          });
+          
+          const totalStudents = classStudents.length;
+          const totalProblems = assignment.problems.length;
+          
+          if (totalStudents === 0 || totalProblems === 0) {
+            return {
+              ...assignment,
+              progress: {
+                totalStudents,
+                totalProblems,
+                completedSubmissions: 0,
+                averageCompletion: 0,
+              },
+            };
+          }
+          
+          // Get completed submissions for this assignment
+          const completedSubmissions = await prisma.submission.count({
+            where: {
+              problemId: { in: problemIds },
+              completed: true,
+            },
+          });
+          
+          const averageCompletion = Math.round((completedSubmissions / (totalStudents * totalProblems)) * 100);
+          
+          return {
+            ...assignment,
+            progress: {
+              totalStudents,
+              totalProblems,
+              completedSubmissions,
+              averageCompletion,
+            },
+          };
+        })
+      );
+      
+      res.status(200).json(assignmentsWithStats);
+    } else {
+      // For students, add their own progress
+      const assignmentsWithProgress = await Promise.all(
+        (assignments as AssignmentWithProblems[]).map(async (assignment) => {
+          const problemIds = assignment.problems.map((p: { id: string }) => p.id);
+          
+          const userSubmissions = await prisma.submission.findMany({
+            where: {
+              problemId: { in: problemIds },
+              userId: userId,
+            },
+            select: {
+              completed: true,
+            },
+          });
+          
+          const completedCount = userSubmissions.filter(s => s.completed).length;
+          const totalProblems = assignment.problems.length;
+          const percentage = totalProblems > 0 ? Math.round((completedCount / totalProblems) * 100) : 0;
+          
+          return {
+            ...assignment,
+            progress: {
+              completed: completedCount,
+              total: totalProblems,
+              percentage,
+            },
+          };
+        })
+      );
+      
+      res.status(200).json(assignmentsWithProgress);
+    }
   } catch (error) {
+    console.error('Error fetching assignments:', error);
     res.status(500).json({ message: 'Error fetching assignments', error });
   }
 };

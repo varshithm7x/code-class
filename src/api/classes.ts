@@ -1,5 +1,5 @@
 import api from './axios';
-import { Class, ClassWithStudents, Assignment } from '../types';
+import { Class, ClassWithStudents, Assignment, TeacherAssignment, StudentAssignment } from '../types';
 
 export const getClasses = async (): Promise<{ classes: Class[] }> => {
   const response = await api.get('/classes');
@@ -11,7 +11,7 @@ export const getClassDetails = async (classId: string) => {
   return response.data as ClassWithStudents;
 };
 
-export const getClassAssignments = async (classId: string): Promise<Assignment[]> => {
+export const getClassAssignments = async (classId: string): Promise<(Assignment | TeacherAssignment | StudentAssignment)[]> => {
   const response = await api.get(`/classes/${classId}/assignments`);
   return response.data;
 };

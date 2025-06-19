@@ -1,0 +1,33 @@
+# Supabase Database Configuration Template
+# Copy this to .env and update with your Supabase credentials
+
+# Supabase Database URL
+# Format: postgresql://postgres:[YOUR-PASSWORD]@db.[YOUR-PROJECT-REF].supabase.co:5432/postgres
+DATABASE_URL="postgresql://postgres:[YOUR-PASSWORD]@db.[YOUR-PROJECT-REF].supabase.co:5432/postgres"
+
+# Supabase Direct URL (for migrations)
+# Same as DATABASE_URL but with ?pgbouncer=true removed if present
+DIRECT_URL="postgresql://postgres:[YOUR-PASSWORD]@db.[YOUR-PROJECT-REF].supabase.co:5432/postgres"
+
+# Supabase Project Details
+SUPABASE_URL="https://[YOUR-PROJECT-REF].supabase.co"
+SUPABASE_ANON_KEY="[YOUR-ANON-KEY]"
+SUPABASE_SERVICE_ROLE_KEY="[YOUR-SERVICE-ROLE-KEY]"
+
+# Other environment variables (copy from your existing .env)
+JWT_SECRET="your-jwt-secret"
+PORT=3001
+
+# Email configuration (if applicable)
+EMAIL_HOST="smtp.example.com"
+EMAIL_PORT=587
+EMAIL_USER="your-email@example.com"
+EMAIL_PASS="your-email-password"
+
+# API Keys (copy from existing .env)
+GEMINI_API_KEY="your-gemini-api-key"
+JUDGE0_API_KEY="your-judge0-api-key"
+
+# Migration specific
+# Set to 'true' during migration to skip certain validations
+MIGRATION_MODE="false" 

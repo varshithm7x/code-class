@@ -60,7 +60,7 @@ const AssignmentDetailsPage: React.FC = () => {
     }
   };
 
-  // Check if all problems are completed for students
+  // Check if all problems are completed for students (manual marking is separate)
   const allCompleted = !isTeacher && assignment?.problems && 
     (assignment.problems as ProblemWithUserSubmission[]).every(problem => 
       problem.completed || problem.manuallyMarked
@@ -109,13 +109,16 @@ const AssignmentDetailsPage: React.FC = () => {
     return <div className="text-center py-10">Assignment not found.</div>;
   }
 
-  // Calculate progress for students (including manual completion)
+  // Calculate progress for students
   const studentProblems = assignment.problems as ProblemWithUserSubmission[];
-  const completedCount = studentProblems ? studentProblems.filter(p => p.completed || p.manuallyMarked).length : 0;
+  
+  // For main progress: Only count automatic completion (actual submissions)
   const autoCompletedCount = studentProblems ? studentProblems.filter(p => p.completed).length : 0;
-  const manuallyMarkedCount = studentProblems ? studentProblems.filter(p => p.manuallyMarked && !p.completed).length : 0;
   const totalCount = studentProblems ? studentProblems.length : 0;
-  const progressPercentage = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+  const progressPercentage = totalCount > 0 ? Math.round((autoCompletedCount / totalCount) * 100) : 0;
+  
+  // Manual marking is tracked separately for student's self-reporting
+  const manuallyMarkedCount = studentProblems ? studentProblems.filter(p => p.manuallyMarked && !p.completed).length : 0;
 
   // Button should be disabled if: 
   // 1. Currently marking as completed (API call in progress)
@@ -138,19 +141,19 @@ const AssignmentDetailsPage: React.FC = () => {
                 )}
               </div>
             </div>
-            <div className="flex gap-2">
+              <div className="flex gap-2">
               {isTeacher ? (
                 <>
-                  <Button asChild variant="outline">
-                    <Link to={`/assignments/${assignment.id}/edit`}>
-                      <Pencil className="mr-2 h-4 w-4" />
-                      Edit
-                    </Link>
-                  </Button>
-                  <Button onClick={handleCheckSubmissions} disabled={isChecking}>
-                    <RefreshCw className={`mr-2 h-4 w-4 ${isChecking ? 'animate-spin' : ''}`} />
-                    {isChecking ? 'Checking...' : 'Check Submissions'}
-                  </Button>
+                <Button asChild variant="outline">
+                  <Link to={`/assignments/${assignment.id}/edit`}>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Edit
+                  </Link>
+                </Button>
+                <Button onClick={handleCheckSubmissions} disabled={isChecking}>
+                  <RefreshCw className={`mr-2 h-4 w-4 ${isChecking ? 'animate-spin' : ''}`} />
+                  {isChecking ? 'Checking...' : 'Check Submissions'}
+                </Button>
                 </>
               ) : (
                 <Button 
@@ -165,7 +168,7 @@ const AssignmentDetailsPage: React.FC = () => {
                    hasMarkedCompleted ? 'Marked!' : 'Mark All as Completed'}
                 </Button>
               )}
-            </div>
+              </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -196,42 +199,45 @@ const AssignmentDetailsPage: React.FC = () => {
                   <Card>
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium">Completed Problems</span>
+                        <span className="text-sm font-medium">Actual Completion (Verified Submissions)</span>
                         <span className="text-sm text-muted-foreground">
-                          {completedCount} of {totalCount}
+                          {autoCompletedCount} of {totalCount}
                         </span>
                       </div>
                       <Progress value={progressPercentage} className="h-2" />
                       <div className="flex items-center gap-2 mt-2">
-                        <Badge variant={allCompleted ? "default" : "secondary"}>
+                        <Badge variant={progressPercentage === 100 ? "default" : "secondary"}>
                           {progressPercentage}% Complete
                         </Badge>
-                        {allCompleted && (
+                        {progressPercentage === 100 && (
                           <Badge variant="default" className="bg-green-500">
                             <CheckCircle2 className="h-3 w-3 mr-1" />
-                            All Done!
+                            All Verified!
                           </Badge>
                         )}
                       </div>
-                      {/* Show breakdown of completion types */}
-                      {(autoCompletedCount > 0 || manuallyMarkedCount > 0) && (
-                        <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
-                          {autoCompletedCount > 0 && (
-                            <span>{autoCompletedCount} auto-completed</span>
-                          )}
-                          {autoCompletedCount > 0 && manuallyMarkedCount > 0 && <span>•</span>}
-                          {manuallyMarkedCount > 0 && (
-                            <span>{manuallyMarkedCount} manually marked</span>
-                          )}
+                      
+                      {/* Manual marking is separate - for student self-reporting only */}
+                      {manuallyMarkedCount > 0 && (
+                        <div className="mt-3 pt-3 border-t">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Self-Reported Completion</span>
+                            <span className="text-blue-600">{manuallyMarkedCount} manually marked</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            These are problems you've marked as completed. They don't count toward verified progress.
+                          </p>
                         </div>
                       )}
                     </CardContent>
                   </Card>
                 </div>
-
-                {/* Problems List for Students */}
+                
                 <h3 className="font-semibold mb-4">Problems</h3>
-                <ProblemCompletionList problems={assignment.problems as ProblemWithUserSubmission[]} />
+                <ProblemCompletionList 
+                  problems={assignment.problems as ProblemWithUserSubmission[]} 
+                  isTeacher={false}
+                />
               </>
             )}
           </div>

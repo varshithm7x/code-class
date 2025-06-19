@@ -7,20 +7,21 @@ import { Button } from '../ui/button';
 
 interface ProblemCompletionListProps {
   problems: ProblemWithUserSubmission[];
+  isTeacher?: boolean;
 }
 
-const ProblemCompletionList: React.FC<ProblemCompletionListProps> = ({ problems }) => {
+const ProblemCompletionList: React.FC<ProblemCompletionListProps> = ({ problems, isTeacher = false }) => {
   return (
     <div className="space-y-3">
       {problems.map((problem, index) => {
         const isAutoCompleted = problem.completed;
-        const isManuallyMarked = problem.manuallyMarked;
+        const isManuallyMarked = !isTeacher && problem.manuallyMarked;
         const isAnyCompleted = isAutoCompleted || isManuallyMarked;
         
         return (
         <Card key={problem.id} className={`border transition-all duration-200 ${
           isAnyCompleted 
-            ? 'border-green-200 bg-green-50/50 hover:bg-green-50' 
+                ? 'border-green-200 bg-green-50/50 hover:bg-green-50' 
             : 'border-gray-200 hover:bg-gray-50'
         }`}>
           <CardContent className="p-4">
@@ -52,10 +53,10 @@ const ProblemCompletionList: React.FC<ProblemCompletionListProps> = ({ problems 
                     {isAutoCompleted && (
                       <Badge className="bg-green-500 text-xs">Auto-Completed</Badge>
                     )}
-                    {isManuallyMarked && !isAutoCompleted && (
+                    {!isTeacher && isManuallyMarked && !isAutoCompleted && (
                       <Badge className="bg-blue-500 text-xs">Manually Marked</Badge>
                     )}
-                    {isAutoCompleted && isManuallyMarked && (
+                    {!isTeacher && isAutoCompleted && isManuallyMarked && (
                       <Badge variant="outline" className="text-xs border-purple-300 text-purple-700">Both</Badge>
                     )}
                   </div>
@@ -89,8 +90,8 @@ const ProblemCompletionList: React.FC<ProblemCompletionListProps> = ({ problems 
                     )}
                   </div>
                 </div>
-
-                {/* Action Button */}
+                  
+                  {/* Action Button */}
                 <div className="flex-shrink-0">
                   <Button asChild variant="outline" size="sm">
                     <a

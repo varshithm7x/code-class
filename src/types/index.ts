@@ -125,10 +125,6 @@ export interface ProblemWithSubmissions extends Problem {
   submissions: Submission[];
 }
 
-export interface AssignmentWithSubmissions extends Assignment {
-  problems: ProblemWithSubmissions[];
-}
-
 export interface ProblemWithUserSubmission extends Problem {
   completed: boolean;
   manuallyMarked: boolean;
@@ -227,5 +223,55 @@ export interface Announcement {
   author: {
     id: string;
     name: string;
+  };
+}
+
+// Teacher view - only shows automatic completion
+export interface TeacherSubmission {
+  id: string;
+  userId: string;
+  completed: boolean; // Only automatic completion
+  submissionTime?: string;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+  };
+}
+
+// Student view - includes manual marking
+export interface StudentSubmission {
+  id: string;
+  completed: boolean; // Automatic completion
+  manuallyMarked: boolean; // Manual self-reporting (student only)
+  submissionTime?: string;
+}
+
+// Teacher problem view
+export interface ProblemWithTeacherSubmissions extends Problem {
+  submissions: TeacherSubmission[];
+}
+
+// Teacher assignment view
+export interface AssignmentWithSubmissions extends Assignment {
+  problems: ProblemWithTeacherSubmissions[];
+  class: {
+    id: string;
+    name: string;
+    students: Array<{
+      id: string;
+      name: string;
+      email: string;
+    }>;
+  };
+}
+
+// Student assignment view
+export interface StudentAssignmentDetails extends Assignment {
+  problems: ProblemWithUserSubmission[];
+  progress: {
+    completed: number;
+    total: number;
+    percentage: number;
   };
 }

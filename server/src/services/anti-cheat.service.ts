@@ -1,7 +1,5 @@
-import { PrismaClient } from '@prisma/client';
+import prisma from '../lib/prisma';
 import { WebSocketService } from './websocket.service';
-
-const prisma = new PrismaClient() as any;
 
 export enum ViolationType {
   TAB_SWITCH = 'TAB_SWITCH',

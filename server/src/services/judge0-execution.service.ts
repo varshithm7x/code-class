@@ -1,7 +1,5 @@
-import { PrismaClient } from '@prisma/client';
+import prisma from '../lib/prisma';
 import { Judge0KeyManager } from './judge0-key-manager.service';
-
-const prisma = new PrismaClient() as any;
 
 interface Judge0SubmissionRequest {
   source_code: string;
@@ -41,8 +39,8 @@ const LANGUAGE_MAPPING = {
 
 // Status mapping from Judge0 to our system
 const STATUS_MAPPING: Record<number, string> = {
-  1: 'QUEUED',           // In Queue
-  2: 'PROCESSING',       // Processing
+  1: 'PENDING',          // In Queue
+  2: 'JUDGING',          // Processing
   3: 'ACCEPTED',         // Accepted
   4: 'WRONG_ANSWER',     // Wrong Answer
   5: 'TIME_LIMIT_EXCEEDED', // Time Limit Exceeded
@@ -53,8 +51,8 @@ const STATUS_MAPPING: Record<number, string> = {
   10: 'RUNTIME_ERROR',   // Runtime Error (SIGABRT)
   11: 'RUNTIME_ERROR',   // Runtime Error (NZEC)
   12: 'RUNTIME_ERROR',   // Runtime Error (Other)
-  13: 'INTERNAL_ERROR',  // Internal Error
-  14: 'EXEC_FORMAT_ERROR' // Exec Format Error
+  13: 'SYSTEM_ERROR',    // Internal Error
+  14: 'SYSTEM_ERROR'     // Exec Format Error
 };
 
 export class Judge0ExecutionService {
@@ -267,11 +265,7 @@ export class Judge0ExecutionService {
             include: {
               test: {
                 include: {
-                  problems: {
-                    include: {
-                      testCases: true
-                    }
-                  }
+                  problems: true
                 }
               }
             }
@@ -294,7 +288,7 @@ export class Judge0ExecutionService {
       // Update submission status to processing
       await prisma.testSubmission.update({
         where: { id: submissionId },
-        data: { status: 'PROCESSING' }
+        data: { status: 'JUDGING' }
       });
 
       // Get available API key
@@ -303,8 +297,8 @@ export class Judge0ExecutionService {
         throw new Error('No available Judge0 API keys');
       }
 
-      // Process each test case
-      const testCases = problem.testCases;
+      // Process each test case (testCases is stored as JSON)
+      const testCases = Array.isArray(problem.testCases) ? problem.testCases : JSON.parse(problem.testCases as string);
       const results: any[] = [];
       let totalScore = 0;
       let allPassed = true;
@@ -361,7 +355,7 @@ export class Judge0ExecutionService {
 
       // Calculate final status
       const finalStatus = allPassed ? 'ACCEPTED' : 
-                         results.some(r => r.passed) ? 'PARTIAL' : 
+                         results.some(r => r.passed) ? 'WRONG_ANSWER' : 
                          results.some(r => r.statusId === 6) ? 'COMPILATION_ERROR' :
                          results.some(r => r.statusId === 5) ? 'TIME_LIMIT_EXCEEDED' :
                          'WRONG_ANSWER';
@@ -374,7 +368,7 @@ export class Judge0ExecutionService {
           score: totalScore,
           executionTime: Math.max(...results.map(r => r.time)),
           memoryUsed: Math.max(...results.map(r => r.memory)),
-          judgeResponse: {
+          judgeOutput: {
             testCases: results,
             summary: {
               totalTestCases: testCases.length,
@@ -393,9 +387,9 @@ export class Judge0ExecutionService {
       await prisma.testSubmission.update({
         where: { id: submissionId },
         data: {
-          status: 'INTERNAL_ERROR',
+          status: 'SYSTEM_ERROR',
           score: 0,
-          judgeResponse: {
+          judgeOutput: {
             error: error instanceof Error ? error.message : 'Unknown error'
           }
         }

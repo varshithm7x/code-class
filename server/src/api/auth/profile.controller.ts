@@ -172,6 +172,14 @@ export const updateJudge0Key = async (req: Request, res: Response): Promise<void
   const userId = req.user.userId;
   const { apiKey, agreedToSharing = false } = req.body;
 
+  console.log('🔑 Backend: Received Judge0 key request', {
+    userId,
+    hasApiKey: !!apiKey,
+    apiKeyLength: apiKey?.length,
+    agreedToSharing,
+    timestamp: new Date().toISOString()
+  });
+
   if (!apiKey || typeof apiKey !== 'string' || apiKey.trim().length < 10) {
     res.status(400).json({ 
       message: 'Valid Judge0 API key is required (minimum 10 characters)' 
@@ -231,12 +239,12 @@ export const removeJudge0Key = async (req: Request, res: Response): Promise<void
     console.log(`🗑️ Removing Judge0 API key for user ${userId}`);
 
     // Remove from shared pool
-    await (prisma as any).judge0KeyPool.deleteMany({
+    await prisma.judge0KeyPool.deleteMany({
       where: { userId }
     });
 
     // Update user status
-    await (prisma as any).user.update({
+    await prisma.user.update({
       where: { id: userId },
       data: {
         judge0ApiKey: null,
@@ -269,7 +277,7 @@ export const getJudge0Status = async (req: Request, res: Response): Promise<void
   const userId = req.user.userId;
 
   try {
-    const user = await (prisma as any).user.findUnique({
+    const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
         judge0KeyStatus: true,
@@ -284,7 +292,7 @@ export const getJudge0Status = async (req: Request, res: Response): Promise<void
     }
 
     // Check if in shared pool
-    const sharedKey = await (prisma as any).judge0KeyPool.findFirst({
+    const sharedKey = await prisma.judge0KeyPool.findFirst({
       where: { userId },
       select: {
         status: true,

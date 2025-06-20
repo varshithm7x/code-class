@@ -2,7 +2,7 @@ import React from 'react';
 import { ProblemWithUserSubmission } from '../../types';
 import { Card, CardContent } from '../ui/card';
 import { Badge } from '../ui/badge';
-import { CheckCircle2, Clock, ExternalLink, Calendar, UserCheck } from 'lucide-react';
+import { CheckCircle2, Clock, ExternalLink, Calendar } from 'lucide-react';
 import { Button } from '../ui/button';
 
 interface ProblemCompletionListProps {
@@ -15,12 +15,10 @@ const ProblemCompletionList: React.FC<ProblemCompletionListProps> = ({ problems,
     <div className="space-y-3">
       {problems.map((problem, index) => {
         const isAutoCompleted = problem.completed;
-        const isManuallyMarked = !isTeacher && problem.manuallyMarked;
-        const isAnyCompleted = isAutoCompleted || isManuallyMarked;
         
         return (
         <Card key={problem.id} className={`border transition-all duration-200 ${
-          isAnyCompleted 
+          isAutoCompleted 
                 ? 'border-green-200 bg-green-50/50 hover:bg-green-50' 
             : 'border-gray-200 hover:bg-gray-50'
         }`}>
@@ -32,10 +30,6 @@ const ProblemCompletionList: React.FC<ProblemCompletionListProps> = ({ problems,
                   {isAutoCompleted ? (
                     <div className="flex items-center justify-center w-8 h-8 bg-green-500 rounded-full">
                       <CheckCircle2 className="h-5 w-5 text-white" />
-                    </div>
-                  ) : isManuallyMarked ? (
-                    <div className="flex items-center justify-center w-8 h-8 bg-blue-500 rounded-full">
-                      <UserCheck className="h-5 w-5 text-white" />
                     </div>
                   ) : (
                     <div className="flex items-center justify-center w-8 h-8 bg-gray-200 rounded-full">
@@ -52,12 +46,6 @@ const ProblemCompletionList: React.FC<ProblemCompletionListProps> = ({ problems,
                     </span>
                     {isAutoCompleted && (
                       <Badge className="bg-green-500 text-xs">Auto-Completed</Badge>
-                    )}
-                    {!isTeacher && isManuallyMarked && !isAutoCompleted && (
-                      <Badge className="bg-blue-500 text-xs">Manually Marked</Badge>
-                    )}
-                    {!isTeacher && isAutoCompleted && isManuallyMarked && (
-                      <Badge variant="outline" className="text-xs border-purple-300 text-purple-700">Both</Badge>
                     )}
                   </div>
                   
@@ -101,7 +89,7 @@ const ProblemCompletionList: React.FC<ProblemCompletionListProps> = ({ problems,
                       className="flex items-center gap-1"
                     >
                       <ExternalLink className="h-3 w-3" />
-                      {isAnyCompleted ? 'Review' : 'Solve'}
+                      {isAutoCompleted ? 'Review' : 'Solve'}
                     </a>
                   </Button>
                 </div>

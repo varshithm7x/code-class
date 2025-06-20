@@ -1,5 +1,5 @@
 import api from './axios';
-import { Assignment, StudentAssignment, TeacherAssignment, Problem, AssignmentWithSubmissions } from '../types';
+import { Assignment, StudentAssignment, TeacherAssignment, Problem, AssignmentWithSubmissions, StudentAssignmentDetails } from '../types';
 
 export interface AssignmentCreationData {
   title: string;
@@ -21,7 +21,7 @@ export const createAssignment = async (
   return response.data;
 };
 
-export const getAssignmentDetails = async (assignmentId: string): Promise<AssignmentWithSubmissions> => {
+export const getAssignmentDetails = async (assignmentId: string): Promise<AssignmentWithSubmissions | StudentAssignmentDetails> => {
   const response = await api.get(`/assignments/${assignmentId}`);
   return response.data;
 }
@@ -54,12 +54,20 @@ export const checkSubmissions = async () => {
   return response.data;
 };
 
-export const checkSubmissionsForAssignment = async (assignmentId: string) => {
-  const response = await api.post(`/assignments/${assignmentId}/check-submissions`);
+export const checkSubmissionsForAssignment = async (
+  assignmentId: string
+): Promise<{ message: string; lastChecked: string }> => {
+  const response = await api.post(
+    `/assignments/${assignmentId}/check-submissions`
+  );
   return response.data;
 };
 
-export const markAllAsCompleted = async (assignmentId: string, studentId: string) => {
-  const response = await api.put(`/assignments/${assignmentId}/students/${studentId}/mark-all-completed`);
+export const checkMySubmissionsForAssignment = async (
+  assignmentId: string
+): Promise<{ message: string }> => {
+  const response = await api.post(
+    `/assignments/${assignmentId}/check-my-submissions`
+  );
   return response.data;
 };

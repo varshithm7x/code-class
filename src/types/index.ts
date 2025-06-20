@@ -114,7 +114,6 @@ export interface Submission {
   studentId: string;
   studentName: string;
   completed: boolean;
-  manuallyMarked: boolean;
   submissionTime?: string;
   leetcodeUsername?: string | null;
   hackerrankUsername?: string | null;
@@ -127,7 +126,6 @@ export interface ProblemWithSubmissions extends Problem {
 
 export interface ProblemWithUserSubmission extends Problem {
   completed: boolean;
-  manuallyMarked: boolean;
   submissionTime?: string;
 }
 
@@ -243,7 +241,6 @@ export interface TeacherSubmission {
 export interface StudentSubmission {
   id: string;
   completed: boolean; // Automatic completion
-  manuallyMarked: boolean; // Manual self-reporting (student only)
   submissionTime?: string;
 }
 
@@ -266,12 +263,3 @@ export interface AssignmentWithSubmissions extends Assignment {
   };
 }
 
-// Student assignment view
-export interface StudentAssignmentDetails extends Assignment {
-  problems: ProblemWithUserSubmission[];
-  progress: {
-    completed: number;
-    total: number;
-    percentage: number;
-  };
-}

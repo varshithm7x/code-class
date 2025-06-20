@@ -15,8 +15,20 @@ interface HackerRankSubmission {
   code?: string;
 }
 
+interface HackerRankSubmissionModel {
+  id: number;
+  status: string;
+  score: number;
+  language: string;
+  created_at: string;
+  challenge: {
+    name: string;
+    slug?: string;
+  }
+}
+
 interface HackerRankSubmissionsResponse {
-  models: unknown[];
+  models: HackerRankSubmissionModel[];
 }
 
 interface HackerRankSubmissionDetailResponse {
@@ -55,24 +67,21 @@ export const fetchHackerRankSubmissions = async (sessionCookie: string, limit: n
     }
 
     const submissions = response.data.models
-      .filter((sub: unknown) => (sub as Record<string, unknown>).status === 'Accepted') // Only accepted submissions
-      .map((sub: unknown, index: number) => {
-        const submission = sub as Record<string, unknown>;
-        const challenge = submission.challenge as Record<string, unknown>;
-        
+      .filter((sub) => sub.status === 'Accepted') // Only accepted submissions
+      .map((sub, index) => {
         // Debug: Log the full challenge object to see available fields (only for first submission)
         if (index === 0) {
-          console.log(`🔍 DEBUG: Full challenge object:`, JSON.stringify(challenge, null, 2));
+          console.log(`🔍 DEBUG: Full challenge object:`, JSON.stringify(sub.challenge, null, 2));
         }
         
         return {
-          id: submission.id as number,
-          challenge_name: challenge.name as string,
-          challenge_slug: challenge.slug as string || null, // Try to get slug if available
-          language: submission.language as string,
-          score: submission.score as number,
-          status: submission.status as string,
-          created_at: submission.created_at as string,
+          id: sub.id,
+          challenge_name: sub.challenge.name,
+          challenge_slug: sub.challenge.slug || null, // Try to get slug if available
+          language: sub.language,
+          score: sub.score,
+          status: sub.status,
+          created_at: sub.created_at,
         };
       });
     
@@ -80,11 +89,12 @@ export const fetchHackerRankSubmissions = async (sessionCookie: string, limit: n
     return submissions;
 
   } catch (error: unknown) {
-    if ((error as { response?: { status?: number } }).response?.status === 401) {
+    const err = error as { response?: { status?: number }, message: string };
+    if (err.response?.status === 401) {
       console.error('🔶 HackerRank: Unauthorized. The session cookie may be invalid or expired.');
       throw new Error('HackerRank session expired or invalid.');
     }
-    console.error('🔶 HackerRank: Error fetching submissions:', (error as Error).message);
+    console.error('🔶 HackerRank: Error fetching submissions:', err.message);
     throw error;
   }
 };
@@ -218,7 +228,7 @@ const processHackerRankSubmissions = async (
     });
     
     if (matchingSubmission) {
-      const submissionTime = safeDateFromTimestamp(matchingSubmission.created_at);
+      const submissionTime = new Date(matchingSubmission.created_at);
       
       await prisma.submission.update({
         where: { id: data.submissionId },
@@ -311,7 +321,7 @@ export const syncAllLinkedHackerRankUsers = async (): Promise<void> => {
       // Rate limiting
       await new Promise(resolve => setTimeout(resolve, 1000));
     } catch (error) {
-      console.error(`🔶 HackerRank: Error syncing user ${user.hackerrankUsername}:`, error);
+      console.error(`🔶 HackerRank: Error syncing user ${user.hackerrankUsername}:`, (error as Error).message);
     }
   }
   
@@ -321,143 +331,124 @@ export const syncAllLinkedHackerRankUsers = async (): Promise<void> => {
 /**
  * Force sync HackerRank submissions for assignment checking (bypasses optimization)
  */
-export const forceCheckHackerRankSubmissionsForAssignment = async (assignmentId: string): Promise<void> => {
-  console.log(`🎯 Starting FORCED HackerRank submission check for assignment: ${assignmentId}`);
-  
-  // Get all users with HackerRank problems in this assignment
-  const usersWithHackerRankProblems = await prisma.user.findMany({
+export const forceCheckHackerRankSubmissionsForAssignment = async (
+  assignmentId: string,
+  userId?: string
+): Promise<number> => {
+  console.log(`Force checking HackerRank submissions for assignment: ${assignmentId}`);
+  let totalUpdatedCount = 0;
+
+  // 1. Get all HackerRank problems for this assignment
+  const hackerrankProblems = await prisma.problem.findMany({
     where: {
-      hackerrankCookieStatus: 'LINKED',
-      hackerrankCookie: { not: null },
-      hackerrankUsername: { not: null },
-      submissions: {
-        some: {
-          problem: {
-            assignmentId: assignmentId,
-            platform: 'hackerrank'
-          }
-        }
-      }
-    }
+      assignmentId: assignmentId,
+      platform: 'hackerrank',
+    },
   });
 
-  console.log(`📊 Found ${usersWithHackerRankProblems.length} users with HackerRank problems in assignment ${assignmentId}`);
-  
-  let successCount = 0;
-  let errorCount = 0;
-  
-  for (const user of usersWithHackerRankProblems) {
-    try {
-      console.log(`🔍 Force checking HackerRank submissions for ${user.hackerrankUsername}...`);
-      
-      // Step 1: Get user's assignment problems
-      const userAssignmentProblems = await prisma.submission.findMany({
-        where: {
-          userId: user.id,
-          problem: {
-            assignmentId: assignmentId,
-            platform: 'hackerrank'
-          }
+  if (hackerrankProblems.length === 0) {
+    console.log('No HackerRank problems in this assignment.');
+    return 0;
+  }
+
+  const problemSlugMap = new Map<string, string>();
+  hackerrankProblems.forEach(p => {
+    const slug = extractHackerRankSlug(p.url);
+    if (slug) problemSlugMap.set(slug, p.id);
+  });
+  console.log('Target HackerRank problem slugs:', Array.from(problemSlugMap.keys()));
+
+  // 2. Get all students assigned to this assignment
+  const assignment = await prisma.assignment.findUnique({
+    where: { id: assignmentId },
+    select: { classId: true },
+  });
+
+  if (!assignment) {
+    console.log(`Assignment ${assignmentId} not found.`);
+    return 0;
+  }
+
+  const users = await prisma.user.findMany({
+    where: {
+      classes: {
+        some: {
+          classId: assignment.classId,
         },
-        include: {
-          problem: true
-        }
-      });
+      },
+      hackerrankCookieStatus: 'LINKED',
+      id: userId, // If userId is provided, filter by it
+    },
+  });
 
-      if (userAssignmentProblems.length === 0) {
-        console.log(`⏭️ No HackerRank problems for ${user.hackerrankUsername} in this assignment`);
-        continue;
+  if (users.length === 0) {
+    if (userId) {
+      console.log(`User ${userId} is not in this class or has no linked HackerRank account.`);
+    } else {
+      console.log('No students with linked HackerRank accounts in this class.');
+    }
+    return 0;
+  }
+
+  // 3. For each user, fetch their recent submissions and check against the assignment problems
+  for (const user of users) {
+    if (!user.hackerrankCookie) continue;
+
+    console.log(`Checking HackerRank submissions for user: ${user.name} (${user.id})`);
+
+    try {
+      const recentSubmissions = await fetchHackerRankSubmissions(user.hackerrankCookie, 200);
+
+      const submissionsToUpdate = [];
+      for (const sub of recentSubmissions) {
+        const submissionSlug = sub.challenge_slug || normalizeHackerRankChallengeName(sub.challenge_name);
+        if (problemSlugMap.has(submissionSlug)) {
+          const problemId = problemSlugMap.get(submissionSlug)!;
+          submissionsToUpdate.push({
+            userId: user.id,
+            problemId: problemId,
+            completed: true,
+            submissionTime: new Date(sub.created_at),
+          });
+        }
       }
 
-      console.log(`📝 Found ${userAssignmentProblems.length} HackerRank problems for ${user.hackerrankUsername} in assignment`);
-
-      // Step 2: Always fetch fresh submissions (no optimization)
-      let submissions: HackerRankSubmission[] = [];
-      try {
-        submissions = await fetchHackerRankSubmissions(user.hackerrankCookie!, 100);
-        console.log(`📥 Fetched ${submissions.length} recent submissions for ${user.hackerrankUsername}`);
-        
-        // Debug: Log all challenge names from submissions
-        if (submissions.length > 0) {
-          console.log(`🔍 DEBUG: Challenge names in submissions:`, submissions.map(s => s.challenge_name).slice(0, 10));
-        }
-      } catch (error: unknown) {
-        console.error(`❌ Failed to fetch HackerRank submissions for ${user.hackerrankUsername}:`, (error as Error).message);
-        errorCount++;
-        continue;
-      }
-
-      // Step 3: Check assignment problems against submissions
-      let updatedCount = 0;
-
-      for (const assignmentSubmission of userAssignmentProblems) {
-        const problemSlug = extractHackerRankSlug(assignmentSubmission.problem.url);
-        if (!problemSlug) {
-          console.log(`⚠️ Could not extract slug from ${assignmentSubmission.problem.url}`);
-          continue;
-        }
-
-        console.log(`🔍 Checking problem: ${assignmentSubmission.problem.title}`);
-        console.log(`   URL: ${assignmentSubmission.problem.url}`);
-        console.log(`   Extracted slug: ${problemSlug}`);
-
-        // IMPROVED MATCHING: Try multiple strategies to match the problem
-        const matchingSubmission = submissions.find(s => {
-          // Strategy 1: Direct slug comparison (if API provides slug)
-          if (s.challenge_slug === problemSlug) {
-            console.log(`   🎯 Direct slug match: ${s.challenge_slug} === ${problemSlug}`);
-            return true;
-          }
-          
-          // Strategy 2: Normalize the challenge name and compare with URL slug
-          const normalizedChallengeName = normalizeHackerRankChallengeName(s.challenge_name);
-          if (normalizedChallengeName === problemSlug) {
-            console.log(`   🎯 Normalized name match: "${s.challenge_name}" -> "${normalizedChallengeName}" === "${problemSlug}"`);
-            return true;
-          }
-          
-          // Strategy 3: Compare normalized versions of both
-          const normalizedSlug = normalizeHackerRankChallengeName(problemSlug);
-          if (normalizedChallengeName === normalizedSlug) {
-            console.log(`   🎯 Both normalized match: "${normalizedChallengeName}" === "${normalizedSlug}"`);
-            return true;
-          }
-          
-          return false;
-        });
-
-        if (matchingSubmission) {
-          const submissionTime = safeDateFromTimestamp(matchingSubmission.created_at);
-
-          await prisma.submission.update({
-            where: { id: assignmentSubmission.id },
+      // 4. Update the database
+      if (submissionsToUpdate.length > 0) {
+        const updatePromises = submissionsToUpdate.map(subData => 
+          prisma.submission.updateMany({
+            where: {
+              userId: subData.userId,
+              problemId: subData.problemId,
+              completed: false, // Only update if not already completed
+            },
             data: {
               completed: true,
-              submissionTime
-            }
-          });
+              submissionTime: subData.submissionTime,
+            },
+          })
+        );
+        
+        const results = await prisma.$transaction(updatePromises);
+        const userUpdatedCount = results.reduce((sum, result) => sum + result.count, 0);
 
-          console.log(`✅ Marked ${assignmentSubmission.problem.title} as completed for ${user.hackerrankUsername}`);
-          console.log(`   Matched via: ${matchingSubmission.challenge_slug ? 'slug' : 'normalized name'} (${matchingSubmission.challenge_name})`);
-          updatedCount++;
-        } else {
-          console.log(`❌ Problem ${assignmentSubmission.problem.title} (slug: ${problemSlug}) not found in ${user.hackerrankUsername}'s submissions`);
-          console.log(`   Available challenge names: ${submissions.map(s => s.challenge_name).slice(0, 5).join(', ')}${submissions.length > 5 ? '...' : ''}`);
-          console.log(`   Tried normalizing "${problemSlug}" and looking for matches...`);
+        totalUpdatedCount += userUpdatedCount;
+
+        if (userUpdatedCount > 0) {
+          console.log(`Updated ${userUpdatedCount} HackerRank submissions for ${user.name}.`);
         }
       }
-
-      console.log(`✅ Updated ${updatedCount}/${userAssignmentProblems.length} problems for ${user.hackerrankUsername}`);
-      successCount++;
-      
-      // Rate limiting
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
     } catch (error) {
-      console.error(`❌ Error force checking user ${user.hackerrankUsername}:`, error);
-      errorCount++;
+      const err = error as Error & { message: string };
+      console.error(`Failed to check HackerRank submissions for ${user.name}: ${err.message}`);
+      if (err.message.includes('session invalid')) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { hackerrankCookieStatus: 'EXPIRED' },
+        });
+        console.log(`Marked HackerRank cookie as expired for ${user.name}.`);
+      }
     }
   }
-  
-  console.log(`✅ Force check completed for assignment ${assignmentId}. Success: ${successCount}, Errors: ${errorCount}`);
+  return totalUpdatedCount;
 };

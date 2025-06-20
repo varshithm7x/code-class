@@ -1,7 +1,5 @@
 import crypto from 'crypto';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient() as any; // Temporary type assertion to fix generated client issues
+import prisma from '../lib/prisma';
 
 interface Judge0KeyInfo {
   id: string;
@@ -238,25 +236,34 @@ export class Judge0KeyManager {
     totalDailyLimit: number;
   }> {
     try {
-      const stats = await prisma.judge0KeyPool.aggregate({
-        _count: { id: true },
-        _sum: { dailyUsage: true, dailyLimit: true }
+      // Get total counts and sums
+      const totalKeysCount = await prisma.judge0KeyPool.count();
+      
+      const activeKeysCount = await prisma.judge0KeyPool.count({
+        where: { status: 'ACTIVE' }
       });
 
-      const statusCounts = await prisma.judge0KeyPool.groupBy({
-        by: ['status'],
-        _count: { id: true }
+      const exhaustedKeysCount = await prisma.judge0KeyPool.count({
+        where: { status: 'EXHAUSTED' }
       });
 
-      const activeKeys = statusCounts.find((s: any) => s.status === 'ACTIVE')?._count?.id || 0;
-      const exhaustedKeys = statusCounts.find((s: any) => s.status === 'EXHAUSTED')?._count?.id || 0;
+             // Get all keys and manually calculate sums to avoid TypeScript aggregation issues
+       const allKeys = await prisma.judge0KeyPool.findMany({
+         select: {
+           dailyUsage: true,
+           dailyLimit: true
+         }
+      });
+
+       const totalDailyUsage = allKeys.reduce((sum, key) => sum + (key.dailyUsage || 0), 0);
+       const totalDailyLimit = allKeys.reduce((sum, key) => sum + (key.dailyLimit || 0), 0);
 
       return {
-        totalKeys: stats._count.id || 0,
-        activeKeys,
-        exhaustedKeys,
-        totalDailyUsage: stats._sum.dailyUsage || 0,
-        totalDailyLimit: stats._sum.dailyLimit || 0
+        totalKeys: totalKeysCount,
+        activeKeys: activeKeysCount,
+        exhaustedKeys: exhaustedKeysCount,
+        totalDailyUsage,
+        totalDailyLimit
       };
     } catch (error) {
       console.error('Error getting pool stats:', error);

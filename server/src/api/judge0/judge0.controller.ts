@@ -1,8 +1,6 @@
 import { Request, Response } from 'express';
 import { Judge0KeyManager } from '../../services/judge0-key-manager.service';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient() as any; // Temporary type assertion to fix generated client issues
+import prisma from '../../lib/prisma';
 
 /**
  * Add Judge0 API key for a user

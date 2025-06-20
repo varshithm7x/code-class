@@ -161,10 +161,10 @@ const ProfilePage: React.FC = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Link className="h-5 w-5" />
-                LeetCode Integration
+                LeetCode Session Cookie
               </CardTitle>
               <CardDescription>
-                Link your LeetCode account for automatic submission tracking and enhanced progress monitoring.
+                Link your LeetCode account with session cookie for automatic submission tracking. Your statistics are displayed in the card above.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -180,27 +180,6 @@ const ProfilePage: React.FC = () => {
                   </div>
                 </div>
                 
-                {/* Show stats if linked */}
-                {(user as any)?.leetcodeCookieStatus === 'LINKED' && (
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-blue-600">{(user as any)?.leetcodeTotalSolved || 0}</div>
-                      <div className="text-xs text-gray-600">Total Solved</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-green-600">{(user as any)?.leetcodeEasySolved || 0}</div>
-                      <div className="text-xs text-gray-600">Easy</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-yellow-600">{(user as any)?.leetcodeMediumSolved || 0}</div>
-                      <div className="text-xs text-gray-600">Medium</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-red-600">{(user as any)?.leetcodeHardSolved || 0}</div>
-                      <div className="text-xs text-gray-600">Hard</div>
-                    </div>
-                  </div>
-                )}
               </div>
 
               {/* Success/Error Messages */}

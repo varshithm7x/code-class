@@ -11,20 +11,17 @@ datasource db {
 }
 
 model User {
-  id                     String           @id @default(cuid())
-  email                  String           @unique
+  id                     String                  @id @default(cuid())
+  email                  String                  @unique
   name                   String
   password               String
   role                   Role             @default(STUDENT)
   createdAt              DateTime         @default(now())
   updatedAt              DateTime         @updatedAt
-  
   hackerrankUsername     String?
   hackerrankCookie       String?          // Session cookie for authenticated API calls
   hackerrankCookieStatus String           @default("NOT_LINKED") // LINKED, EXPIRED, NOT_LINKED
-  
   gfgUsername            String?
-  
   leetcodeUsername       String?
   leetcodeCookie         String?          // Encrypted session cookie for authenticated API calls
   leetcodeCookieStatus   String           @default("NOT_LINKED") // LINKED, EXPIRED, NOT_LINKED
@@ -172,6 +169,9 @@ model TestSession {
   endedAt             DateTime?
   status              TestStatus       @default(IN_PROGRESS)
   penaltyCount        Int              @default(0)
+  totalPenalties      Int              @default(0)
+  scoreReduction      Int              @default(0)
+  timePenalty         Int              @default(0)
   lastActivity        DateTime         @default(now())
   currentProblemIndex Int              @default(0)
   createdAt           DateTime         @default(now())
@@ -203,13 +203,18 @@ model TestSubmission {
 }
 
 model TestPenalty {
-  id          String      @id @default(cuid())
-  sessionId   String
-  type        PenaltyType
-  description String
-  timestamp   DateTime    @default(now())
-  createdAt   DateTime    @default(now())
-  session     TestSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  id             String        @id @default(cuid())
+  sessionId      String
+  type           PenaltyType
+  violationType  ViolationType
+  penaltyLevel   PenaltyLevel
+  description    String
+  details        Json?
+  scoreReduction Int           @default(0)
+  timePenalty    Int           @default(0)
+  timestamp      DateTime      @default(now())
+  createdAt      DateTime      @default(now())
+  session        TestSession   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 }
 
 model Judge0KeyPool {
@@ -272,4 +277,20 @@ enum PenaltyType {
   PASTE_ATTEMPT
   FOCUS_LOST
   SUSPICIOUS_ACTIVITY
+}
+
+enum ViolationType {
+  TAB_SWITCH
+  FULLSCREEN_EXIT
+  COPY_PASTE
+  DEV_TOOLS
+  FOCUS_LOSS
+  CONTEXT_MENU
+}
+
+enum PenaltyLevel {
+  WARNING
+  MINOR
+  MAJOR
+  TERMINATION
 }

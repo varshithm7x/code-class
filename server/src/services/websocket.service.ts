@@ -214,7 +214,7 @@ export class WebSocketService {
         startTime: test.startTime,
         endTime: test.endTime,
         allowedLanguages: test.allowedLanguages,
-        problems: test.problems.map((p: any) => ({
+        problems: (test as any).problems?.map((p: any) => ({
           id: p.id,
           title: p.title,
           description: p.description,
@@ -280,7 +280,11 @@ export class WebSocketService {
       data: {
         sessionId: socket.sessionId,
         type: data.type as any,
-        description: data.description
+        violationType: data.type as any,
+        penaltyLevel: 'WARNING' as any,
+        description: data.description,
+        scoreReduction: 0,
+        timePenalty: 0
       }
     });
 

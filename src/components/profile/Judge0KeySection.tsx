@@ -2,9 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
-import { Switch } from '../ui/switch';
 import { Alert, AlertDescription } from '../ui/alert';
 import { Badge } from '../ui/badge';
 import { 
@@ -43,9 +41,10 @@ const Judge0KeySection: React.FC<Judge0KeySectionProps> = ({ onKeyUpdate }) => {
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
     apiKey: '',
-    agreedToSharing: false
+    agreedToSharing: true // Always true - all keys are automatically shared
   });
   const [submitting, setSubmitting] = useState(false);
+  const [validating, setValidating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -76,12 +75,24 @@ const Judge0KeySection: React.FC<Judge0KeySectionProps> = ({ onKeyUpdate }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
+    setValidating(true);
     setError(null);
     setSuccess(null);
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/v1/auth/judge0-key', {
+      
+      // Get API URL from environment or fallback
+      const apiBaseUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '/api/v1';
+      const apiUrl = `${apiBaseUrl}/auth/judge0-key`;
+      
+      console.log('🔑 Judge0KeySection: Validating and submitting API key', {
+        apiUrl,
+        hasToken: !!token,
+        formData: { ...formData, apiKey: formData.apiKey ? '***HIDDEN***' : '' }
+      });
+
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -90,19 +101,34 @@ const Judge0KeySection: React.FC<Judge0KeySectionProps> = ({ onKeyUpdate }) => {
         body: JSON.stringify(formData)
       });
 
+      console.log('🔑 Judge0KeySection: Response received', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok
+      });
+
       const data = await response.json();
+      setValidating(false);
 
       if (response.ok) {
-        setSuccess(data.message);
+        console.log('✅ Judge0KeySection: Success', data.message);
+        setSuccess('Judge0 API key validated and added successfully! Your key is now shared with the class pool.');
         setShowForm(false);
-        setFormData({ apiKey: '', agreedToSharing: false });
+        setFormData({ apiKey: '', agreedToSharing: true });
         await fetchStatus(); // Refresh status
         onKeyUpdate?.();
       } else {
+        console.error('❌ Judge0KeySection: Error', data);
+        if (response.status === 400 && data.message?.includes('Invalid Judge0 API key')) {
+          setError('Invalid Judge0 API key. Please verify your RapidAPI key is correct and has access to Judge0.');
+      } else {
         setError(data.message || 'Failed to add Judge0 API key');
+        }
       }
     } catch (err) {
-      setError('Error adding Judge0 API key');
+      console.error('❌ Judge0KeySection: Exception', err);
+      setValidating(false);
+      setError('Network error occurred while adding Judge0 API key. Please check your connection and try again.');
     } finally {
       setSubmitting(false);
     }
@@ -163,9 +189,9 @@ const Judge0KeySection: React.FC<Judge0KeySectionProps> = ({ onKeyUpdate }) => {
   const getStatusBadge = (keyStatus: string) => {
     switch (keyStatus) {
       case 'ACTIVE':
-        return <Badge variant="success">Active</Badge>;
+        return <Badge className="bg-green-100 text-green-800">Active</Badge>;
       case 'EXHAUSTED':
-        return <Badge variant="warning">Quota Exhausted</Badge>;
+        return <Badge className="bg-yellow-100 text-yellow-800">Quota Exhausted</Badge>;
       case 'INVALID':
         return <Badge variant="destructive">Invalid</Badge>;
       default:
@@ -204,6 +230,15 @@ const Judge0KeySection: React.FC<Judge0KeySectionProps> = ({ onKeyUpdate }) => {
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Alert Messages */}
+        {validating && (
+          <Alert className="bg-blue-50 border-blue-200">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600" />
+            <AlertDescription className="text-blue-700">
+              Validating your Judge0 API key with RapidAPI. This may take a few seconds...
+            </AlertDescription>
+          </Alert>
+        )}
+
         {error && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
@@ -212,9 +247,9 @@ const Judge0KeySection: React.FC<Judge0KeySectionProps> = ({ onKeyUpdate }) => {
         )}
 
         {success && (
-          <Alert>
-            <CheckCircle className="h-4 w-4" />
-            <AlertDescription>{success}</AlertDescription>
+          <Alert className="bg-green-50 border-green-200">
+            <CheckCircle className="h-4 w-4 text-green-600" />
+            <AlertDescription className="text-green-700">{success}</AlertDescription>
           </Alert>
         )}
 
@@ -341,7 +376,7 @@ const Judge0KeySection: React.FC<Judge0KeySectionProps> = ({ onKeyUpdate }) => {
           <div className="border rounded-lg p-4 bg-gray-50">
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <Label htmlFor="apiKey">Judge0 API Key</Label>
+                <label htmlFor="apiKey" className="text-sm font-medium">Judge0 API Key</label>
                 <Input
                   id="apiKey"
                   type="password"
@@ -352,26 +387,35 @@ const Judge0KeySection: React.FC<Judge0KeySectionProps> = ({ onKeyUpdate }) => {
                   minLength={10}
                 />
                 <p className="text-xs text-gray-600 mt-1">
-                  Get your API key from RapidAPI Judge0 CE (free tier: 50 requests/day)
+                  Get your API key from RapidAPI Judge0 CE (free tier: 50 requests/day). Your key will be validated before saving.
                 </p>
               </div>
 
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="sharing"
-                  checked={formData.agreedToSharing}
-                  onCheckedChange={(checked) => 
-                    setFormData(prev => ({ ...prev, agreedToSharing: checked }))
-                  }
-                />
-                <Label htmlFor="sharing" className="text-sm">
-                  Share with class pool (recommended for better quota distribution)
-                </Label>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <div className="flex items-center gap-2 text-blue-700">
+                  <Users className="h-4 w-4" />
+                  <span className="text-sm font-medium">Automatic Pool Sharing</span>
+                </div>
+                <p className="text-xs text-blue-600 mt-1">
+                  Your API key will be automatically shared with the class pool for better quota distribution and resource optimization.
+                </p>
               </div>
 
               <div className="flex gap-2">
                 <Button type="submit" disabled={submitting}>
-                  {submitting ? 'Validating...' : 'Save API Key'}
+                  {validating ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Validating API Key...
+                    </>
+                  ) : submitting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Saving Key...
+                    </>
+                  ) : (
+                    'Save API Key'
+                  )}
                 </Button>
                 <Button 
                   type="button" 
@@ -394,7 +438,7 @@ const Judge0KeySection: React.FC<Judge0KeySectionProps> = ({ onKeyUpdate }) => {
               <li>Sign up or log in to RapidAPI</li>
               <li>Subscribe to the free tier (50 requests/day)</li>
               <li>Copy your API key from the dashboard</li>
-              <li>Paste it above and optionally share with the class pool</li>
+              <li>Paste it above - we'll validate it works before saving</li>
             </ol>
           </div>
         )}

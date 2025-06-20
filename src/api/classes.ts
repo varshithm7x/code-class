@@ -45,3 +45,8 @@ export const checkClassSubmissionStatus = async (classId: string) => {
   const response = await api.get(`/classes/${classId}/check-submission-status`);
   return response.data;
 };
+
+export const getClassJudge0Status = async (classId: string) => {
+  const response = await api.get(`/classes/${classId}/judge0-status`);
+  return response.data;
+};

@@ -244,6 +244,15 @@ export const getAssignmentById = async (req: Request, res: Response): Promise<vo
         },
       });
 
+      const studentAssignmentInfo = await prisma.studentAssignmentInfo.findUnique({
+        where: {
+          userId_assignmentId: {
+            userId: userId,
+            assignmentId: assignmentId,
+          },
+        },
+      });
+
       const problemsWithUserSubmission = assignment.problems.map(problem => {
         const userSubmission = userSubmissions.find(
           s => s.problemId === problem.id
@@ -268,7 +277,8 @@ export const getAssignmentById = async (req: Request, res: Response): Promise<vo
           completed: completedCount,
           total: totalProblems,
           percentage: totalProblems > 0 ? Math.round((completedCount / totalProblems) * 100) : 0
-        }
+        },
+        lastCheckedAt: studentAssignmentInfo?.lastCheckedAt || null,
       };
       
       // We don't need to send the full class details back for students
@@ -311,30 +321,73 @@ export const checkSubmissions = async (req: Request, res: Response): Promise<voi
 
 export const checkAssignmentSubmissions = async (req: Request, res: Response): Promise<void> => {
   const { assignmentId } = req.params;
-  console.log('🎯 [DEBUG] checkAssignmentSubmissions endpoint called');
-  console.log('🎯 [DEBUG] Assignment ID:', assignmentId);
-  console.log('🎯 [DEBUG] Request method:', req.method);
-  console.log('🎯 [DEBUG] Request URL:', req.url);
-  console.log('🎯 [DEBUG] Request user:', (req as { user?: unknown }).user);
-  
+  // @ts-expect-error: req.user is added by the protect middleware
+  const { userId, role } = req.user;
+
+  if (role !== 'TEACHER') {
+    res.status(403).json({ message: 'Only teachers can trigger submission checks.' });
+    return;
+  }
+
   try {
-    console.log(`🚀 [DEBUG] Manual submission check triggered for assignment ${assignmentId}...`);
-    await checkSubmissionsForAssignmentService(assignmentId);
-    
-    // Update the lastSubmissionCheck timestamp
+    const { count } = await checkSubmissionsForAssignmentService(assignmentId);
     await prisma.assignment.update({
       where: { id: assignmentId },
-      data: { lastSubmissionCheck: new Date() }
+      data: { lastSubmissionCheck: new Date() },
     });
-    
-    console.log(`✅ [DEBUG] checkSubmissionsForAssignmentService completed for assignment ${assignmentId}`);
-    res.status(200).json({ 
-      message: 'Submission check completed successfully.',
-      lastChecked: new Date().toISOString()
-    });
+    res.status(200).json({ message: `Submission check completed. ${count} submissions updated.` });
   } catch (error) {
-    console.error(`❌ [DEBUG] Error during manual submission check for assignment ${assignmentId}:`, error);
-    res.status(500).json({ message: 'Error during manual submission check', error });
+    console.error('Error checking submissions for assignment:', error);
+    res.status(500).json({ message: 'Error checking submissions for assignment', error });
+  }
+};
+
+export const checkMySubmissionsForAssignment = async (req: Request, res: Response): Promise<void> => {
+  const { assignmentId } = req.params;
+  // @ts-expect-error: req.user is added by the protect middleware
+  const { userId } = req.user;
+
+  try {
+    const studentInfo = await prisma.studentAssignmentInfo.findUnique({
+      where: {
+        userId_assignmentId: {
+          userId,
+          assignmentId,
+        },
+      },
+    });
+
+    if (studentInfo) {
+      const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+      if (studentInfo.lastCheckedAt > tenMinutesAgo) {
+        res.status(429).json({ message: 'You can only check for new submissions once every 10 minutes.' });
+        return;
+      }
+    }
+
+    const { count } = await checkSubmissionsForAssignmentService(assignmentId, userId);
+
+    await prisma.studentAssignmentInfo.upsert({
+      where: {
+        userId_assignmentId: {
+          userId,
+          assignmentId,
+        },
+      },
+      update: {
+        lastCheckedAt: new Date(),
+      },
+      create: {
+        userId,
+        assignmentId,
+        lastCheckedAt: new Date(),
+      },
+    });
+
+    res.status(200).json({ message: `Submission check completed. ${count} of your submissions were updated.` });
+  } catch (error) {
+    console.error('Error checking student submissions for assignment:', error);
+    res.status(500).json({ message: 'Error checking your submissions', error });
   }
 };
 

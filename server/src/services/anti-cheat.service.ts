@@ -92,13 +92,18 @@ export class AntiCheatService {
     totalViolations: number;
   }> {
     try {
-      // Get current session
+      // Get current session with relations
       const session = await prisma.testSession.findUnique({
         where: { id: sessionId },
         include: {
           user: { select: { name: true, email: true } },
-          test: { select: { title: true, teacherId: true } },
-          penalties: { where: { violationType } }
+          test: { 
+            select: { 
+              title: true, 
+              class: { select: { teacherId: true } }
+            } 
+          },
+          penalties: true
         }
       });
 
@@ -106,8 +111,9 @@ export class AntiCheatService {
         throw new Error('Test session not found');
       }
 
-      // Count violations of this type
-      const violationCount = session.penalties.length + 1;
+      // Count violations of this type by filtering penalties
+      const typeViolations = session.penalties.filter(p => p.violationType === violationType);
+      const violationCount = typeViolations.length + 1;
       const config = this.VIOLATION_CONFIGS[violationType];
 
       // Determine penalty level
@@ -129,8 +135,10 @@ export class AntiCheatService {
       const penalty = await prisma.testPenalty.create({
         data: {
           sessionId,
+          type: violationType as any, // Map to PenaltyType for compatibility
           violationType,
           penaltyLevel,
+          description: `${violationType} violation - ${penaltyLevel}`,
           scoreReduction: penaltyLevel === PenaltyLevel.WARNING ? 0 : config.scoreReduction,
           timePenalty: penaltyLevel === PenaltyLevel.WARNING ? 0 : config.timePenalty,
           details,
@@ -145,7 +153,7 @@ export class AntiCheatService {
       const message = this.generatePenaltyMessage(violationType, penaltyLevel, violationCount);
 
       // Notify teacher in real-time
-      await this.notifyTeacher(session.test.teacherId, {
+      await this.notifyTeacher(session.test.class.teacherId, {
         type: 'VIOLATION_DETECTED',
         sessionId,
         studentName: session.user.name,
@@ -189,23 +197,30 @@ export class AntiCheatService {
    * Update session penalty totals
    */
   private static async updateSessionPenalties(sessionId: string): Promise<void> {
-    const penalties = await prisma.testPenalty.aggregate({
-      where: { sessionId },
-      _sum: {
-        scoreReduction: true,
-        timePenalty: true
-      },
-      _count: { id: true }
-    });
+    try {
+      // Get all penalties for this session
+      const penalties = await prisma.testPenalty.findMany({
+        where: { sessionId }
+      });
 
-    await prisma.testSession.update({
-      where: { id: sessionId },
-      data: {
-        totalPenalties: penalties._count.id || 0,
-        scoreReduction: penalties._sum.scoreReduction || 0,
-        timePenalty: penalties._sum.timePenalty || 0
-      }
-    });
+      // Calculate totals
+      const totalPenalties = penalties.length;
+      const scoreReduction = penalties.reduce((sum, p) => sum + (p.scoreReduction || 0), 0);
+      const timePenalty = penalties.reduce((sum, p) => sum + (p.timePenalty || 0), 0);
+
+      // Update session
+      await prisma.testSession.update({
+        where: { id: sessionId },
+        data: {
+          totalPenalties,
+          scoreReduction,
+          timePenalty,
+          penaltyCount: totalPenalties
+        }
+      });
+    } catch (error) {
+      console.error('Error updating session penalties:', error);
+    }
   }
 
   /**
@@ -286,7 +301,10 @@ export class AntiCheatService {
       let shouldTerminate = false;
 
       penalties.forEach((penalty: any) => {
-        violationsByType[penalty.violationType as ViolationType]++;
+        const vType = penalty.violationType as ViolationType;
+        if (vType && violationsByType.hasOwnProperty(vType)) {
+          violationsByType[vType]++;
+        }
         totalScoreReduction += penalty.scoreReduction || 0;
         totalTimePenalty += penalty.timePenalty || 0;
         
@@ -310,7 +328,7 @@ export class AntiCheatService {
   }
 
   /**
-   * Get test-wide violation statistics for teacher
+   * Get test violation statistics
    */
   static async getTestViolationStats(testId: string): Promise<{
     totalSessions: number;
@@ -322,8 +340,8 @@ export class AntiCheatService {
       const sessions = await prisma.testSession.findMany({
         where: { testId },
         include: {
-          user: { select: { name: true, email: true } },
-          penalties: true
+          penalties: true,
+          user: { select: { name: true, email: true } }
         }
       });
 
@@ -339,26 +357,26 @@ export class AntiCheatService {
       let sessionsWithViolations = 0;
       const highRiskSessions: any[] = [];
 
-      sessions.forEach((session: any) => {
+      sessions.forEach(session => {
         if (session.penalties.length > 0) {
           sessionsWithViolations++;
-        }
 
-        session.penalties.forEach((penalty: any) => {
-          violationsByType[penalty.violationType as ViolationType]++;
-        });
-
-        // High risk: more than 5 total violations or any termination-level penalty
-        const hasTermination = session.penalties.some((p: any) => p.penaltyLevel === PenaltyLevel.TERMINATION);
-        if (session.penalties.length > 5 || hasTermination) {
-          highRiskSessions.push({
-            sessionId: session.id,
-            studentName: session.user.name,
-            studentEmail: session.user.email,
-            totalViolations: session.penalties.length,
-            hasTermination,
-            latestViolation: session.penalties[session.penalties.length - 1]?.timestamp
+          session.penalties.forEach((penalty: any) => {
+            const vType = penalty.violationType as ViolationType;
+            if (vType && violationsByType.hasOwnProperty(vType)) {
+              violationsByType[vType]++;
+            }
           });
+
+          // Mark as high risk if 5+ violations
+          if (session.penalties.length >= 5) {
+            highRiskSessions.push({
+              sessionId: session.id,
+              userId: session.userId,
+              userName: session.user.name,
+              violationCount: session.penalties.length
+            });
+          }
         }
       });
 
@@ -376,20 +394,20 @@ export class AntiCheatService {
   }
 
   /**
-   * Check if session should be terminated due to violations
+   * Check if session should be terminated
    */
   static async shouldTerminateSession(sessionId: string): Promise<boolean> {
     try {
-      const terminalPenalty = await prisma.testPenalty.findFirst({
-        where: {
+      const penalties = await prisma.testPenalty.findMany({
+        where: { 
           sessionId,
           penaltyLevel: PenaltyLevel.TERMINATION
         }
       });
 
-      return !!terminalPenalty;
+      return penalties.length > 0;
     } catch (error) {
-      console.error('Error checking session termination:', error);
+      console.error('Error checking termination status:', error);
       return false;
     }
   }

@@ -77,34 +77,7 @@ router.post('/:testId/join', async (req, res) => {
   }
 });
 
-// Submit solution endpoint
-router.post('/:testId/submit', async (req, res) => {
-  try {
-    const { testId } = req.params;
-    const { problemId, code, language } = req.body;
-    
-    // Mock submission response
-    res.json({
-      success: true,
-      submission: {
-        id: `submission-${Date.now()}`,
-        problemId,
-        code,
-        language,
-        status: 'ACCEPTED',
-        score: 100,
-        executionTime: 45,
-        memoryUsed: 128,
-        testCasesPassed: 2,
-        totalTestCases: 2
-      }
-    });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to submit solution' });
-  }
-});
-
-// Simple join endpoint for now (GET - for compatibility)
+// Get test details for joining (GET - for compatibility)
 router.get('/:testId/join', async (req, res) => {
   try {
     // Mock response for now

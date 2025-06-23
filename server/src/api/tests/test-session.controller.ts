@@ -653,4 +653,333 @@ export const submitSingleProblem = async (req: Request, res: Response): Promise<
     console.error('Error submitting single problem:', error);
     res.status(500).json({ error: 'Submission failed' });
   }
+};
+
+/**
+ * Execute code in real-time using multi-test functionality (Codeforces style)
+ * Enhanced version that uses solve() function pattern for massive efficiency gains
+ */
+export const executeRealTimeMultiTest = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.id;
+    const { testId } = req.params;
+    
+    // Enhanced validation schema for solve function
+    const multiTestExecutionSchema = z.object({
+      solveFunction: z.string().min(1),
+      problemId: z.string().cuid(),
+      isMultiTestEnabled: z.boolean().default(true)
+    });
+
+    const validatedData = multiTestExecutionSchema.parse(req.body);
+
+    // Verify test session
+    const session = await prisma.testSession.findUnique({
+      where: {
+        testId_userId: { testId, userId }
+      },
+      include: {
+        test: {
+          include: {
+            problems: {
+              where: { id: validatedData.problemId },
+              include: {
+                testCases: {
+                  where: { isPublic: true }
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!session) {
+      return res.status(404).json({ error: 'Test session not found' });
+    }
+
+    if (session.status !== 'IN_PROGRESS') {
+      return res.status(400).json({ error: 'Test session is not active' });
+    }
+
+    const problem = session.test.problems[0];
+    if (!problem) {
+      return res.status(404).json({ error: 'Problem not found' });
+    }
+
+    const testCases = problem.testCases.map((tc: any) => ({
+      id: tc.id,
+      input: tc.input,
+      expectedOutput: tc.expectedOutput,
+      isPublic: tc.isPublic
+    }));
+
+    // Use multi-test execution if enabled and language is C++
+    if (validatedData.isMultiTestEnabled && testCases.length > 1) {
+      console.log(`🚀 Using multi-test execution for ${testCases.length} test cases`);
+      
+      // Import the service dynamically to avoid circular dependency issues
+      const { SimpleMultiTestService } = await import('../../services/simple-multi-test.service');
+      const multiTestService = new SimpleMultiTestService();
+      
+      // Execute using multi-test approach with monitoring
+      const result = await judge0Service.executeMultiTestCases(
+        validatedData.solveFunction,
+        testCases,
+        problem.timeLimit,
+        problem.memoryLimit,
+        userId  // Pass userId for Phase 4 monitoring
+      );
+
+      // Update last activity
+      await prisma.testSession.update({
+        where: { id: session.id },
+        data: { lastActivity: new Date() }
+      });
+
+      // Format response to match original API
+      const formattedResult = {
+        success: result.success,
+        testCaseResults: result.results.map(r => ({
+          input: r.input,
+          expectedOutput: r.expectedOutput,
+          actualOutput: r.actualOutput,
+          passed: r.passed,
+          status: r.status
+        })),
+        executionTime: result.executionTime,
+        memoryUsed: result.memoryUsed,
+        totalTestCases: result.totalTestCases,
+        passedTestCases: result.passedTestCases,
+        multiTestUsed: true,
+        efficiencyGain: testCases.length,
+        error: result.error
+      };
+
+      return res.json(formattedResult);
+      
+    } else {
+      // Fallback to traditional single-test execution
+      console.log('📝 Using traditional single-test execution');
+      
+      // Convert solve function to full code for backward compatibility
+      const fullCode = `#include <bits/stdc++.h>
+using namespace std;
+
+${validatedData.solveFunction}
+
+int main() {
+    solve();
+    return 0;
+}`;
+
+      const result = await judge0Service.executeRealTime(
+        userId,
+        fullCode,
+        'cpp', // Assuming C++ for multi-test
+        testCases,
+        problem.timeLimit,
+        problem.memoryLimit
+      );
+
+      // Update last activity
+      await prisma.testSession.update({
+        where: { id: session.id },
+        data: { lastActivity: new Date() }
+      });
+
+      return res.json({
+        ...result,
+        multiTestUsed: false,
+        efficiencyGain: 1
+      });
+    }
+
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Validation failed', details: error.errors });
+    }
+    console.error('Error executing multi-test real-time code:', error);
+    res.status(500).json({ error: 'Multi-test code execution failed' });
+  }
+};
+
+/**
+ * Submit final solutions using multi-test approach for efficiency
+ */
+export const submitFinalSolutionsMultiTest = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.id;
+    const { testId } = req.params;
+    
+    const multiTestFinalSubmissionSchema = z.object({
+      submissions: z.array(z.object({
+        problemId: z.string().cuid(),
+        solveFunction: z.string().min(1),
+        useMultiTest: z.boolean().default(true)
+      })).min(1)
+    });
+
+    const validatedData = multiTestFinalSubmissionSchema.parse(req.body);
+
+    // Verify test session
+    const session = await prisma.testSession.findUnique({
+      where: {
+        testId_userId: { testId, userId }
+      },
+      include: {
+        test: {
+          include: {
+            problems: {
+              include: {
+                testCases: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!session) {
+      return res.status(404).json({ error: 'Test session not found' });
+    }
+
+    if (session.status !== 'IN_PROGRESS') {
+      return res.status(400).json({ error: 'Test session is not active' });
+    }
+
+    // Process each submission
+    const results = [];
+    
+    for (const submissionData of validatedData.submissions) {
+      const problem = session.test.problems.find((p: any) => p.id === submissionData.problemId);
+      if (!problem) {
+        return res.status(400).json({ error: `Problem not found: ${submissionData.problemId}` });
+      }
+
+      // Create submission record
+      const submission = await prisma.testSubmission.create({
+        data: {
+          sessionId: session.id,
+          problemId: submissionData.problemId,
+          code: submissionData.solveFunction,
+          language: 'cpp',
+          status: 'PROCESSING'
+        }
+      });
+
+      try {
+        const testCases = problem.testCases.map((tc: any) => ({
+          id: tc.id,
+          input: tc.input,
+          expectedOutput: tc.expectedOutput,
+          isPublic: tc.isPublic
+        }));
+
+        let executionResult;
+
+        if (submissionData.useMultiTest && testCases.length > 3) {
+          // Use multi-test execution for efficiency
+          console.log(`🚀 Processing ${testCases.length} test cases with multi-test approach`);
+          
+          executionResult = await judge0Service.executeMultiTestCases(
+            submissionData.solveFunction,
+            testCases,
+            problem.timeLimit,
+            problem.memoryLimit,
+            userId  // Pass userId for Phase 4 monitoring
+          );
+          
+          // Calculate score based on passed test cases
+          const score = executionResult.success ? 
+            (executionResult.passedTestCases / executionResult.totalTestCases) * 100 : 0;
+
+          // Update submission with results
+          await prisma.testSubmission.update({
+            where: { id: submission.id },
+            data: {
+              status: executionResult.success ? 'ACCEPTED' : 'WRONG_ANSWER',
+              score: score,
+              executionTime: executionResult.executionTime,
+              memoryUsed: executionResult.memoryUsed,
+              judgeResponse: {
+                multiTestUsed: true,
+                totalTestCases: executionResult.totalTestCases,
+                passedTestCases: executionResult.passedTestCases,
+                results: executionResult.results,
+                efficiencyGain: testCases.length
+              }
+            }
+          });
+
+        } else {
+          // Use traditional single-test execution for smaller test suites
+          console.log(`📝 Processing ${testCases.length} test cases with traditional approach`);
+          
+          // Convert solve function to full code
+          const fullCode = `#include <bits/stdc++.h>
+using namespace std;
+
+${submissionData.solveFunction}
+
+int main() {
+    solve();
+    return 0;
+}`;
+
+          // Process using existing single-test method
+          await judge0Service.processSubmission(submission.id);
+        }
+
+        results.push({
+          submissionId: submission.id,
+          problemId: submissionData.problemId,
+          status: 'PROCESSED',
+          multiTestUsed: submissionData.useMultiTest && testCases.length > 3
+        });
+
+      } catch (executionError) {
+        console.error(`Execution failed for submission ${submission.id}:`, executionError);
+        
+        // Update submission with error
+        await prisma.testSubmission.update({
+          where: { id: submission.id },
+          data: {
+            status: 'SYSTEM_ERROR',
+            score: 0,
+            judgeResponse: { error: 'Execution failed', multiTestUsed: false }
+          }
+        });
+
+        results.push({
+          submissionId: submission.id,
+          problemId: submissionData.problemId,
+          status: 'ERROR',
+          error: 'Execution failed'
+        });
+      }
+    }
+
+    // Update session status
+    await prisma.testSession.update({
+      where: { id: session.id },
+      data: { 
+        status: 'SUBMITTED',
+        lastActivity: new Date()
+      }
+    });
+
+    res.json({
+      message: 'Solutions processed successfully',
+      results: results,
+      multiTestOptimization: true
+    });
+
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Validation failed', details: error.errors });
+    }
+    console.error('Error processing multi-test final solutions:', error);
+    res.status(500).json({ error: 'Multi-test submission processing failed' });
+  }
 }; 

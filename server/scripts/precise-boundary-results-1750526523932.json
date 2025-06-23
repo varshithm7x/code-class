@@ -1,0 +1,76 @@
+{
+  "results": [
+    {
+      "testCases": 5,
+      "timePerCase": 1,
+      "success": true,
+      "actualTime": "5.002",
+      "wallTime": 7.337,
+      "outputLines": 0
+    },
+    {
+      "testCases": 6,
+      "timePerCase": 1,
+      "success": true,
+      "actualTime": "6.002",
+      "wallTime": 8.274,
+      "outputLines": 0
+    },
+    {
+      "testCases": 7,
+      "timePerCase": 1,
+      "success": true,
+      "actualTime": "7.002",
+      "wallTime": 8.074,
+      "outputLines": 0
+    },
+    {
+      "testCases": 8,
+      "timePerCase": 1,
+      "success": true,
+      "actualTime": "8.002",
+      "wallTime": 9.468,
+      "outputLines": 0
+    },
+    {
+      "testCases": 9,
+      "timePerCase": 1,
+      "success": true,
+      "actualTime": "9.002",
+      "wallTime": 11.078,
+      "outputLines": 0
+    },
+    {
+      "testCases": 10,
+      "timePerCase": 1,
+      "success": false,
+      "wallTime": 12.519,
+      "status": "Time Limit Exceeded"
+    }
+  ],
+  "maxSuccessfulTotal": 9,
+  "maxSuccessfulTestCases1s": 9,
+  "strategies": [
+    {
+      "type": "Easy Problems (0.5s)",
+      "maxCases": 18,
+      "safeMaxCases": 14
+    },
+    {
+      "type": "Medium Problems (1.0s)",
+      "maxCases": 9,
+      "safeMaxCases": 7
+    },
+    {
+      "type": "Hard Problems (2.0s)",
+      "maxCases": 4,
+      "safeMaxCases": 3
+    }
+  ],
+  "recommendations": {
+    "easy": 14,
+    "medium": 7,
+    "hard": 3,
+    "maxTotalTime": 9
+  }
+}

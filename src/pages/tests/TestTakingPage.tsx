@@ -6,6 +6,8 @@ import { Badge } from '../../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Alert, AlertDescription } from '../../components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
+import { Switch } from '../../components/ui/switch';
+import { Label } from '../../components/ui/label';
 import { 
   PlayIcon, 
   PauseIcon, 
@@ -17,7 +19,9 @@ import {
   SendIcon,
   ShieldIcon,
   MaximizeIcon,
-  UploadIcon
+  UploadIcon,
+  ZapIcon,
+  InfoIcon
 } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 import { io, Socket } from 'socket.io-client';
@@ -71,12 +75,27 @@ interface ExecutionResult {
   }>;
   rateLimited?: boolean;
   error?: string;
+  // Multi-test specific fields
+  multiTestUsed?: boolean;
+  efficiencyGain?: number;
+  totalTestCases?: number;
+  passedTestCases?: number;
+  testCaseResults?: Array<{
+    input: string;
+    expectedOutput: string;
+    actualOutput: string;
+    passed: boolean;
+    status: string;
+  }>;
 }
 
 interface Submission {
   problemId: string;
   code: string;
   language: string;
+  // Multi-test specific fields
+  solveFunction?: string;
+  useMultiTest?: boolean;
 }
 
 const TestTakingPage: React.FC = () => {
@@ -89,6 +108,7 @@ const TestTakingPage: React.FC = () => {
   const [test, setTest] = useState<Test | null>(null);
   const [currentProblemIndex, setCurrentProblemIndex] = useState(0);
   const [code, setCode] = useState<{ [problemId: string]: { [language: string]: string } }>({});
+  const [solveFunctions, setSolveFunctions] = useState<{ [problemId: string]: string }>({});
   const [selectedLanguage, setSelectedLanguage] = useState<string>('cpp');
   const [isExecuting, setIsExecuting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -102,6 +122,13 @@ const TestTakingPage: React.FC = () => {
   const [isViolationModalOpen, setIsViolationModalOpen] = useState(false);
   const [isFullscreenMode, setIsFullscreenMode] = useState(false);
   const [autoCloseTimer, setAutoCloseTimer] = useState<NodeJS.Timeout | null>(null);
+  
+  // Multi-test state
+  const [isMultiTestEnabled, setIsMultiTestEnabled] = useState(true);
+  const [codeMode, setCodeMode] = useState<'solve' | 'full'>('solve');
+
+  // Derived state
+  const currentProblem = test?.problems[currentProblemIndex] || null;
 
   // Handle violation events
   const handleViolation = (violation: ViolationEvent) => {
@@ -193,17 +220,27 @@ public class Solution {
     }
 }`,
     python: `def main():
-    # Your code here
+    // Your code here
     pass
 
 if __name__ == "__main__":
     main()`,
-    javascript: `function main() {
-    // Your code here
-}
-
-main();`
+    javascript: `// Your code here
+console.log("Hello World");`
   };
+
+  // Solve function template for C++
+  const solveFunctionTemplate = `void solve() {
+    // Write your solution here
+    // Example: Read input, process, and output result
+    
+    int n;
+    cin >> n;
+    
+    // Your logic here
+    
+    cout << result << endl;
+}`;
 
   // Initialize test session
   useEffect(() => {
@@ -331,30 +368,48 @@ main();`
   };
 
   // Get current problem
-  const currentProblem = test?.problems[currentProblemIndex];
-
   // Handle code change
   const handleCodeChange = (value: string | undefined) => {
-    if (!currentProblem || !value) return;
+    if (!currentProblem) return;
     
-    setCode(prev => ({
-      ...prev,
-      [currentProblem.id]: {
-        ...prev[currentProblem.id],
-        [selectedLanguage]: value
-      }
-    }));
+    if (codeMode === 'solve') {
+      setSolveFunctions(prev => ({
+        ...prev,
+        [currentProblem.id]: value || ''
+      }));
+    } else {
+      setCode(prev => ({
+        ...prev,
+        [currentProblem.id]: {
+          ...prev[currentProblem.id],
+          [selectedLanguage]: value || ''
+        }
+      }));
+    }
+  };
+
+  const getCurrentCodeValue = () => {
+    if (!currentProblem) return '';
+    
+    if (codeMode === 'solve') {
+      return solveFunctions[currentProblem.id] || solveFunctionTemplate;
+    } else {
+      return code[currentProblem.id]?.[selectedLanguage] || languageTemplates[selectedLanguage] || '';
+    }
   };
 
   // Execute code in real-time
   const handleExecuteCode = async () => {
     if (!currentProblem || !test || isExecuting) return;
 
-    const currentCode = code[currentProblem.id]?.[selectedLanguage] || '';
+    const currentCode = codeMode === 'solve' 
+      ? solveFunctions[currentProblem.id] || '' 
+      : code[currentProblem.id]?.[selectedLanguage] || '';
+
     if (!currentCode.trim()) {
       toast({
         title: 'Error',
-        description: 'Please write some code before testing.',
+        description: `Please write some ${codeMode === 'solve' ? 'solve function' : 'code'} before testing.`,
         variant: 'destructive'
       });
       return;
@@ -365,17 +420,30 @@ main();`
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`/api/v1/tests/${testId}/execute`, {
+      
+      // Use multi-test endpoint if solve mode and multi-test enabled
+      const useMultiTest = codeMode === 'solve' && isMultiTestEnabled && selectedLanguage === 'cpp';
+      const endpoint = useMultiTest 
+        ? `/api/v1/tests/${testId}/execute-multi-test`
+        : `/api/v1/tests/${testId}/execute`;
+
+      const requestBody = useMultiTest ? {
+        solveFunction: currentCode,
+        problemId: currentProblem.id,
+        isMultiTestEnabled: isMultiTestEnabled
+      } : {
+        code: currentCode,
+        language: selectedLanguage,
+        problemId: currentProblem.id
+      };
+
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({
-          code: currentCode,
-          language: selectedLanguage,
-          problemId: currentProblem.id
-        })
+        body: JSON.stringify(requestBody)
       });
 
       const result = await response.json();
@@ -385,6 +453,15 @@ main();`
       }
 
       setExecutionResults(result);
+
+      // Show efficiency toast for multi-test
+      if (result.multiTestUsed && result.efficiencyGain > 1) {
+        toast({
+          title: '⚡ Multi-Test Optimization Used!',
+          description: `${result.efficiencyGain}x efficiency gain - ${result.totalTestCases} tests in 1 API call!`,
+          variant: 'default'
+        });
+      }
 
       if (result.rateLimited) {
         toast({
@@ -459,13 +536,27 @@ main();`
     const finalSubmissions: Submission[] = [];
     
     test.problems.forEach(problem => {
-      const problemCode = code[problem.id]?.[selectedLanguage] || '';
-      if (problemCode.trim()) {
-        finalSubmissions.push({
-          problemId: problem.id,
-          code: problemCode,
-          language: selectedLanguage
-        });
+      if (codeMode === 'solve') {
+        const solveFunction = solveFunctions[problem.id] || '';
+        if (solveFunction.trim()) {
+          finalSubmissions.push({
+            problemId: problem.id,
+            code: '', // Empty for multi-test
+            language: selectedLanguage,
+            solveFunction: solveFunction,
+            useMultiTest: isMultiTestEnabled && selectedLanguage === 'cpp'
+          });
+        }
+      } else {
+        const problemCode = code[problem.id]?.[selectedLanguage] || '';
+        if (problemCode.trim()) {
+          finalSubmissions.push({
+            problemId: problem.id,
+            code: problemCode,
+            language: selectedLanguage,
+            useMultiTest: false
+          });
+        }
       }
     });
 
@@ -480,7 +571,14 @@ main();`
 
     try {
       const token = localStorage.getItem('token');
-              const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api/v1'}/tests/${testId}/submit`, {
+      
+      // Use multi-test endpoint if any submission uses multi-test
+      const hasMultiTest = finalSubmissions.some(sub => sub.useMultiTest);
+      const endpoint = hasMultiTest 
+        ? `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api/v1'}/tests/${testId}/submit-multi-test`
+        : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api/v1'}/tests/${testId}/submit`;
+
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -491,6 +589,8 @@ main();`
         })
       });
 
+      const result = await response.json();
+
       if (!response.ok) {
         throw new Error('Submission failed');
       }
@@ -498,11 +598,20 @@ main();`
       setHasSubmitted(true);
       setSubmissions(finalSubmissions);
 
-      toast({
-        title: 'Submitted Successfully',
-        description: 'Your solutions have been submitted for evaluation.',
-        variant: 'default'
-      });
+      // Show optimization toast if multi-test was used
+      if (result.multiTestOptimization) {
+        toast({
+          title: '🚀 Multi-Test Optimization Applied!',
+          description: 'Your solutions were processed with enhanced efficiency.',
+          variant: 'default'
+        });
+      } else {
+        toast({
+          title: 'Submitted Successfully',
+          description: 'Your solutions have been submitted for evaluation.',
+          variant: 'default'
+        });
+      }
 
       // Redirect to results page after a delay
       setTimeout(() => {
@@ -673,8 +782,47 @@ main();`
         {/* Right Panel - Code Editor */}
         <div className="w-1/2 flex flex-col">
           {/* Editor Header */}
-          <div className="p-4 bg-gray-50 border-b">
-            <div className="flex items-center justify-between mb-2">
+          <div className="p-4 bg-gray-50 border-b space-y-3">
+            {/* Code Mode Toggle */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="solve-mode" className="text-sm">Solve Function Mode</Label>
+                  <Switch 
+                    id="solve-mode"
+                    checked={codeMode === 'solve'}
+                    onCheckedChange={(checked) => setCodeMode(checked ? 'solve' : 'full')}
+                  />
+                  {codeMode === 'solve' && selectedLanguage === 'cpp' && (
+                    <Badge variant="secondary" className="text-xs">
+                      <ZapIcon className="h-3 w-3 mr-1" />
+                      Multi-Test Ready
+                    </Badge>
+                  )}
+                </div>
+                
+                {codeMode === 'solve' && (
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="multi-test" className="text-sm">Multi-Test Optimization</Label>
+                    <Switch 
+                      id="multi-test"
+                      checked={isMultiTestEnabled}
+                      onCheckedChange={setIsMultiTestEnabled}
+                      disabled={selectedLanguage !== 'cpp'}
+                    />
+                    {isMultiTestEnabled && selectedLanguage === 'cpp' && (
+                      <div className="flex items-center gap-1 text-xs text-green-600">
+                        <InfoIcon className="h-3 w-3" />
+                        <span>5-50x faster</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Language and Action Controls */}
+            <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
                   <SelectTrigger className="w-32">
@@ -718,6 +866,17 @@ main();`
                 </div>
               </div>
             </div>
+
+            {/* Mode Explanation */}
+            {codeMode === 'solve' && (
+              <Alert>
+                <InfoIcon className="h-4 w-4" />
+                <AlertDescription className="text-sm">
+                  <strong>Solve Function Mode:</strong> Write only the solve() function. 
+                  {selectedLanguage === 'cpp' && isMultiTestEnabled && ' Multi-test optimization enabled for maximum efficiency!'}
+                </AlertDescription>
+              </Alert>
+            )}
           </div>
 
           {/* Code Editor */}
@@ -725,7 +884,7 @@ main();`
             <Editor
               height="100%"
               language={selectedLanguage === 'cpp' ? 'cpp' : selectedLanguage}
-              value={code[currentProblem.id]?.[selectedLanguage] || ''}
+              value={getCurrentCodeValue()}
               onChange={handleCodeChange}
               theme="vs-dark"
               options={{
@@ -743,8 +902,16 @@ main();`
 
           {/* Execution Results */}
           {executionResults && (
-            <div className="p-4 border-t bg-gray-50 max-h-64 overflow-y-auto">
-              <h3 className="font-semibold mb-2">Test Results:</h3>
+            <div className="p-4 border-t bg-gray-50 max-h-80 overflow-y-auto">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-semibold">Test Results:</h3>
+                {executionResults.multiTestUsed && (
+                  <Badge variant="outline" className="text-xs">
+                    <ZapIcon className="h-3 w-3 mr-1" />
+                    Multi-Test: {executionResults.efficiencyGain}x faster
+                  </Badge>
+                )}
+              </div>
               
               {executionResults.error ? (
                 <Alert variant="destructive">
@@ -753,6 +920,20 @@ main();`
                 </Alert>
               ) : (
                 <div className="space-y-2">
+                  {/* Multi-test summary */}
+                  {executionResults.multiTestUsed && (
+                    <div className="p-2 bg-green-50 rounded border border-green-200">
+                      <div className="flex items-center gap-2 text-sm text-green-700">
+                        <ZapIcon className="h-4 w-4" />
+                        <span className="font-medium">
+                          Multi-Test Optimization: {executionResults.passedTestCases}/{executionResults.totalTestCases} passed
+                          ({executionResults.efficiencyGain}x efficiency gain)
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Regular results display */}
                   {executionResults.results?.map((result, index) => (
                     <div key={index} className="p-2 bg-white rounded border">
                       <div className="flex items-center gap-2 mb-1">
@@ -781,9 +962,31 @@ main();`
                       )}
                     </div>
                   ))}
+
+                  {/* Multi-test detailed results (if available) */}
+                  {executionResults.testCaseResults && executionResults.testCaseResults.length > 0 && (
+                    <div>
+                      <h4 className="font-medium text-sm mb-2">Detailed Results:</h4>
+                      <div className="space-y-1 max-h-32 overflow-y-auto">
+                        {executionResults.testCaseResults.map((result, index) => (
+                          <div key={index} className="flex items-center gap-2 text-xs p-1 bg-white rounded">
+                            {result.passed ? (
+                              <CheckCircleIcon className="h-3 w-3 text-green-500" />
+                            ) : (
+                              <XCircleIcon className="h-3 w-3 text-red-500" />
+                            )}
+                            <span>Test {index + 1}: {result.status}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   
                   <div className="text-sm text-gray-600 mt-2">
-                    Showing results for first 3 test cases only. Final submission will test all cases.
+                    {executionResults.multiTestUsed 
+                      ? `Multi-test optimization processed ${executionResults.totalTestCases || 'all'} test cases in a single execution.`
+                      : 'Showing results for first 3 test cases only. Final submission will test all cases.'
+                    }
                   </div>
                 </div>
               )}

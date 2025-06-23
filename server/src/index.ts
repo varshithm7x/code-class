@@ -14,7 +14,8 @@ import analyticsRoutes from './api/analytics';
 import studentRoutes from './api/students';
 import announcementRoutes from './api/announcements';
 import judge0Routes from './api/judge0';
-import testRoutes from './api/tests/tests.routes';                                                                                                      
+import testRoutes from './api/tests/tests.routes';
+import monitoringRoutes from './api/monitoring/monitoring.routes';                                                                                                      
 
 import { initializeScheduledJobs } from './cron';
 import { WebSocketService } from './services/websocket.service';
@@ -52,6 +53,7 @@ app.use('/api/v1/students', studentRoutes);
 app.use('/api/v1/announcements', announcementRoutes);
 app.use('/api/v1/judge0', judge0Routes);
 app.use('/api/v1/tests', testRoutes);
+app.use('/api/v1/monitoring', monitoringRoutes);
 
 // Initialize all scheduled jobs
 initializeScheduledJobs();

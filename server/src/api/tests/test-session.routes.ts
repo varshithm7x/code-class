@@ -9,7 +9,9 @@ import {
   completeTestSession, 
   runTestCases,
   getTestSessionStatus,
-  submitSingleProblem
+  submitSingleProblem,
+  executeRealTimeMultiTest,
+  submitFinalSolutionsMultiTest
 } from './test-session.controller';
 
 const router = Router();
@@ -31,6 +33,10 @@ router.get('/:testId/status', getTestSessionStatus);
 
 // Submit individual problem (immediate execution)
 router.post('/:testId/submit', submitSingleProblem);
+
+// Multi-test execution endpoints (Phase 2 enhancement)
+router.post('/:testId/execute-multi-test', executeRealTimeMultiTest);
+router.post('/:testId/submit-multi-test', submitFinalSolutionsMultiTest);
 
 // Join test endpoint (POST)
 router.post('/:testId/join', async (req, res) => {

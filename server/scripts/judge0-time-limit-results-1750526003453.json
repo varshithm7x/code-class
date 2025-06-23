@@ -1,0 +1,216 @@
+{
+  "timestamp": "2025-06-21T17:13:01.075Z",
+  "config": {
+    "maintenance_mode": false,
+    "enable_wait_result": false,
+    "enable_compiler_options": true,
+    "allowed_languages_for_compile_options": [],
+    "enable_command_line_arguments": true,
+    "enable_submission_delete": false,
+    "enable_callbacks": true,
+    "callbacks_max_tries": 3,
+    "callbacks_timeout": 5,
+    "enable_additional_files": true,
+    "max_queue_size": 10000,
+    "cpu_time_limit": 5,
+    "max_cpu_time_limit": 20,
+    "cpu_extra_time": 1,
+    "max_cpu_extra_time": 5,
+    "wall_time_limit": 10,
+    "max_wall_time_limit": 30,
+    "memory_limit": 256000,
+    "max_memory_limit": 2048000,
+    "stack_limit": 64000,
+    "max_stack_limit": 128000,
+    "max_processes_and_or_threads": 128,
+    "max_max_processes_and_or_threads": 256,
+    "enable_per_process_and_thread_time_limit": false,
+    "allow_enable_per_process_and_thread_time_limit": true,
+    "enable_per_process_and_thread_memory_limit": false,
+    "allow_enable_per_process_and_thread_memory_limit": true,
+    "max_file_size": 5120,
+    "max_max_file_size": 20480,
+    "number_of_runs": 1,
+    "max_number_of_runs": 20,
+    "redirect_stderr_to_stdout": false,
+    "max_extract_size": 10240,
+    "enable_batched_submissions": true,
+    "max_submission_batch_size": 20,
+    "submission_cache_duration": 0,
+    "use_docs_as_homepage": true,
+    "allow_enable_network": false,
+    "enable_network": false
+  },
+  "singleSubmissionTests": [
+    {
+      "expectedTime": 0.5,
+      "status": "ERROR",
+      "error": "Request failed with status code 403"
+    },
+    {
+      "expectedTime": 1,
+      "status": "ERROR",
+      "error": "Request failed with status code 403"
+    },
+    {
+      "expectedTime": 2,
+      "status": "ERROR",
+      "error": "Request failed with status code 403"
+    },
+    {
+      "expectedTime": 5,
+      "status": "ERROR",
+      "error": "Request failed with status code 403"
+    },
+    {
+      "expectedTime": 10,
+      "status": "ERROR",
+      "error": "Request failed with status code 403"
+    },
+    {
+      "expectedTime": 15,
+      "status": "ERROR",
+      "error": "Request failed with status code 403"
+    },
+    {
+      "expectedTime": 20,
+      "status": "ERROR",
+      "error": "Request failed with status code 403"
+    },
+    {
+      "expectedTime": 30,
+      "status": "ERROR",
+      "error": "Request failed with status code 403"
+    }
+  ],
+  "batchTests": [
+    {
+      "config": {
+        "batchSize": 5,
+        "timePerCase": 0.2,
+        "description": "5 submissions × 0.2s each = 1s total"
+      },
+      "error": {
+        "error": "there should be at least one submission in a batch"
+      }
+    },
+    {
+      "config": {
+        "batchSize": 10,
+        "timePerCase": 0.5,
+        "description": "10 submissions × 0.5s each = 5s total"
+      },
+      "error": {
+        "error": "there should be at least one submission in a batch"
+      }
+    },
+    {
+      "config": {
+        "batchSize": 20,
+        "timePerCase": 0.5,
+        "description": "20 submissions × 0.5s each = 10s total"
+      },
+      "error": {
+        "error": "there should be at least one submission in a batch"
+      }
+    },
+    {
+      "config": {
+        "batchSize": 20,
+        "timePerCase": 1,
+        "description": "20 submissions × 1s each = 20s total"
+      },
+      "error": {
+        "error": "there should be at least one submission in a batch"
+      }
+    },
+    {
+      "config": {
+        "batchSize": 20,
+        "timePerCase": 2,
+        "description": "20 submissions × 2s each = 40s total"
+      },
+      "error": {
+        "error": "there should be at least one submission in a batch"
+      }
+    },
+    {
+      "config": {
+        "batchSize": 20,
+        "timePerCase": 5,
+        "description": "20 submissions × 5s each = 100s total"
+      },
+      "error": {
+        "error": "there should be at least one submission in a batch"
+      }
+    },
+    {
+      "config": {
+        "batchSize": 20,
+        "timePerCase": 10,
+        "description": "20 submissions × 10s each = 200s total"
+      },
+      "error": {
+        "error": "there should be at least one submission in a batch"
+      }
+    }
+  ],
+  "multiTestCaseTests": [
+    {
+      "config": {
+        "testCases": 5,
+        "timePerCase": 0.2,
+        "description": "5 test cases × 0.2s each = 1s total"
+      },
+      "error": "Request failed with status code 403"
+    },
+    {
+      "config": {
+        "testCases": 10,
+        "timePerCase": 0.5,
+        "description": "10 test cases × 0.5s each = 5s total"
+      },
+      "error": "Request failed with status code 403"
+    },
+    {
+      "config": {
+        "testCases": 25,
+        "timePerCase": 0.4,
+        "description": "25 test cases × 0.4s each = 10s total"
+      },
+      "error": "Request failed with status code 403"
+    },
+    {
+      "config": {
+        "testCases": 50,
+        "timePerCase": 0.4,
+        "description": "50 test cases × 0.4s each = 20s total"
+      },
+      "error": "Request failed with status code 403"
+    },
+    {
+      "config": {
+        "testCases": 100,
+        "timePerCase": 0.3,
+        "description": "100 test cases × 0.3s each = 30s total"
+      },
+      "error": "Request failed with status code 403"
+    },
+    {
+      "config": {
+        "testCases": 200,
+        "timePerCase": 0.25,
+        "description": "200 test cases × 0.25s each = 50s total"
+      },
+      "error": "Request failed with status code 403"
+    },
+    {
+      "config": {
+        "testCases": 500,
+        "timePerCase": 0.2,
+        "description": "500 test cases × 0.2s each = 100s total"
+      },
+      "error": "Request failed with status code 403"
+    }
+  ]
+}

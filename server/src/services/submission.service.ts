@@ -96,15 +96,16 @@ const getProblemIdentifier = (platform: string, url: string): string => {
 /**
  * Process only GFG submissions - LeetCode is handled by the enhanced service
  */
-const processGfgSubmissions = async (submissions: (Submission & { user: User, problem: Problem })[]) => {
+const processGfgSubmissions = async (submissions: (Submission & { user: User, problem: Problem })[]): Promise<number> => {
     // Filter to only GFG submissions
     const gfgSubmissions = submissions.filter(s => s.problem.platform.toLowerCase() === 'gfg');
     
     if (gfgSubmissions.length === 0) {
         console.log('📚 No GFG submissions to process.');
-        return;
+        return 0;
     }
 
+    let totalUpdatedCount = 0;
     console.log(`📚 Processing ${gfgSubmissions.length} GFG submissions`);
 
     // Group submissions by user to process one user at a time
@@ -136,20 +137,24 @@ const processGfgSubmissions = async (submissions: (Submission & { user: User, pr
 
             if (isCompleted) {
                 console.log(`✅ Marking GFG submission as completed for ${user.name} on ${problem.title}`);
-                await prisma.submission.update({
-                    where: { id: submission.id },
+                const result = await prisma.submission.updateMany({
+                    where: { id: submission.id, completed: false },
                     data: { completed: true, submissionTime: new Date() },
                 });
-                updatedCount++;
+                if (result.count > 0) {
+                  updatedCount++;
+                }
             } else {
                 console.log(`❌ GFG problem '${problem.title}' not found in solved list`);
             }
         }
         
         console.log(`✅ Updated ${updatedCount}/${userSubmissions.length} GFG submissions for ${user.name}`);
+        totalUpdatedCount += updatedCount;
     }
     
     console.log('✅ Finished processing all GFG submissions');
+    return totalUpdatedCount;
 };
 
 /**
@@ -182,8 +187,9 @@ export const checkAllSubmissions = async () => {
 /**
  * Check submissions for a specific assignment - uses enhanced LeetCode service + GFG processing
  */
-export const checkSubmissionsForAssignment = async (assignmentId: string) => {
+export const checkSubmissionsForAssignment = async (assignmentId: string, userId?: string): Promise<{ count: number }> => {
     console.log(`🎯 Starting submission check for assignment: ${assignmentId}...`);
+    let totalUpdatedCount = 0;
     
     // Get assignment details for better logging
     const assignment = await prisma.assignment.findUnique({
@@ -193,7 +199,7 @@ export const checkSubmissionsForAssignment = async (assignmentId: string) => {
     
     if (!assignment) {
         console.log(`❌ Assignment ${assignmentId} not found`);
-        return;
+        return { count: 0 };
     }
     
     console.log(`📋 Assignment: "${assignment.title}" with ${assignment.problems.length} problems`);
@@ -209,7 +215,7 @@ export const checkSubmissionsForAssignment = async (assignmentId: string) => {
     // Step 1: Force check LeetCode submissions for this specific assignment
     if (leetcodeProblems.length > 0) {
         console.log('📱 Step 1: Force checking LeetCode submissions for assignment...');
-        await forceCheckLeetCodeSubmissionsForAssignment(assignmentId);
+        totalUpdatedCount += await forceCheckLeetCodeSubmissionsForAssignment(assignmentId, userId);
     } else {
         console.log('⏭️ No LeetCode problems in this assignment - skipping LeetCode sync');
     }
@@ -217,7 +223,7 @@ export const checkSubmissionsForAssignment = async (assignmentId: string) => {
     // Step 2: Force check HackerRank submissions for this specific assignment
     if (hackerrankProblems.length > 0) {
         console.log('🔶 Step 2: Force checking HackerRank submissions for assignment...');
-        await forceCheckHackerRankSubmissionsForAssignment(assignmentId);
+        totalUpdatedCount += await forceCheckHackerRankSubmissionsForAssignment(assignmentId, userId);
     } else {
         console.log('⏭️ No HackerRank problems in this assignment - skipping HackerRank sync');
     }
@@ -225,23 +231,25 @@ export const checkSubmissionsForAssignment = async (assignmentId: string) => {
     // Step 3: Process GFG submissions for this assignment
     if (gfgProblems.length > 0) {
         console.log('📝 Step 3: Processing GFG submissions for assignment...');
-    const pendingSubmissions = await prisma.submission.findMany({
-        where: {
-            problem: {
-                assignmentId: assignmentId,
+        const pendingSubmissions = await prisma.submission.findMany({
+            where: {
+                problem: {
+                    assignmentId: assignmentId,
+                },
+                completed: false,
+                ...(userId && { userId }),
             },
-            completed: false,
-        },
-        include: { user: true, problem: true },
-    });
+            include: { user: true, problem: true },
+        });
         
         console.log(`Found ${pendingSubmissions.length} pending submissions for assignment ${assignmentId}`);
-        await processGfgSubmissions(pendingSubmissions);
+        totalUpdatedCount += await processGfgSubmissions(pendingSubmissions);
     } else {
         console.log('⏭️ No GFG problems in this assignment - skipping GFG processing');
     }
     
-    console.log(`✅ Assignment "${assignment.title}" submission check completed`);
+    console.log(`✅ Assignment "${assignment.title}" submission check completed. Total updated: ${totalUpdatedCount}`);
+    return { count: totalUpdatedCount };
 };
 
 /**

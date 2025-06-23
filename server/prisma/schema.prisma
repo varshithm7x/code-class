@@ -15,32 +15,38 @@ model User {
   email                  String                  @unique
   name                   String
   password               String
-  role                   Role                    @default(STUDENT)
-  createdAt              DateTime                @default(now())
-  updatedAt              DateTime                @updatedAt
+  role                   Role             @default(STUDENT)
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
   hackerrankUsername     String?
-  hackerrankCookie       String? // Session cookie for authenticated API calls
-  hackerrankCookieStatus String                  @default("NOT_LINKED") // LINKED, EXPIRED, NOT_LINKED
+  hackerrankCookie       String?          // Session cookie for authenticated API calls
+  hackerrankCookieStatus String           @default("NOT_LINKED") // LINKED, EXPIRED, NOT_LINKED
   gfgUsername            String?
   leetcodeUsername       String?
-  leetcodeCookie         String? // Encrypted session cookie for authenticated API calls
-  leetcodeCookieStatus   String                  @default("NOT_LINKED") // LINKED, EXPIRED, NOT_LINKED
-  leetcodeTotalSolved    Int? // Cached total problems solved
-  leetcodeEasySolved     Int? // Cached easy problems solved
-  leetcodeMediumSolved   Int? // Cached medium problems solved
-  leetcodeHardSolved     Int? // Cached hard problems solved
-  judge0ApiKey           String? // Encrypted RapidAPI key
-  judge0KeyStatus        String                  @default("NOT_PROVIDED") // ACTIVE, EXHAUSTED, INVALID, NOT_PROVIDED
-  judge0QuotaUsed        Int                     @default(0) // Daily usage counter
-  judge0LastReset        DateTime? // Last quota reset timestamp
-  geminiApiKey           String? // Encrypted Gemini API key
-  geminiKeyStatus        String                  @default("NOT_PROVIDED") // ACTIVE, INVALID, NOT_PROVIDED
+  leetcodeCookie         String?          // Encrypted session cookie for authenticated API calls
+  leetcodeCookieStatus   String           @default("NOT_LINKED") // LINKED, EXPIRED, NOT_LINKED
+  leetcodeTotalSolved    Int?             // Cached total problems solved
+  leetcodeEasySolved     Int?             // Cached easy problems solved
+  leetcodeMediumSolved   Int?             // Cached medium problems solved
+  leetcodeHardSolved     Int?             // Cached hard problems solved
+
+  // Judge0 API Key Management
+  judge0ApiKey           String?          // Encrypted RapidAPI key
+  judge0KeyStatus        String           @default("NOT_PROVIDED") // ACTIVE, EXHAUSTED, INVALID, NOT_PROVIDED
+  judge0QuotaUsed        Int              @default(0) // Daily usage counter
+  judge0LastReset        DateTime?        // Last quota reset timestamp
+
+  // Gemini API Key Management (Teachers only)
+  geminiApiKey           String?          // Encrypted Gemini API key
+  geminiKeyStatus        String           @default("NOT_PROVIDED") // ACTIVE, INVALID, NOT_PROVIDED
+
+  // Relations
   announcements          Announcement[]
   taughtClasses          Class[]
-  judge0Keys             Judge0KeyPool? // Fixed: Single relation to match actual database
   submissions            Submission[]
   testSessions           TestSession[]
   classes                UsersOnClasses[]
+  judge0Keys             Judge0KeyPool?
   studentAssignmentInfos StudentAssignmentInfo[]
 }
 

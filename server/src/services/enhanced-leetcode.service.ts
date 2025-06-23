@@ -16,6 +16,17 @@ interface LeetCodeSubmission {
   lang: string;
 }
 
+interface LeetCodeUserProfile {
+  matchedUser: {
+    submitStats: {
+      acSubmissionNum: Array<{
+        difficulty: 'All' | 'Easy' | 'Medium' | 'Hard';
+        count: number;
+      }>;
+    };
+  };
+}
+
 /**
  * Fetches LeetCode stats using unauthenticated API call
  */
@@ -24,21 +35,20 @@ export const fetchPublicLeetCodeStats = async (username: string): Promise<LeetCo
   
   try {
     const leetcode = new LeetCode();
-    const user = await leetcode.user(username);
+    const user = await leetcode.user(username) as LeetCodeUserProfile;
     
-    if (!user) {
+    if (!user || !user.matchedUser) {
       console.log(`❌ Could not fetch public stats for ${username}`);
       return null;
     }
 
     // Extract accurate stats from matchedUser.submitStats.acSubmissionNum
-    const matchedUser = (user as any).matchedUser;
-    if (!matchedUser || !matchedUser.submitStats || !matchedUser.submitStats.acSubmissionNum) {
+    const stats = user.matchedUser.submitStats.acSubmissionNum;
+    if (!stats) {
       console.log(`❌ No submission stats found for ${username}`);
       return null;
     }
 
-    const stats = matchedUser.submitStats.acSubmissionNum;
     const result: LeetCodeStats = {
       totalSolved: 0,
       easySolved: 0,
@@ -47,7 +57,7 @@ export const fetchPublicLeetCodeStats = async (username: string): Promise<LeetCo
     };
 
     // Parse the accurate difficulty breakdown from the API
-    stats.forEach((stat: any) => {
+    stats.forEach((stat) => {
       switch (stat.difficulty) {
         case 'All':
           result.totalSolved = stat.count;
@@ -68,8 +78,9 @@ export const fetchPublicLeetCodeStats = async (username: string): Promise<LeetCo
     
     return result;
     
-  } catch (error: any) {
-    console.error(`❌ Error fetching public stats for ${username}:`, error.message);
+  } catch (error: unknown) {
+    const err = error as Error;
+    console.error(`❌ Error fetching public stats for ${username}:`, err.message);
     return null;
   }
 };
@@ -95,21 +106,22 @@ export const fetchAuthenticatedSubmissions = async (cookie: string, limit: numbe
     }
 
     // Filter only accepted submissions
-    const acceptedSubmissions = submissionsResponse.filter((sub: any) => 
+    const acceptedSubmissions = submissionsResponse.filter((sub) => 
       sub.statusDisplay === 'Accepted'
     );
     
     console.log(`📋 Found ${acceptedSubmissions.length} accepted submissions out of ${submissionsResponse.length} total`);
     
-    return acceptedSubmissions.map((sub: any) => ({
+    return acceptedSubmissions.map((sub) => ({
       titleSlug: sub.titleSlug,
       timestamp: sub.timestamp,
       statusDisplay: sub.statusDisplay,
       lang: sub.lang
     }));
     
-  } catch (error: any) {
-    console.error(`❌ Error fetching authenticated submissions:`, error.message);
+  } catch (error: unknown) {
+    const err = error as Error;
+    console.error(`❌ Error fetching authenticated submissions:`, err.message);
     throw error; // Re-throw to allow caller to handle expired sessions
   }
 };
@@ -134,20 +146,19 @@ export const fetchAuthenticatedStats = async (cookie: string): Promise<LeetCodeS
     }
 
     // Fetch the user's profile with accurate difficulty stats
-    const userProfile = await leetcode.user(whoAmI.username);
-    if (!userProfile) {
+    const userProfile = await leetcode.user(whoAmI.username) as LeetCodeUserProfile;
+    if (!userProfile || !userProfile.matchedUser) {
       console.log(`❌ Could not fetch user profile for ${whoAmI.username}`);
       return null;
     }
 
     // Extract accurate stats from matchedUser.submitStats.acSubmissionNum
-    const matchedUser = (userProfile as any).matchedUser;
-    if (!matchedUser || !matchedUser.submitStats || !matchedUser.submitStats.acSubmissionNum) {
+    const stats = userProfile.matchedUser.submitStats.acSubmissionNum;
+    if (!stats) {
       console.log(`❌ No submission stats found for authenticated user ${whoAmI.username}`);
       return null;
     }
 
-    const stats = matchedUser.submitStats.acSubmissionNum;
     const result: LeetCodeStats = {
       totalSolved: 0,
       easySolved: 0,
@@ -156,7 +167,7 @@ export const fetchAuthenticatedStats = async (cookie: string): Promise<LeetCodeS
     };
 
     // Parse the accurate difficulty breakdown from the API
-    stats.forEach((stat: any) => {
+    stats.forEach((stat) => {
       switch (stat.difficulty) {
         case 'All':
           result.totalSolved = stat.count;
@@ -177,8 +188,9 @@ export const fetchAuthenticatedStats = async (cookie: string): Promise<LeetCodeS
     
     return result;
     
-  } catch (error: any) {
-    console.error(`❌ Error fetching authenticated stats:`, error.message);
+  } catch (error: unknown) {
+    const err = error as Error;
+    console.error(`❌ Error fetching authenticated stats:`, err.message);
     throw error;
   }
 };
@@ -208,7 +220,7 @@ export const fetchLeetCodeStatsAndSubmissions = async (user: User & {
     let authenticatedStats: LeetCodeStats | null = null;
     try {
       authenticatedStats = await fetchAuthenticatedStats(user.leetcodeCookie);
-    } catch (error: any) {
+    } catch (error: unknown) {
       // If authenticated call fails, mark cookie as expired
       console.error(`❌ Authenticated stats call failed for ${user.leetcodeUsername}, marking cookie as expired`);
       
@@ -241,7 +253,7 @@ export const fetchLeetCodeStatsAndSubmissions = async (user: User & {
     let submissions: LeetCodeSubmission[] = [];
     try {
       submissions = await fetchAuthenticatedSubmissions(user.leetcodeCookie, 100);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(`❌ Authenticated submissions call failed for ${user.leetcodeUsername}`);
       return false;
     }
@@ -252,8 +264,9 @@ export const fetchLeetCodeStatsAndSubmissions = async (user: User & {
     console.log(`✅ Successfully synced ${submissions.length} submissions for ${user.leetcodeUsername}`);
     return true;
     
-  } catch (error: any) {
-    console.error(`❌ Error in fetchLeetCodeStatsAndSubmissions for ${user.leetcodeUsername}:`, error.message);
+  } catch (error: unknown) {
+    const err = error as Error;
+    console.error(`❌ Error in fetchLeetCodeStatsAndSubmissions for ${user.leetcodeUsername}:`, err.message);
     return false;
   }
 };
@@ -361,7 +374,7 @@ const processLeetCodeSubmissions = async (
  */
 const extractLeetCodeSlug = (url: string): string | null => {
   try {
-    const match = url.match(/\/problems\/([^\/]+)/);
+    const match = url.match(/\/problems\/([^/]+)/);
     return match ? match[1] : null;
   } catch {
     return null;
@@ -371,122 +384,142 @@ const extractLeetCodeSlug = (url: string): string | null => {
 /**
  * Force sync LeetCode submissions for assignment checking (bypasses optimization)
  */
-export const forceCheckLeetCodeSubmissionsForAssignment = async (assignmentId: string): Promise<void> => {
-  console.log(`🎯 Starting FORCED LeetCode submission check for assignment: ${assignmentId}`);
-  
-  // Get all users with LeetCode problems in this assignment
-  const usersWithLeetCodeProblems = await prisma.user.findMany({
+export const forceCheckLeetCodeSubmissionsForAssignment = async (
+  assignmentId: string,
+  userId?: string
+): Promise<number> => {
+  console.log(`Force checking LeetCode submissions for assignment: ${assignmentId}`);
+  let totalUpdatedCount = 0;
+
+  // 1. Get all LeetCode problems for this assignment
+  const leetcodeProblems = await prisma.problem.findMany({
     where: {
-      leetcodeCookieStatus: 'LINKED',
-      leetcodeCookie: { not: null },
-      leetcodeUsername: { not: null },
-      submissions: {
-        some: {
-          problem: {
-            assignmentId: assignmentId,
-            platform: 'leetcode'
-          }
-        }
-      }
-    }
+      assignmentId: assignmentId,
+      platform: 'leetcode',
+    },
   });
 
-  console.log(`📊 Found ${usersWithLeetCodeProblems.length} users with LeetCode problems in assignment ${assignmentId}`);
-  
-  let successCount = 0;
-  let errorCount = 0;
-  
-  for (const user of usersWithLeetCodeProblems) {
-    try {
-      console.log(`🔍 Force checking LeetCode submissions for ${user.leetcodeUsername}...`);
-      
-      // Step 1: Get user's assignment problems
-      const userAssignmentProblems = await prisma.submission.findMany({
-        where: {
-          userId: user.id,
-          problem: {
-            assignmentId: assignmentId,
-            platform: 'leetcode'
-          }
+  if (leetcodeProblems.length === 0) {
+    console.log('No LeetCode problems in this assignment.');
+    return 0;
+  }
+
+  const problemSlugs = new Set(
+    leetcodeProblems.map(p => extractLeetCodeSlug(p.url)).filter(Boolean) as string[]
+  );
+  console.log('Target LeetCode problem slugs:', problemSlugs);
+
+  // 2. Get all students assigned to this assignment
+  const assignment = await prisma.assignment.findUnique({
+    where: { id: assignmentId },
+    select: { classId: true },
+  });
+
+  if (!assignment) {
+    console.log(`Assignment ${assignmentId} not found.`);
+    return 0;
+  }
+
+  const users = await prisma.user.findMany({
+    where: {
+      classes: {
+        some: {
+          classId: assignment.classId,
         },
-        include: {
-          problem: true
-        }
-      });
+      },
+      leetcodeCookieStatus: 'LINKED',
+      id: userId, // If userId is provided, filter by it
+    },
+  });
 
-      if (userAssignmentProblems.length === 0) {
-        console.log(`⏭️ No LeetCode problems for ${user.leetcodeUsername} in this assignment`);
+  if (users.length === 0) {
+    if (userId) {
+      console.log(`User ${userId} is not in this class or has no linked LeetCode account.`);
+    } else {
+      console.log('No students with linked LeetCode accounts in this class.');
+    }
+    return 0;
+  }
+
+  // 3. For each user, fetch their recent submissions and check against the assignment problems
+  for (const user of users) {
+    if (!user.leetcodeCookie) continue;
+
+    console.log(`Checking LeetCode submissions for user: ${user.name} (${user.id})`);
+
+    try {
+      const recentSubmissions = await fetchAuthenticatedSubmissions(user.leetcodeCookie, 200);
+
+      const relevantSubmissions = recentSubmissions.filter(s =>
+        problemSlugs.has(s.titleSlug)
+      );
+
+      if (relevantSubmissions.length === 0) {
+        console.log(`No relevant LeetCode submissions found for ${user.name}.`);
         continue;
       }
 
-      console.log(`📝 Found ${userAssignmentProblems.length} LeetCode problems for ${user.leetcodeUsername} in assignment`);
+      console.log(`Found ${relevantSubmissions.length} relevant submissions for ${user.name}.`);
 
-      // Step 2: Always fetch fresh submissions (no optimization)
-      let submissions: LeetCodeSubmission[] = [];
-      try {
-        submissions = await fetchAuthenticatedSubmissions(user.leetcodeCookie!, 100);
-        console.log(`📥 Fetched ${submissions.length} recent submissions for ${user.leetcodeUsername}`);
-      } catch (error: any) {
-        console.error(`❌ Failed to fetch submissions for ${user.leetcodeUsername}:`, error.message);
-        errorCount++;
-        continue;
+      // Find the corresponding DB problem for each submission
+      const submissionsToUpdate = [];
+      for (const sub of relevantSubmissions) {
+        const problem = leetcodeProblems.find(p => extractLeetCodeSlug(p.url) === sub.titleSlug);
+        if (problem) {
+          submissionsToUpdate.push({
+            userId: user.id,
+            problemId: problem.id,
+            completed: true,
+            submissionTime: safeDateFromTimestamp(sub.timestamp),
+          });
+        }
       }
 
-      // Step 3: Check assignment problems against submissions
-      const submissionSlugs = new Set(submissions.map(s => s.titleSlug));
-      let updatedCount = 0;
-
-      for (const assignmentSubmission of userAssignmentProblems) {
-        const problemSlug = extractLeetCodeSlug(assignmentSubmission.problem.url);
-        if (!problemSlug) {
-          console.log(`⚠️ Could not extract slug from ${assignmentSubmission.problem.url}`);
-          continue;
-        }
-
-        console.log(`🔍 Checking problem: ${assignmentSubmission.problem.title} (slug: ${problemSlug})`);
-
-        if (submissionSlugs.has(problemSlug)) {
-          // Find the submission for timestamp
-          const submission = submissions.find(s => s.titleSlug === problemSlug);
-          const submissionTime = submission 
-            ? safeDateFromTimestamp(submission.timestamp)
-            : new Date();
-
-          await prisma.submission.update({
-            where: { id: assignmentSubmission.id },
+      // 4. Update the database
+      if (submissionsToUpdate.length > 0) {
+        const updatePromises = submissionsToUpdate.map(subData =>
+          prisma.submission.updateMany({
+            where: {
+              userId: subData.userId,
+              problemId: subData.problemId,
+              completed: false, // Only update if not already completed
+            },
             data: {
               completed: true,
-              submissionTime
-            }
-          });
+              submissionTime: subData.submissionTime,
+            },
+          })
+        );
 
-          console.log(`✅ Marked ${assignmentSubmission.problem.title} as completed for ${user.leetcodeUsername}`);
-          updatedCount++;
-        } else {
-          console.log(`❌ Problem ${assignmentSubmission.problem.title} not found in ${user.leetcodeUsername}'s submissions`);
+        const results = await prisma.$transaction(updatePromises);
+        const userUpdatedCount = results.reduce((sum, result) => sum + result.count, 0);
+
+        totalUpdatedCount += userUpdatedCount;
+
+        if (userUpdatedCount > 0) {
+          console.log(`Updated ${userUpdatedCount} LeetCode submissions for ${user.name}.`);
         }
       }
-
-      console.log(`✅ Updated ${updatedCount}/${userAssignmentProblems.length} problems for ${user.leetcodeUsername}`);
-      successCount++;
-      
-      // Rate limiting
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-    } catch (error) {
-      console.error(`❌ Error force checking user ${user.leetcodeUsername}:`, error);
-      errorCount++;
+    } catch (error: unknown) {
+      const err = error as Error & { message: string };
+      console.error(`Failed to check LeetCode submissions for ${user.name}: ${err.message}`);
+      if (err.message.includes('session invalid')) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { leetcodeCookieStatus: 'EXPIRED' },
+        });
+        console.log(`Marked LeetCode cookie as expired for ${user.name}.`);
+      }
     }
   }
-  
-  console.log(`✅ Force check completed for assignment ${assignmentId}. Success: ${successCount}, Errors: ${errorCount}`);
+  return totalUpdatedCount;
 };
 
 /**
  * Sync LeetCode data for all users with linked accounts (background sync)
  */
 export const syncAllLinkedLeetCodeUsers = async (): Promise<void> => {
-  console.log(`🔄 Starting sync for all linked LeetCode users`);
+  console.log('🔄 Syncing all users with linked LeetCode accounts...');
   
   const linkedUsers = await prisma.user.findMany({
     where: {
@@ -513,8 +546,9 @@ export const syncAllLinkedLeetCodeUsers = async (): Promise<void> => {
       // Rate limiting - space out requests
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-    } catch (error) {
-      console.error(`❌ Error syncing user ${user.leetcodeUsername}:`, error);
+    } catch (error: unknown) {
+      const err = error as Error;
+      console.error(`❌ Error syncing user ${user.leetcodeUsername}:`, err);
       errorCount++;
     }
   }

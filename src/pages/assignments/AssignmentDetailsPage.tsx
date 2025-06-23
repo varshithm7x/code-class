@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
-import { getAssignmentDetails, checkSubmissionsForAssignment, markAllAsCompleted } from '../../api/assignments';
+import { getAssignmentDetails, checkSubmissionsForAssignment, checkMySubmissionsForAssignment } from '../../api/assignments';
 import { AssignmentWithSubmissions, StudentAssignmentDetails, ProblemWithUserSubmission } from '../../types';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
@@ -11,17 +11,17 @@ import CompletionStats from '../../components/assignments/CompletionStats';
 import ProblemCompletionList from '../../components/assignments/ProblemCompletionList';
 import { Button } from '../../components/ui/button';
 import { toast } from 'sonner';
-import { RefreshCw, Pencil, CheckCircle2, Clock, AlertCircle, Check } from 'lucide-react';
+import { RefreshCw, Pencil, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Progress } from '../../components/ui/progress';
+import { isAxiosError } from 'axios';
 
 const AssignmentDetailsPage: React.FC = () => {
   const { assignmentId } = useParams<{ assignmentId: string }>();
   const [assignment, setAssignment] = useState<AssignmentWithSubmissions | StudentAssignmentDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isChecking, setIsChecking] = useState(false);
-  const [isMarkingCompleted, setIsMarkingCompleted] = useState(false);
-  const [hasMarkedCompleted, setHasMarkedCompleted] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
   const { user } = useAuth();
   const isTeacher = user?.role === 'TEACHER';
 
@@ -30,8 +30,20 @@ const AssignmentDetailsPage: React.FC = () => {
     try {
       const data = await getAssignmentDetails(assignmentId);
       setAssignment(data);
-      // Reset the hasMarkedCompleted flag when we get fresh data
-      setHasMarkedCompleted(false);
+
+      if (user?.role === 'STUDENT' && data && 'problems' in data) {
+        const studentData = data as StudentAssignmentDetails;
+        if (studentData.lastSubmissionCheck) {
+          const lastChecked = new Date(studentData.lastSubmissionCheck).getTime();
+          const now = new Date().getTime();
+          const diffInSeconds = Math.floor((now - lastChecked) / 1000);
+          const cooldownDuration = 600; // 10 minutes
+
+          if (diffInSeconds < cooldownDuration) {
+            setCooldown(cooldownDuration - diffInSeconds);
+          }
+        }
+      }
     } catch (error) {
       console.error('Failed to fetch assignment details', error);
       toast.error('Failed to fetch assignment details.');
@@ -43,6 +55,13 @@ const AssignmentDetailsPage: React.FC = () => {
   useEffect(() => {
     fetchAssignment();
   }, [assignmentId]);
+
+  useEffect(() => {
+    if (cooldown > 0) {
+      const timer = setTimeout(() => setCooldown(cooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [cooldown]);
 
   const handleCheckSubmissions = async () => {
     if (!assignmentId) return;
@@ -60,46 +79,26 @@ const AssignmentDetailsPage: React.FC = () => {
     }
   };
 
-  // Check if all problems are completed for students (manual marking is separate)
-  const allCompleted = !isTeacher && assignment?.problems && 
-    (assignment.problems as ProblemWithUserSubmission[]).every(problem => 
-      problem.completed || problem.manuallyMarked
-    );
-
-  const handleMarkAllCompleted = useCallback(async () => {
-    // Early return if already processing or conditions not met
-    if (!assignmentId || !user?.id || isMarkingCompleted || hasMarkedCompleted || allCompleted) {
-      return;
-    }
-    
-    // Disable the button immediately when clicked
-    setIsMarkingCompleted(true);
-    setHasMarkedCompleted(true);
-    
+  const handleCheckMySubmissions = async () => {
+    if (!assignmentId) return;
+    setIsChecking(true);
     try {
-      await markAllAsCompleted(assignmentId, user.id);
-      toast.success('Successfully marked all problems as manually completed!');
-      await fetchAssignment(); // Refresh to show updated status
-    } catch (error: unknown) {
-      console.error('Failed to mark all as manually completed:', error);
-      
-      // Reset the flag if there was an error so user can try again
-      setHasMarkedCompleted(false);
-      
-      const errorResponse = error as { response?: { data?: { migrationRequired?: boolean }; status?: number } };
-      if (errorResponse.response?.data?.migrationRequired) {
-        toast.error('Manual completion feature requires database setup. Please contact your teacher.');
-      } else if (errorResponse.response?.status === 401) {
-        toast.error('Please log in to mark problems as manually complete');
-      } else if (errorResponse.response?.status === 403) {
-        toast.error('You can only mark your own problems as manually completed');
+      const result = await checkMySubmissionsForAssignment(assignmentId);
+      toast.success(result.message);
+      setCooldown(600); // 10 minutes
+      fetchAssignment();
+    } catch (error) {
+      console.error('Failed to check my submissions', error);
+      if (isAxiosError(error) && error.response?.status === 429) {
+        toast.error('You can only check for new submissions once every 10 minutes.');
+        setCooldown(600); // Start cooldown even if rate-limited
       } else {
-        toast.error('Failed to mark all problems as manually completed');
+        toast.error('Failed to check your submissions.');
       }
     } finally {
-      setIsMarkingCompleted(false);
+      setIsChecking(false);
     }
-  }, [assignmentId, user?.id, isMarkingCompleted, hasMarkedCompleted, allCompleted, fetchAssignment]);
+  };
 
   if (isLoading) {
     return <LoadingScreen />;
@@ -117,15 +116,6 @@ const AssignmentDetailsPage: React.FC = () => {
   const totalCount = studentProblems ? studentProblems.length : 0;
   const progressPercentage = totalCount > 0 ? Math.round((autoCompletedCount / totalCount) * 100) : 0;
   
-  // Manual marking is tracked separately for student's self-reporting
-  const manuallyMarkedCount = studentProblems ? studentProblems.filter(p => p.manuallyMarked && !p.completed).length : 0;
-
-  // Button should be disabled if: 
-  // 1. Currently marking as completed (API call in progress)
-  // 2. Already marked as completed (until database confirms update)
-  // 3. All problems are already completed
-  const isButtonDisabled = isMarkingCompleted || hasMarkedCompleted || allCompleted;
-
   return (
     <div className="container py-8">
       <Card>
@@ -155,17 +145,18 @@ const AssignmentDetailsPage: React.FC = () => {
                   {isChecking ? 'Checking...' : 'Check Submissions'}
                 </Button>
                 </>
-              ) : (
-                <Button 
-                  onClick={handleMarkAllCompleted}
-                  disabled={isButtonDisabled}
-                  variant={allCompleted ? "secondary" : "default"}
-                  className="flex items-center gap-2"
+              ) : null}
+              {!isTeacher && (
+                <Button
+                  onClick={handleCheckMySubmissions}
+                  disabled={isChecking || cooldown > 0}
+                  className="w-full sm:w-auto"
                 >
-                  <Check className="h-4 w-4" />
-                  {isMarkingCompleted ? 'Marking...' : 
-                   allCompleted ? 'All Completed!' : 
-                   hasMarkedCompleted ? 'Marked!' : 'Mark All as Completed'}
+                  {isChecking
+                    ? 'Checking...'
+                    : cooldown > 0
+                    ? `Available in ${Math.floor(cooldown / 60)}:${(cooldown % 60).toString().padStart(2, '0')}`
+                    : 'Check My Submissions'}
                 </Button>
               )}
               </div>
@@ -195,49 +186,17 @@ const AssignmentDetailsPage: React.FC = () => {
               <>
                 {/* Simple Progress Section for Students */}
                 <div className="mb-6">
-                  <h3 className="font-semibold mb-4">Your Progress</h3>
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium">Actual Completion (Verified Submissions)</span>
-                        <span className="text-sm text-muted-foreground">
-                          {autoCompletedCount} of {totalCount}
-                        </span>
-                      </div>
-                      <Progress value={progressPercentage} className="h-2" />
-                      <div className="flex items-center gap-2 mt-2">
-                        <Badge variant={progressPercentage === 100 ? "default" : "secondary"}>
-                          {progressPercentage}% Complete
-                        </Badge>
-                        {progressPercentage === 100 && (
-                          <Badge variant="default" className="bg-green-500">
-                            <CheckCircle2 className="h-3 w-3 mr-1" />
-                            All Verified!
-                          </Badge>
-                        )}
-                      </div>
-                      
-                      {/* Manual marking is separate - for student self-reporting only */}
-                      {manuallyMarkedCount > 0 && (
-                        <div className="mt-3 pt-3 border-t">
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground">Self-Reported Completion</span>
-                            <span className="text-blue-600">{manuallyMarkedCount} manually marked</span>
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            These are problems you've marked as completed. They don't count toward verified progress.
-                          </p>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
+                  <h3 className="font-semibold mb-2">Your Progress</h3>
+                  <Progress value={progressPercentage} className="w-full" />
+                  <div className="flex justify-between text-sm text-muted-foreground mt-2">
+                    <span>{progressPercentage}% complete</span>
+                    <span>{autoCompletedCount} of {totalCount} problems completed</span>
+                  </div>
                 </div>
-                
+
+                {/* Problems List */}
                 <h3 className="font-semibold mb-4">Problems</h3>
-                <ProblemCompletionList 
-                  problems={assignment.problems as ProblemWithUserSubmission[]} 
-                  isTeacher={false}
-                />
+                <ProblemCompletionList problems={studentProblems} />
               </>
             )}
           </div>

@@ -7,6 +7,7 @@ import {
 } from '../../services/submission.service';
 import { getLeetCodeProblemDetails } from '../../services/leetcode.service';
 import { sendAssignmentEmail } from '../../services/email.service';
+import { extractProblemDetailsFromUrl } from '../../services/url-title-extractor.service';
 
 
 const getPlatformFromUrl = (url: string): string => {
@@ -358,9 +359,9 @@ export const checkMySubmissionsForAssignment = async (req: Request, res: Respons
     });
 
     if (studentInfo) {
-      const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-      if (studentInfo.lastCheckedAt > tenMinutesAgo) {
-        res.status(429).json({ message: 'You can only check for new submissions once every 10 minutes.' });
+      const oneMinuteAgo = new Date(Date.now() - 1 * 60 * 1000);
+      if (studentInfo.lastCheckedAt > oneMinuteAgo) {
+        res.status(429).json({ message: 'You can only check for new submissions once every 1 minute.' });
         return;
       }
     }
@@ -738,5 +739,165 @@ export const markAllAsCompleted = async (req: Request, res: Response): Promise<v
 
     console.error(`❌ [DEBUG] Error marking all as manually completed for assignment ${assignmentId}, student ${studentId}:`, dbError);
     res.status(500).json({ message: 'Error marking all problems as manually completed', error: dbError });
+  }
+};
+
+/**
+ * Extract problem title and details from URL
+ */
+export const extractProblemFromUrl = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userRole = (req as Request & { user: { role: string } }).user.role;
+
+    // Only teachers can extract problem details
+    if (userRole !== 'TEACHER') {
+      res.status(403).json({ error: 'Only teachers can extract problem details' });
+      return;
+    }
+
+    const { url } = req.body;
+
+    if (!url || typeof url !== 'string') {
+      res.status(400).json({ error: 'URL is required' });
+      return;
+    }
+
+    // Validate URL format
+    try {
+      new URL(url);
+    } catch {
+      res.status(400).json({ error: 'Invalid URL format' });
+      return;
+    }
+
+    console.log(`Extracting problem details from URL: ${url}`);
+    
+    const problemDetails = await extractProblemDetailsFromUrl(url);
+
+    if (!problemDetails) {
+      res.status(404).json({ 
+        error: 'Could not extract problem details from the provided URL. Please enter the title manually.' 
+      });
+      return;
+    }
+
+    // Map difficulty to match our schema if available
+    let difficulty = problemDetails.difficulty;
+    if (difficulty) {
+      const difficultyMap: { [key: string]: string } = {
+        'easy': 'Easy',
+        'medium': 'Medium',
+        'hard': 'Hard',
+        'Easy': 'Easy',
+        'Medium': 'Medium',
+        'Hard': 'Hard'
+      };
+      difficulty = difficultyMap[difficulty] || 'Easy';
+    }
+
+    res.json({
+      message: 'Problem details extracted successfully',
+      problem: {
+        title: problemDetails.title,
+        difficulty: difficulty || 'Easy',
+        platform: problemDetails.platform,
+        url: url
+      }
+    });
+
+  } catch (error) {
+    console.error('Error extracting problem details:', error);
+    res.status(500).json({ 
+      message: 'Error extracting problem details from URL',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+};
+
+/**
+ * Debug endpoint to test URL extraction with detailed logging
+ */
+export const debugExtractProblemFromUrl = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userRole = (req as Request & { user: { role: string } }).user.role;
+
+    // Only teachers can debug extract problem details
+    if (userRole !== 'TEACHER') {
+      res.status(403).json({ error: 'Only teachers can debug extract problem details' });
+      return;
+    }
+
+    const { url } = req.body;
+
+    if (!url || typeof url !== 'string') {
+      res.status(400).json({ error: 'URL is required' });
+      return;
+    }
+
+    // Validate URL format
+    try {
+      new URL(url);
+    } catch {
+      res.status(400).json({ error: 'Invalid URL format' });
+      return;
+    }
+
+    console.log(`[DEBUG] Extracting problem details from URL: ${url}`);
+    
+    const problemDetails = await extractProblemDetailsFromUrl(url);
+
+    console.log(`[DEBUG] Extraction result:`, problemDetails);
+
+    if (!problemDetails) {
+      res.status(404).json({ 
+        error: 'Could not extract problem details from the provided URL. Check server logs for detailed debugging information.',
+        debug: {
+          url: url,
+          timestamp: new Date().toISOString()
+        }
+      });
+      return;
+    }
+
+    // Map difficulty to match our schema if available
+    let difficulty = problemDetails.difficulty;
+    if (difficulty) {
+      const difficultyMap: { [key: string]: string } = {
+        'easy': 'Easy',
+        'medium': 'Medium',
+        'hard': 'Hard',
+        'Easy': 'Easy',
+        'Medium': 'Medium',
+        'Hard': 'Hard'
+      };
+      difficulty = difficultyMap[difficulty] || 'Easy';
+    }
+
+    res.json({
+      message: 'Problem details extracted successfully',
+      problem: {
+        title: problemDetails.title,
+        difficulty: difficulty || 'Easy',
+        platform: problemDetails.platform,
+        url: url
+      },
+      debug: {
+        originalDifficulty: problemDetails.difficulty,
+        platform: problemDetails.platform,
+        timestamp: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error('[DEBUG] Error extracting problem details:', error);
+    res.status(500).json({ 
+      message: 'Error extracting problem details from URL',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      debug: {
+        url: req.body.url,
+        timestamp: new Date().toISOString(),
+        stack: error instanceof Error ? error.stack : undefined
+      }
+    });
   }
 };

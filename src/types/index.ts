@@ -19,6 +19,7 @@ export interface User {
 export interface Class {
   id: string;
   name: string;
+  description: string;
   teacherId: string;
   teacherName: string;
   joinCode: string;
@@ -136,9 +137,10 @@ export interface StudentAssignmentDetails extends Assignment {
     total: number;
     percentage: number;
   };
+  lastCheckedAt?: string | null;
 }
 
-
+export interface MonitoringStats {
   statistics: {
     totalStudents: number;
     studentsWithKeys: number;
@@ -268,11 +270,11 @@ export interface AssignmentWithSubmissions extends Assignment {
   class: {
     id: string;
     name: string;
-    students: Array<{
-      id: string;
-      name: string;
-      email: string;
-    }>;
+          students: Array<{
+        id: string;
+        name: string;
+        email: string;
+      }>;
   };
 }
 

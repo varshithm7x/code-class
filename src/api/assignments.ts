@@ -14,6 +14,18 @@ export interface AssignmentCreationData {
   }[];
 }
 
+export interface AssignmentUpdateData {
+  title?: string;
+  description?: string;
+  assignDate?: Date;
+  dueDate?: Date;
+  problems?: {
+    url: string;
+    title: string;
+    difficulty: string;
+  }[];
+}
+
 export const createAssignment = async (
   assignmentData: AssignmentCreationData
 ): Promise<Assignment> => {
@@ -38,7 +50,7 @@ export const getMyAssignments = async (): Promise<StudentAssignment[]> => {
 
 export const updateAssignment = async (
   assignmentId: string,
-  data: Partial<Assignment>
+  data: AssignmentUpdateData
 ) => {
   const response = await api.patch(`/assignments/${assignmentId}`, data);
   return response.data;
@@ -70,4 +82,14 @@ export const checkMySubmissionsForAssignment = async (
     `/assignments/${assignmentId}/check-my-submissions`
   );
   return response.data;
+};
+
+export const extractProblemFromUrl = async (url: string): Promise<{
+  title: string;
+  difficulty: string;
+  platform: string;
+  url: string;
+}> => {
+  const response = await api.post('/assignments/extract-from-url', { url });
+  return response.data.problem;
 };

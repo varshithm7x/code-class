@@ -1,30 +1,42 @@
-
 import React from 'react';
 import { ResponsiveContainer, LineChart as RechartsLineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 
+interface LineData {
+  key: string;
+  name: string;
+  color: string;
+}
+
 interface LineChartProps {
-  data: any[];
+  data: Record<string, string | number>[];
   xKey: string;
-  yKey: string;
+  yKey?: string; // Legacy support
+  lines?: LineData[]; // New multi-line support
   title?: string;
   xLabel?: string;
   yLabel?: string;
   color?: string;
+  height?: number;
 }
 
 const LineChart: React.FC<LineChartProps> = ({
   data,
   xKey,
   yKey,
+  lines,
   title,
   xLabel,
   yLabel,
   color = '#0d9488',
+  height = 300,
 }) => {
+  // Use either multi-line configuration or legacy single-line
+  const lineConfigs = lines || (yKey ? [{ key: yKey, name: yKey, color }] : []);
+
   return (
     <div className="bg-white p-4 rounded-lg shadow-sm">
       {title && <h3 className="text-lg font-semibold mb-4">{title}</h3>}
-      <div className="h-[300px]">
+      <div style={{ height: `${height}px` }}>
         <ResponsiveContainer width="100%" height="100%">
           <RechartsLineChart
             data={data}
@@ -57,13 +69,17 @@ const LineChart: React.FC<LineChartProps> = ({
               }} 
             />
             <Legend verticalAlign="top" height={36} />
-            <Line 
-              type="monotone" 
-              dataKey={yKey} 
-              stroke={color} 
-              activeDot={{ r: 8 }} 
-              strokeWidth={2} 
-            />
+            {lineConfigs.map((line, index) => (
+              <Line 
+                key={line.key}
+                type="monotone" 
+                dataKey={line.key} 
+                name={line.name}
+                stroke={line.color} 
+                activeDot={{ r: 8 }} 
+                strokeWidth={2} 
+              />
+            ))}
           </RechartsLineChart>
         </ResponsiveContainer>
       </div>

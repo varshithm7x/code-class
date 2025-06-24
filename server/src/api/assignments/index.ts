@@ -10,6 +10,8 @@ import {
   checkMySubmissionsForAssignment,
   getMyAssignments,
   markAllAsCompleted,
+  extractProblemFromUrl,
+  debugExtractProblemFromUrl
 } from './assignments.controller';
 
 const router = Router();
@@ -33,5 +35,9 @@ router.post('/check-submissions', protect, checkSubmissions);
 
 // Mark all as completed
 router.put('/:assignmentId/students/:studentId/mark-all-completed', protect, markAllAsCompleted);
+
+// Extract problem details from URL
+router.post('/extract-from-url', protect, extractProblemFromUrl);
+router.post('/debug-extract-from-url', protect, debugExtractProblemFromUrl);
 
 export default router; 

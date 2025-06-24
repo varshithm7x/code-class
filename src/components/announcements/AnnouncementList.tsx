@@ -7,46 +7,25 @@ import * as announcementApi from '../../api/announcements';
 import { Skeleton } from '../ui/skeleton';
 
 interface AnnouncementListProps {
+  announcements: Announcement[];
+  isTeacher: boolean;
   classId: string;
 }
 
-const AnnouncementList: React.FC<AnnouncementListProps> = ({ classId }) => {
-  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const { user } = useAuth();
-  const isTeacher = user?.role === 'TEACHER';
+const AnnouncementList: React.FC<AnnouncementListProps> = ({ announcements, isTeacher, classId }) => {
+  const [announcementList, setAnnouncementList] = useState<Announcement[]>(announcements);
 
   useEffect(() => {
-    const fetchAnnouncements = async () => {
-      try {
-        const data = await announcementApi.getClassAnnouncements(classId);
-        setAnnouncements(data);
-      } catch (error) {
-        console.error('Error fetching announcements:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchAnnouncements();
-  }, [classId]);
+    setAnnouncementList(announcements);
+  }, [announcements]);
 
   const handleAnnouncementCreated = (newAnnouncement: Announcement) => {
-    setAnnouncements([newAnnouncement, ...announcements]);
+    setAnnouncementList([newAnnouncement, ...announcementList]);
   };
 
   const handleAnnouncementDeleted = (announcementId: string) => {
-    setAnnouncements(announcements.filter(a => a.id !== announcementId));
+    setAnnouncementList(announcementList.filter(a => a.id !== announcementId));
   };
-
-  if (isLoading) {
-    return (
-        <div>
-            <Skeleton className="h-24 w-full mb-4" />
-            <Skeleton className="h-24 w-full mb-4" />
-            <Skeleton className="h-24 w-full" />
-        </div>
-    );
-  }
 
   return (
     <div>
@@ -60,8 +39,8 @@ const AnnouncementList: React.FC<AnnouncementListProps> = ({ classId }) => {
         </div>
       )}
       <h3 className="text-2xl font-bold mb-4">Announcements</h3>
-      {announcements.length > 0 ? (
-        announcements.map(announcement => (
+      {announcementList.length > 0 ? (
+        announcementList.map(announcement => (
           <AnnouncementCard
             key={announcement.id}
             announcement={announcement}

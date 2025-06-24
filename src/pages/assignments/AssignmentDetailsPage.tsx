@@ -24,6 +24,7 @@ const AssignmentDetailsPage: React.FC = () => {
   const [cooldown, setCooldown] = useState(0);
   const { user } = useAuth();
   const isTeacher = user?.role === 'TEACHER';
+  const cooldownDuration = 60; // 1 minute
 
   const fetchAssignment = async () => {
     if (!assignmentId) return;
@@ -33,12 +34,11 @@ const AssignmentDetailsPage: React.FC = () => {
 
       if (user?.role === 'STUDENT' && data && 'problems' in data) {
         const studentData = data as StudentAssignmentDetails;
-        if (studentData.lastSubmissionCheck) {
-          const lastChecked = new Date(studentData.lastSubmissionCheck).getTime();
+        if (studentData.lastCheckedAt) {
+          const lastChecked = new Date(studentData.lastCheckedAt).getTime();
           const now = new Date().getTime();
           const diffInSeconds = Math.floor((now - lastChecked) / 1000);
-          const cooldownDuration = 600; // 10 minutes
-
+          
           if (diffInSeconds < cooldownDuration) {
             setCooldown(cooldownDuration - diffInSeconds);
           }
@@ -82,16 +82,15 @@ const AssignmentDetailsPage: React.FC = () => {
   const handleCheckMySubmissions = async () => {
     if (!assignmentId) return;
     setIsChecking(true);
+    setCooldown(cooldownDuration);
     try {
-      const result = await checkMySubmissionsForAssignment(assignmentId);
-      toast.success(result.message);
-      setCooldown(600); // 10 minutes
+      const response = await checkMySubmissionsForAssignment(assignmentId);
+      toast.success(response.message || 'Checked for new submissions!');
       fetchAssignment();
     } catch (error) {
       console.error('Failed to check my submissions', error);
       if (isAxiosError(error) && error.response?.status === 429) {
-        toast.error('You can only check for new submissions once every 10 minutes.');
-        setCooldown(600); // Start cooldown even if rate-limited
+        toast.error('You can only check for new submissions once every 1 minute.');
       } else {
         toast.error('Failed to check your submissions.');
       }

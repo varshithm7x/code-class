@@ -138,25 +138,7 @@ export interface StudentAssignmentDetails extends Assignment {
   };
 }
 
-export interface StudentJudge0Status {
-  id: string;
-  name: string;
-  email: string;
-  judge0KeyStatus: string;
-  judge0QuotaUsed: number;
-  judge0LastReset: string | null;
-  hasKey: boolean;
-  isSharedWithClass: boolean;
-  poolStatus: string | null;
-  dailyUsage: number;
-  dailyLimit: number;
-  lastUsed: string | null;
-}
 
-export interface ClassJudge0Status {
-  classId: string;
-  className: string;
-  students: StudentJudge0Status[];
   statistics: {
     totalStudents: number;
     studentsWithKeys: number;

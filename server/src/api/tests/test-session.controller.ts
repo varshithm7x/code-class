@@ -1,11 +1,9 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
-import { Judge0ExecutionService } from '../../services/judge0-execution.service';
 import { WebSocketService } from '../../services/websocket.service';
 
 const prisma = new PrismaClient() as any;
-const judge0Service = new Judge0ExecutionService();
 
 // Validation schemas
 const realTimeExecutionSchema = z.object({
@@ -314,18 +312,12 @@ export const executeRealTime = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Language not allowed for this test' });
     }
 
-    // Execute code with rate limiting
-    const result = await judge0Service.executeRealTime(
-      userId,
-      validatedData.code,
-      validatedData.language,
-      problem.testCases.map((tc: any) => ({
-        input: tc.input,
-        expectedOutput: tc.expectedOutput
-      })),
-      problem.timeLimit,
-      problem.memoryLimit
-    );
+    // TODO: Execute code with new EC2-based Judge0 service
+    const result = {
+      status: 'PENDING',
+      message: 'Code execution service is being migrated to EC2-based approach',
+      testCaseResults: []
+    };
 
     // Update last activity
     await prisma.testSession.update({
@@ -405,12 +397,8 @@ export const submitFinalSolutions = async (req: Request, res: Response) => {
       )
     );
 
-    // Queue submissions for batch processing
-    await Promise.all(
-      createdSubmissions.map(submission => 
-        judge0Service.queueForBatch(testId, submission.id)
-      )
-    );
+    // TODO: Queue submissions for batch processing with new EC2-based service
+    // Submissions will be processed when EC2 Judge0 service is implemented
 
     // Update session status
     await prisma.testSession.update({
@@ -619,9 +607,9 @@ export const submitSingleProblem = async (req: Request, res: Response): Promise<
       }
     });
 
-    // Execute immediately using Judge0
+    // TODO: Execute immediately using new EC2-based Judge0
     try {
-      await judge0Service.processSubmission(submission.id);
+      // Placeholder for EC2 Judge0 implementation
       
       // Fetch updated submission with results
       const updatedSubmission = await prisma.testSubmission.findUnique({
@@ -653,7 +641,7 @@ export const submitSingleProblem = async (req: Request, res: Response): Promise<
     console.error('Error submitting single problem:', error);
     res.status(500).json({ error: 'Submission failed' });
   }
-};
+}; 
 
 /**
  * Execute code in real-time using multi-test functionality (Codeforces style)
@@ -718,18 +706,16 @@ export const executeRealTimeMultiTest = async (req: Request, res: Response) => {
     if (validatedData.isMultiTestEnabled && testCases.length > 1) {
       console.log(`🚀 Using multi-test execution for ${testCases.length} test cases`);
       
-      // Import the service dynamically to avoid circular dependency issues
-      const { SimpleMultiTestService } = await import('../../services/simple-multi-test.service');
-      const multiTestService = new SimpleMultiTestService();
-      
-      // Execute using multi-test approach with monitoring
-      const result = await judge0Service.executeMultiTestCases(
-        validatedData.solveFunction,
-        testCases,
-        problem.timeLimit,
-        problem.memoryLimit,
-        userId  // Pass userId for Phase 4 monitoring
-      );
+      // TODO: Execute using multi-test approach with new EC2-based Judge0
+      const result = {
+        success: false,
+        results: [],
+        executionTime: 0,
+        memoryUsed: 0,
+        totalTestCases: testCases.length,
+        passedTestCases: 0,
+        error: 'Service migrating to EC2-based approach'
+      };
 
       // Update last activity
       await prisma.testSession.update({
@@ -740,12 +726,12 @@ export const executeRealTimeMultiTest = async (req: Request, res: Response) => {
       // Format response to match original API
       const formattedResult = {
         success: result.success,
-        testCaseResults: result.results.map(r => ({
-          input: r.input,
-          expectedOutput: r.expectedOutput,
-          actualOutput: r.actualOutput,
-          passed: r.passed,
-          status: r.status
+        testCaseResults: result.results.map((r: any) => ({
+          input: r.input || '',
+          expectedOutput: r.expectedOutput || '',
+          actualOutput: r.actualOutput || '',
+          passed: r.passed || false,
+          status: r.status || 'PENDING'
         })),
         executionTime: result.executionTime,
         memoryUsed: result.memoryUsed,
@@ -773,14 +759,12 @@ int main() {
     return 0;
 }`;
 
-      const result = await judge0Service.executeRealTime(
-        userId,
-        fullCode,
-        'cpp', // Assuming C++ for multi-test
-        testCases,
-        problem.timeLimit,
-        problem.memoryLimit
-      );
+      // TODO: Execute with new EC2-based Judge0 service
+      const result = {
+        success: false,
+        testCaseResults: [],
+        message: 'Service migrating to EC2-based approach'
+      };
 
       // Update last activity
       await prisma.testSession.update({
@@ -882,13 +866,15 @@ export const submitFinalSolutionsMultiTest = async (req: Request, res: Response)
           // Use multi-test execution for efficiency
           console.log(`🚀 Processing ${testCases.length} test cases with multi-test approach`);
           
-          executionResult = await judge0Service.executeMultiTestCases(
-            submissionData.solveFunction,
-            testCases,
-            problem.timeLimit,
-            problem.memoryLimit,
-            userId  // Pass userId for Phase 4 monitoring
-          );
+          // TODO: Execute with new EC2-based Judge0 service
+          executionResult = {
+            success: false,
+            passedTestCases: 0,
+            totalTestCases: testCases.length,
+            executionTime: 0,
+            memoryUsed: 0,
+            results: []
+          };
           
           // Calculate score based on passed test cases
           const score = executionResult.success ? 
@@ -927,8 +913,8 @@ int main() {
     return 0;
 }`;
 
-          // Process using existing single-test method
-          await judge0Service.processSubmission(submission.id);
+          // TODO: Process using new EC2-based Judge0 service
+          // Placeholder for EC2 Judge0 implementation
         }
 
         results.push({

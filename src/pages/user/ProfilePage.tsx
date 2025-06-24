@@ -21,7 +21,7 @@ import { useState } from 'react';
 import { Textarea } from '../../components/ui/textarea';
 import { linkLeetCodeCredentials } from '../../api/auth';
 import LeetCodeStats from '../../components/ui/LeetCodeStats';
-import Judge0KeySection from '../../components/profile/Judge0KeySection';
+
 import GeminiKeySection from '../../components/profile/GeminiKeySection';
 import HackerRankKeySection from '../../components/profile/HackerRankKeySection';
 
@@ -257,8 +257,7 @@ const ProfilePage: React.FC = () => {
         {/* HackerRank Account Integration */}
         <HackerRankKeySection />
 
-        {/* Judge0 API Key Section */}
-        <Judge0KeySection onKeyUpdate={refreshUser} />
+
 
         {/* Gemini API Key Section - Teachers only */}
         {user?.role === 'TEACHER' && (

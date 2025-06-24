@@ -3,7 +3,6 @@ import prisma from '../../lib/prisma';
 import { LeetCode } from 'leetcode-query';
 import { Credential } from 'leetcode-query';
 import { fetchAuthenticatedStats } from '../../services/enhanced-leetcode.service';
-import { Judge0KeyManager } from '../../services/judge0-key-manager.service';
 
 export const getProfile = async (req: Request, res: Response): Promise<void> => {
   // @ts-ignore
@@ -25,9 +24,7 @@ export const getProfile = async (req: Request, res: Response): Promise<void> => 
         leetcodeEasySolved: true,
         leetcodeMediumSolved: true,
         leetcodeHardSolved: true,
-        judge0KeyStatus: true,
-        judge0QuotaUsed: true,
-        judge0LastReset: true,
+
         createdAt: true,
       },
     });
@@ -164,168 +161,7 @@ export const linkLeetCodeCredentials = async (req: Request, res: Response): Prom
   }
 };
 
-/**
- * Add or update Judge0 API key for a student
- */
-export const updateJudge0Key = async (req: Request, res: Response): Promise<void> => {
-  // @ts-ignore
-  const userId = req.user.userId;
-  const { apiKey, agreedToSharing = false } = req.body;
 
-  console.log('🔑 Backend: Received Judge0 key request', {
-    userId,
-    hasApiKey: !!apiKey,
-    apiKeyLength: apiKey?.length,
-    agreedToSharing,
-    timestamp: new Date().toISOString()
-  });
-
-  if (!apiKey || typeof apiKey !== 'string' || apiKey.trim().length < 10) {
-    res.status(400).json({ 
-      message: 'Valid Judge0 API key is required (minimum 10 characters)' 
-    });
-    return;
-  }
-
-  try {
-    console.log(`🔑 Adding Judge0 API key for user ${userId}, sharing: ${agreedToSharing}`);
-
-    // Validate the API key first
-    const isValid = await Judge0KeyManager.validateKey(apiKey.trim());
-    
-    if (!isValid) {
-      res.status(400).json({ 
-        message: 'Invalid Judge0 API key. Please check your RapidAPI key and try again.' 
-      });
-      return;
-    }
-
-    // Add the key using the Judge0KeyManager
-    await Judge0KeyManager.addKey(userId, apiKey.trim(), agreedToSharing);
-
-    console.log(`✅ Judge0 API key successfully added for user ${userId}`);
-
-    res.status(200).json({
-      message: agreedToSharing 
-        ? 'Judge0 API key added successfully and shared with class pool!'
-        : 'Judge0 API key added successfully to your profile!',
-      keyStatus: 'ACTIVE'
-    });
-
-  } catch (error: any) {
-    console.error('❌ Error adding Judge0 API key:', error);
-    
-    if (error.message.includes('Invalid API key')) {
-      res.status(400).json({ 
-        message: 'Invalid Judge0 API key format. Please check your RapidAPI key.' 
-      });
-    } else {
-      res.status(500).json({ 
-        message: 'Error saving Judge0 API key. Please try again.', 
-        error: error.message 
-      });
-    }
-  }
-};
-
-/**
- * Remove Judge0 API key for a student
- */
-export const removeJudge0Key = async (req: Request, res: Response): Promise<void> => {
-  // @ts-ignore
-  const userId = req.user.userId;
-
-  try {
-    console.log(`🗑️ Removing Judge0 API key for user ${userId}`);
-
-    // Remove from shared pool
-    await prisma.judge0KeyPool.deleteMany({
-      where: { userId }
-    });
-
-    // Update user status
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        judge0ApiKey: null,
-        judge0KeyStatus: 'NOT_PROVIDED',
-        judge0QuotaUsed: 0,
-        judge0LastReset: null
-      }
-    });
-
-    console.log(`✅ Judge0 API key successfully removed for user ${userId}`);
-
-    res.status(200).json({
-      message: 'Judge0 API key removed successfully'
-    });
-
-  } catch (error: any) {
-    console.error('❌ Error removing Judge0 API key:', error);
-    res.status(500).json({ 
-      message: 'Error removing Judge0 API key. Please try again.', 
-      error: error.message 
-    });
-  }
-};
-
-/**
- * Get Judge0 key status and quota information
- */
-export const getJudge0Status = async (req: Request, res: Response): Promise<void> => {
-  // @ts-ignore
-  const userId = req.user.userId;
-
-  try {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        judge0KeyStatus: true,
-        judge0QuotaUsed: true,
-        judge0LastReset: true,
-      },
-    });
-
-    if (!user) {
-      res.status(404).json({ message: 'User not found' });
-      return;
-    }
-
-    // Check if in shared pool
-    const sharedKey = await prisma.judge0KeyPool.findFirst({
-      where: { userId },
-      select: {
-        status: true,
-        dailyUsage: true,
-        dailyLimit: true,
-        lastUsed: true
-      }
-    });
-
-    const isShared = !!sharedKey;
-    
-    res.status(200).json({
-      hasKey: user.judge0KeyStatus !== 'NOT_PROVIDED',
-      keyStatus: user.judge0KeyStatus,
-      quotaUsed: user.judge0QuotaUsed || 0,
-      lastReset: user.judge0LastReset,
-      isSharedWithClass: isShared,
-      sharedKeyInfo: sharedKey ? {
-        status: sharedKey.status,
-        dailyUsage: sharedKey.dailyUsage,
-        dailyLimit: sharedKey.dailyLimit,
-        lastUsed: sharedKey.lastUsed
-      } : null
-    });
-
-  } catch (error: any) {
-    console.error('❌ Error fetching Judge0 status:', error);
-    res.status(500).json({ 
-      message: 'Error fetching Judge0 key status', 
-      error: error.message 
-    });
-  }
-};
 
 /**
  * Add or update Gemini API key for a teacher

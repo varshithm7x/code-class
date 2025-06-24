@@ -378,13 +378,13 @@ console.log("Hello World");`
         [currentProblem.id]: value || ''
       }));
     } else {
-      setCode(prev => ({
-        ...prev,
-        [currentProblem.id]: {
-          ...prev[currentProblem.id],
+    setCode(prev => ({
+      ...prev,
+      [currentProblem.id]: {
+        ...prev[currentProblem.id],
           [selectedLanguage]: value || ''
-        }
-      }));
+      }
+    }));
     }
   };
 
@@ -548,14 +548,14 @@ console.log("Hello World");`
           });
         }
       } else {
-        const problemCode = code[problem.id]?.[selectedLanguage] || '';
-        if (problemCode.trim()) {
-          finalSubmissions.push({
-            problemId: problem.id,
-            code: problemCode,
+      const problemCode = code[problem.id]?.[selectedLanguage] || '';
+      if (problemCode.trim()) {
+        finalSubmissions.push({
+          problemId: problem.id,
+          code: problemCode,
             language: selectedLanguage,
             useMultiTest: false
-          });
+        });
         }
       }
     });
@@ -606,11 +606,11 @@ console.log("Hello World");`
           variant: 'default'
         });
       } else {
-        toast({
-          title: 'Submitted Successfully',
-          description: 'Your solutions have been submitted for evaluation.',
-          variant: 'default'
-        });
+      toast({
+        title: 'Submitted Successfully',
+        description: 'Your solutions have been submitted for evaluation.',
+        variant: 'default'
+      });
       }
 
       // Redirect to results page after a delay

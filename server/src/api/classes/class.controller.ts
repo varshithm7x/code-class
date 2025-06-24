@@ -37,15 +37,7 @@ interface AssignmentWithProblems {
   }[];
 }
 
-// Interface for user with potential Judge0 fields
-interface UserWithJudge0Fields {
-  id: string;
-  name: string;
-  email: string;
-  judge0KeyStatus?: string;
-  judge0QuotaUsed?: number;
-  judge0LastReset?: Date | null;
-}
+
 
 export const createClass = async (req: Request, res: Response): Promise<void> => {
   const { name } = req.body;
@@ -453,136 +445,7 @@ export const deleteClass = async (req: Request, res: Response): Promise<void> =>
   }
 }; 
 
-/**
- * Get Judge0 API key status for all students in a class (Teachers only)
- */
-export const getClassJudge0Status = async (req: Request, res: Response): Promise<void> => {
-  const { classId } = req.params;
-  // @ts-expect-error: req.user is added by the protect middleware
-  const { userId, role } = req.user;
-
-  if (role !== 'TEACHER') {
-    res.status(403).json({ message: 'Only teachers can view Judge0 key status.' });
-    return;
-  }
-
-  try {
-    // Verify teacher owns this class
-    const classInfo = await prisma.class.findFirst({
-      where: { 
-        id: classId,
-        teacherId: userId 
-      }
-    });
-
-    if (!classInfo) {
-      res.status(404).json({ message: 'Class not found or access denied.' });
-      return;
-    }
-
-    // Get all students in the class
-    const studentsInClass = await prisma.class.findUnique({
-      where: { id: classId },
-      select: {
-        students: {
-          select: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-              }
-            }
-          }
-        }
-      }
-    });
-
-    if (!studentsInClass) {
-      res.status(404).json({ message: 'Class not found.' });
-      return;
-    }
-
-    interface ProcessedStudent {
-      id: string;
-      name: string;
-      email: string;
-      judge0KeyStatus: string;
-      judge0QuotaUsed: number;
-      judge0LastReset: Date | null;
-      hasKey: boolean;
-      isSharedWithClass: boolean;
-      poolStatus: string | null;
-      dailyUsage: number;
-      dailyLimit: number;
-      lastUsed: Date | null;
-    }
-
-    // Get Judge0 information for each student
-    const studentsWithJudge0Info: ProcessedStudent[] = await Promise.all(
-      studentsInClass.students.map(async ({ user }) => {
-        // Get user's Judge0 key status (using raw query to handle potential missing fields)
-        const userWithJudge0 = await prisma.user.findUnique({
-          where: { id: user.id },
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          }
-        }) as UserWithJudge0Fields;
-
-        // Note: Judge0KeyPool functionality disabled due to schema compatibility
-        const poolKey = null;
-
-        const judge0KeyStatus = userWithJudge0?.judge0KeyStatus || 'NOT_PROVIDED';
-        const judge0QuotaUsed = userWithJudge0?.judge0QuotaUsed || 0;
-        const judge0LastReset = userWithJudge0?.judge0LastReset || null;
-
-        return {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          judge0KeyStatus,
-          judge0QuotaUsed,
-          judge0LastReset,
-          hasKey: judge0KeyStatus !== 'NOT_PROVIDED',
-          isSharedWithClass: false, // Disabled until judge0KeyPool is available
-          poolStatus: null,
-          dailyUsage: 0,
-          dailyLimit: 50,
-          lastUsed: null
-        };
-      })
-    );
-
-    // Calculate statistics
-    const totalStudents = studentsWithJudge0Info.length;
-    const studentsWithKeys = studentsWithJudge0Info.filter(s => s.hasKey).length;
-    const studentsSharing = studentsWithJudge0Info.filter(s => s.isSharedWithClass).length;
-    const totalDailyQuota = studentsWithJudge0Info.reduce((sum, s) => sum + (s.isSharedWithClass ? s.dailyLimit : 0), 0);
-    const totalUsedQuota = studentsWithJudge0Info.reduce((sum, s) => sum + (s.isSharedWithClass ? s.dailyUsage : 0), 0);
-
-    res.status(200).json({
-      classId,
-      className: classInfo.name,
-      students: studentsWithJudge0Info,
-      statistics: {
-        totalStudents,
-        studentsWithKeys,
-        studentsSharing,
-        totalDailyQuota,
-        totalUsedQuota,
-        availableQuota: totalDailyQuota - totalUsedQuota,
-        keyProvisionPercentage: Math.round((studentsWithKeys / totalStudents) * 100),
-        sharingPercentage: Math.round((studentsSharing / totalStudents) * 100)
-      }
-    });
-
-  } catch (error) {
-    console.error('Error fetching Judge0 status for class:', error);
-    res.status(500).json({ message: 'Error fetching Judge0 key status', error });
-  }
-}; 
+ 
 
 /**
  * Allow a student to leave a class

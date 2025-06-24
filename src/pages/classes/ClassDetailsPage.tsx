@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { getClassDetails, getClassAssignments, removeStudentFromClass, getClassJudge0Status } from '../../api/classes';
+import { getClassDetails, getClassAssignments, removeStudentFromClass } from '../../api/classes';
 import { deleteAssignment } from '../../api/assignments';
-import { ClassWithStudents, Assignment, TeacherAssignment, StudentAssignment, Student, ClassJudge0Status } from '../../types';
+import { ClassWithStudents, Assignment, TeacherAssignment, StudentAssignment, Student } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../hooks/use-toast';
 import { triggerDataRefresh, DATA_REFRESH_EVENTS } from '../../utils/dataRefresh';
@@ -19,7 +19,7 @@ import { CodingTest } from '../../components/tests/TestCard';
 import { Plus, Users, BookOpen, Award, Copy, Code, TrendingUp, Search, Megaphone, Terminal, UserMinus, Key, Shield } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import SubmissionStatusChecker from '../../components/classes/SubmissionStatusChecker';
-import Judge0StatusIndicator from '../../components/classes/Judge0StatusIndicator';
+
 
 const ClassDetailsPage: React.FC = () => {
   const { classId } = useParams<{ classId: string }>();
@@ -34,31 +34,12 @@ const ClassDetailsPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [studentSearch, setStudentSearch] = useState('');
-  const [judge0Status, setJudge0Status] = useState<ClassJudge0Status | null>(null);
-  const [judge0Loading, setJudge0Loading] = useState(false);
+
   
   // Mock data for the completion grid
   const [completionData, setCompletionData] = useState<Record<string, Record<string, boolean>>>({});
 
-  // Fetch Judge0 status for all students (teachers only)
-  const fetchJudge0Status = async () => {
-    if (!isTeacher || !classId) return;
-    
-    setJudge0Loading(true);
-    try {
-      const data = await getClassJudge0Status(classId);
-      setJudge0Status(data);
-    } catch (error) {
-      console.error('Failed to fetch Judge0 status:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load Judge0 API key status",
-        variant: "destructive",
-      });
-    } finally {
-      setJudge0Loading(false);
-    }
-  };
+
 
   useEffect(() => {
     const fetchData = async () => {
@@ -120,12 +101,7 @@ const ClassDetailsPage: React.FC = () => {
     fetchData();
   }, [classId, toast]);
 
-  // Fetch Judge0 status when students tab is viewed
-  useEffect(() => {
-    if (activeTab === 'students' && isTeacher && classId && !judge0Status) {
-      fetchJudge0Status();
-    }
-  }, [activeTab, isTeacher, classId, judge0Status]);
+
 
   const handleDeleteAssignment = async (assignmentId: string) => {
     try {
@@ -467,97 +443,14 @@ const ClassDetailsPage: React.FC = () => {
               {/* Submission Status Checker */}
               <SubmissionStatusChecker classId={classId || ''} />
               
-              {/* Judge0 API Key Status Overview */}
-              {judge0Loading && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Key className="h-5 w-5" />
-                      Judge0 API Key Status
-                    </CardTitle>
-                    <CardDescription>
-                      Loading API key configuration status...
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center justify-center py-8">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-              
-              {judge0Status && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Key className="h-5 w-5" />
-                      Judge0 API Key Status
-                    </CardTitle>
-                    <CardDescription>
-                      Overview of Judge0 API key configuration for code execution during tests
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                        <div className="text-2xl font-bold text-blue-600">
-                          {judge0Status.statistics.studentsWithKeys}
-                        </div>
-                        <div className="text-sm text-blue-700">
-                          Students with Keys
-                        </div>
-                        <div className="text-xs text-blue-600 mt-1">
-                          {judge0Status.statistics.keyProvisionPercentage}% of class
-                        </div>
-                      </div>
-                      
-                      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                        <div className="text-2xl font-bold text-green-600">
-                          {judge0Status.statistics.studentsSharing}
-                        </div>
-                        <div className="text-sm text-green-700">
-                          Sharing with Pool
-                        </div>
-                        <div className="text-xs text-green-600 mt-1">
-                          {judge0Status.statistics.sharingPercentage}% sharing
-                        </div>
-                      </div>
-                      
-                      <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                        <div className="text-2xl font-bold text-purple-600">
-                          {judge0Status.statistics.totalDailyQuota}
-                        </div>
-                        <div className="text-sm text-purple-700">
-                          Total Daily Quota
-                        </div>
-                        <div className="text-xs text-purple-600 mt-1">
-                          API requests/day
-                        </div>
-                      </div>
-                      
-                      <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-                        <div className="text-2xl font-bold text-orange-600">
-                          {judge0Status.statistics.availableQuota}
-                        </div>
-                        <div className="text-sm text-orange-700">
-                          Available Today
-                        </div>
-                        <div className="text-xs text-orange-600 mt-1">
-                          Remaining requests
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
+
               
               {/* Student List */}
               <Card>
                 <CardHeader>
                   <CardTitle>Enrolled Students</CardTitle>
                   <CardDescription>
-                    Search for students and view their profiles and Judge0 API key status
+                    Search for students and view their profiles
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -621,27 +514,7 @@ const ClassDetailsPage: React.FC = () => {
                               <div className="flex-shrink-0 min-w-[200px]">
                                 <LeetCodeStats user={student} compact={true} showDetails={false} />
                               </div>
-                              
-                              {/* Judge0 Status Indicator */}
-                              {judge0Status && (
-                                <div className="flex-shrink-0">
-                                  {(() => {
-                                    const studentJudge0Status = judge0Status.students.find(
-                                      s => s.id === student.id
-                                    );
-                                    return studentJudge0Status ? (
-                                      <Judge0StatusIndicator 
-                                        student={studentJudge0Status} 
-                                        compact={true}
-                                      />
-                                    ) : (
-                                      <div className="text-xs text-gray-500">
-                                        Loading...
-                                      </div>
-                                    );
-                                  })()}
-                                </div>
-                              )}
+
                               
                               <Button
                                 variant="outline"

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { getClassDetails, getClassAssignments, removeStudentFromClass } from '../../api/classes';
 import { deleteAssignment } from '../../api/assignments';
 import { getClassAnnouncements } from '../../api/announcements';
@@ -26,6 +26,7 @@ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '..
 const ClassDetailsPage: React.FC = () => {
   const { classId } = useParams<{ classId: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const { toast } = useToast();
   const isTeacher = user?.role === 'TEACHER';
@@ -34,13 +35,20 @@ const ClassDetailsPage: React.FC = () => {
   const [assignments, setAssignments] = useState<(Assignment | TeacherAssignment | StudentAssignment)[]>([]);
   const [tests, setTests] = useState<CodingTest[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [activeTab, setActiveTab] = useState(isTeacher ? 'overview' : 'assignments');
+  const initialTab = searchParams.get('tab') || (isTeacher ? 'overview' : 'assignments');
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [studentSearch, setStudentSearch] = useState('');
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
+
   useEffect(() => {
     const fetchData = async () => {
       if (!classId) return;
@@ -236,21 +244,29 @@ const ClassDetailsPage: React.FC = () => {
           {classDetails.students
             .filter(student => student.name.toLowerCase().includes(studentSearch.toLowerCase()))
             .map(student => (
-              <Card key={student.id}>
+              <Card key={student.id} className="hover:shadow-lg transition-shadow cursor-pointer">
                 <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle className="text-lg">{student.name}</CardTitle>
+                  <CardTitle 
+                    className="text-lg hover:text-blue-600 transition-colors cursor-pointer"
+                    onClick={() => navigate(`/students/${student.id}`)}
+                  >
+                    {student.name}
+                  </CardTitle>
                   {isTeacher && (
                     <Button 
                       variant="ghost" 
                       size="icon" 
-                      onClick={() => handleRemoveStudent(student.id, student.name)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemoveStudent(student.id, student.name);
+                      }}
                       title="Remove student"
                     >
                       <UserMinus className="h-4 w-4 text-red-500" />
                     </Button>
                   )}
                 </CardHeader>
-                <CardContent>
+                <CardContent onClick={() => navigate(`/students/${student.id}`)}>
                   <p className="text-sm text-muted-foreground">{student.email}</p>
                   
                   <div className="mt-3">
@@ -313,7 +329,11 @@ const ClassDetailsPage: React.FC = () => {
         )}
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
+      <Tabs value={activeTab} onValueChange={(value) => {
+        setActiveTab(value);
+        // Update URL to reflect current tab
+        navigate(`/classes/${classId}?tab=${value}`, { replace: true });
+      }} className="mt-6">
         <TabsList className={`grid w-full ${isTeacher ? 'grid-cols-2 md:grid-cols-5' : 'grid-cols-3'}`}>
           {isTeacher && (
             <TabsTrigger value="overview">

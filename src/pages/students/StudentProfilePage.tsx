@@ -1,15 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { getStudentProfile } from '../../api/students';
 import { StudentProfile as StudentProfileType } from '../../types';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
+import { Button } from '../../components/ui/button';
 import LoadingScreen from '../../components/ui/LoadingScreen';
 import LeetCodeStats from '../../components/ui/LeetCodeStats';
-import { CheckCircle2, XCircle } from 'lucide-react';
+import { CheckCircle2, XCircle, ArrowLeft } from 'lucide-react';
 
 const StudentProfilePage: React.FC = () => {
   const { studentId } = useParams<{ studentId: string }>();
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<StudentProfileType | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -27,6 +29,17 @@ const StudentProfilePage: React.FC = () => {
     };
     fetchProfile();
   }, [studentId]);
+
+  // Handle back navigation - try to go back to where we came from
+  const handleBack = () => {
+    // Check if we have navigation history and try to go back
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      // Fallback to classes list
+      navigate('/classes');
+    }
+  };
 
   // --- Calculations ---
   const totalSubmissions = profile?.submissions.length || 0;
@@ -50,11 +63,31 @@ const StudentProfilePage: React.FC = () => {
   }
 
   if (!profile) {
-    return <div className="text-center py-10">Student not found.</div>;
+    return (
+      <div className="text-center py-10">
+        <h2 className="text-xl font-bold mb-4">Student not found</h2>
+        <Button onClick={handleBack}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Go Back
+        </Button>
+      </div>
+    );
   }
 
   return (
     <div className="container py-8 space-y-8">
+      {/* Back Button Header */}
+      <div className="mb-6">
+        <Button
+          variant="outline"
+          onClick={handleBack}
+          className="mb-4"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back
+        </Button>
+      </div>
+
       <div>
         <h1 className="text-3xl font-bold">{profile.name}</h1>
         <p className="text-muted-foreground">{profile.email}</p>

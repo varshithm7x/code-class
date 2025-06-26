@@ -7,7 +7,9 @@ export interface StudentPerformanceData {
   email: string;
   leetcodeUsername?: string;
   totalAssignments: number;
+  totalQuestions: number;
   completedAssignments: number;
+  completedQuestions: number;
   completionRate: number;
   averageCompletionTime: number; // in hours
   assignmentHistory: Array<{
@@ -36,6 +38,7 @@ export interface ClassAnalytics {
   totalStudents: number;
   activeStudents: number;
   totalAssignments: number;
+  totalQuestions: number;
   averageClassPerformance: number;
   students: StudentPerformanceData[];
   assignmentTrends: Array<{

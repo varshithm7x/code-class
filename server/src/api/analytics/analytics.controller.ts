@@ -486,6 +486,7 @@ export const getClassAnalytics = async (req: Request, res: Response): Promise<vo
     }
 
     const totalAssignments = classData.assignments.length;
+    const totalQuestions = classData.assignments.reduce((sum, assignment) => sum + assignment.problems.length, 0);
 
     const students: StudentPerformanceData[] = await Promise.all(
       classData.students.map(async (studentClass) => {
@@ -533,7 +534,9 @@ export const getClassAnalytics = async (req: Request, res: Response): Promise<vo
         });
 
         const completedAssignments = assignmentHistory.filter((a) => a.completionRate >= 100).length;
-        const overallCompletionRate = totalAssignments > 0 ? (completedAssignments / totalAssignments) * 100 : 0;
+        const totalQuestionsForStudent = assignmentHistory.reduce((sum, a) => sum + a.problemsTotal, 0);
+        const completedQuestionsForStudent = assignmentHistory.reduce((sum, a) => sum + a.problemsCompleted, 0);
+        const overallCompletionRate = totalQuestionsForStudent > 0 ? (completedQuestionsForStudent / totalQuestionsForStudent) * 100 : 0;
         
         const completionTimes = assignmentHistory
           .map((a) => a.timeToComplete)
@@ -582,7 +585,9 @@ export const getClassAnalytics = async (req: Request, res: Response): Promise<vo
           email: student.email,
           leetcodeUsername: student.leetcodeUsername,
           totalAssignments,
+          totalQuestions: totalQuestionsForStudent,
           completedAssignments,
+          completedQuestions: completedQuestionsForStudent,
           completionRate: overallCompletionRate,
           averageCompletionTime,
           assignmentHistory,
@@ -656,6 +661,7 @@ export const getClassAnalytics = async (req: Request, res: Response): Promise<vo
       totalStudents,
       activeStudents,
       totalAssignments,
+      totalQuestions,
       averageClassPerformance,
       students,
       assignmentTrends,

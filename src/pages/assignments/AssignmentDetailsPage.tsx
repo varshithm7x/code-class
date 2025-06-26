@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { getAssignmentDetails, checkSubmissionsForAssignment, checkMySubmissionsForAssignment } from '../../api/assignments';
 import { AssignmentWithSubmissions, StudentAssignmentDetails, ProblemWithUserSubmission } from '../../types';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
@@ -11,13 +11,14 @@ import CompletionStats from '../../components/assignments/CompletionStats';
 import ProblemCompletionList from '../../components/assignments/ProblemCompletionList';
 import { Button } from '../../components/ui/button';
 import { toast } from 'sonner';
-import { RefreshCw, Pencil, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
+import { RefreshCw, Pencil, CheckCircle2, Clock, AlertCircle, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Progress } from '../../components/ui/progress';
 import { isAxiosError } from 'axios';
 
 const AssignmentDetailsPage: React.FC = () => {
   const { assignmentId } = useParams<{ assignmentId: string }>();
+  const navigate = useNavigate();
   const [assignment, setAssignment] = useState<AssignmentWithSubmissions | StudentAssignmentDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isChecking, setIsChecking] = useState(false);
@@ -117,6 +118,18 @@ const AssignmentDetailsPage: React.FC = () => {
   
   return (
     <div className="container py-8">
+      {/* Back Button Header */}
+      <div className="mb-6">
+        <Button
+          variant="outline"
+          onClick={() => navigate(`/classes/${assignment.classId}?tab=assignments`)}
+          className="mb-4"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Assignments
+        </Button>
+      </div>
+
       <Card>
         <CardHeader>
           <div className="flex justify-between items-start">

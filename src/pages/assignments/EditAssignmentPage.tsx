@@ -25,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PlusCircle, Trash2, Sparkles, Edit3, Check, X, FileText, ArrowRight } from 'lucide-react';
+import { PlusCircle, Trash2, Sparkles, Edit3, Check, X, FileText, ArrowRight, ArrowLeft } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import LoadingScreen from '@/components/ui/LoadingScreen';
 import { Assignment } from '@/types';
@@ -318,7 +318,7 @@ const EditAssignmentPage = () => {
       });
 
       toast.success('Assignment updated successfully!');
-      navigate('/dashboard');
+      navigate(`/assignments/${assignmentId}`);
     } catch (error) {
       console.error('Error updating assignment:', error);
       toast.error('Failed to update assignment');
@@ -405,7 +405,9 @@ const EditAssignmentPage = () => {
     const failedCount = problems.filter(p => p.status === 'failed').length;
     
     if (successCount > 0 && failedCount === 0) {
-      toast.success(`🎉 Successfully extracted ${successCount} problems! Review and update assignment.`);
+      toast.success(`🎉 Successfully extracted ${successCount} problems! Review and update assignment.`, {
+        duration: 2000
+      });
     } else if (successCount > 0 && failedCount > 0) {
       toast.warning(`📊 Extracted ${successCount} problems, ${failedCount} failed. Please edit the failed ones.`);
     } else {
@@ -455,13 +457,28 @@ const EditAssignmentPage = () => {
     toast.success('Problems added to assignment!');
   };
 
+  // Handle back navigation
+  const handleBack = () => {
+    // Go back to assignment details
+    navigate(`/assignments/${assignmentId}`);
+  };
+
   if (isLoading) {
     return <LoadingScreen />;
   }
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
+      {/* Back Button Header */}
       <div className="mb-6">
+        <Button
+          variant="outline"
+          onClick={handleBack}
+          className="mb-4"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Assignment
+        </Button>
         <h1 className="text-2xl font-bold">Edit Assignment</h1>
         <p className="text-gray-600">Update your assignment details</p>
       </div>
@@ -792,7 +809,7 @@ https://codeforces.com/problemset/problem/1/A`}
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => navigate('/dashboard')}
+                  onClick={handleBack}
                 >
                   Cancel
                 </Button>

@@ -25,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PlusCircle, Trash2, Download, Sparkles, Edit3, Check, X, FileText, ArrowRight } from 'lucide-react';
+import { PlusCircle, Trash2, Download, Sparkles, Edit3, Check, X, FileText, ArrowRight, ArrowLeft } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const problemSchema = z.object({
@@ -281,7 +281,7 @@ const NewAssignmentPage = () => {
 
   const onSubmit = async (data: FormValues) => {
     try {
-      await createAssignment({
+      const newAssignment = await createAssignment({
         title: data.title,
         description: data.description || '',
         classId: data.classId,
@@ -294,7 +294,8 @@ const NewAssignmentPage = () => {
         }))
       });
       toast.success('Assignment created successfully!');
-      navigate(`/classes/${data.classId}`);
+      // Navigate to the newly created assignment page
+      navigate(`/assignments/${newAssignment.id}`);
     } catch (error) {
       console.error(error);
       toast.error('Failed to create assignment.');
@@ -389,7 +390,9 @@ const NewAssignmentPage = () => {
     const failedCount = problems.filter(p => p.status === 'failed').length;
     
     if (successCount > 0 && failedCount === 0) {
-      toast.success(`🎉 Successfully extracted ${successCount} problems! Review and create assignment.`);
+      toast.success(`🎉 Successfully extracted ${successCount} problems! Review and create assignment.`, {
+        duration: 2000
+      });
     } else if (successCount > 0 && failedCount > 0) {
       toast.warning(`📊 Extracted ${successCount} problems, ${failedCount} failed. Please edit the failed ones.`);
     } else {
@@ -444,11 +447,36 @@ const NewAssignmentPage = () => {
     form.setValue('problems', [{ title: '', url: '', difficulty: 'Easy' }]);
   };
 
+  // Handle back navigation
+  const handleBack = () => {
+    if (classIdFromParams) {
+      // If we came from a specific class, go back to that class's assignments tab
+      navigate(`/classes/${classIdFromParams}?tab=assignments`);
+    } else {
+      // Otherwise go back to classes list
+      navigate('/classes');
+    }
+  };
+
   return (
     <div className="container mx-auto p-4">
+      {/* Back Button Header */}
+      <div className="mb-6">
+        <Button
+          variant="outline"
+          onClick={handleBack}
+          className="mb-4"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to {classIdFromParams ? 'Class Assignments' : 'Classes'}
+        </Button>
+        <h1 className="text-2xl font-bold">Create New Assignment</h1>
+        <p className="text-gray-600">Add problems and set due dates for your students</p>
+      </div>
+
       <Card>
         <CardHeader>
-          <CardTitle>Create New Assignment</CardTitle>
+          <CardTitle>Assignment Details</CardTitle>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -663,9 +691,16 @@ https://codeforces.com/problemset/problem/1/A`}
                 )}
               </div>
 
-              <Button type="submit" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? 'Creating...' : 'Create Assignment'}
-              </Button>
+              <div className="flex justify-end space-x-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleBack}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit">Create Assignment</Button>
+              </div>
             </form>
           </Form>
         </CardContent>

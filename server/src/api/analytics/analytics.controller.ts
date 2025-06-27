@@ -562,11 +562,14 @@ export const getClassAnalytics = async (req: Request, res: Response): Promise<vo
         }
 
         let riskLevel: 'low' | 'medium' | 'high' = 'low';
-        if (overallCompletionRate < 30 || performanceTrend === 'inactive') {
+        // 🔴 HIGH RISK: Student has completed < 40% of questions OR shows no recent activity
+        if (overallCompletionRate < 40 || performanceTrend === 'inactive') {
           riskLevel = 'high';
-        } else if (overallCompletionRate < 60 || performanceTrend === 'declining') {
+        // 🟡 MEDIUM RISK: Student has completed 41-69% of questions OR shows declining performance
+        } else if ((overallCompletionRate >= 40 && overallCompletionRate < 70) || performanceTrend === 'declining') {
           riskLevel = 'medium';
         }
+        // 🟢 LOW RISK: Student has completed ≥ 70% of questions AND shows stable/improving performance
 
         const submissionsWithDates: SubmissionWithDate[] = submissions
           .filter((sub): sub is SubmissionInClass & { submissionTime: Date } => !!sub.submissionTime && sub.completed)
@@ -605,10 +608,10 @@ export const getClassAnalytics = async (req: Request, res: Response): Promise<vo
       : 0;
 
     const performanceDistribution = {
-      excellent: students.filter(s => s.completionRate >= 90).length,
-      good: students.filter(s => s.completionRate >= 70 && s.completionRate < 90).length,
-      average: students.filter(s => s.completionRate >= 50 && s.completionRate < 70).length,
-      poor: students.filter(s => s.completionRate < 50).length
+      excellent: students.filter(s => s.completionRate >= 90).length,  // 🟢 Excellent (90-100%)
+      good: students.filter(s => s.completionRate >= 70 && s.completionRate < 90).length,  // 🔵 Good (70-89%)
+      average: students.filter(s => s.completionRate >= 40 && s.completionRate < 70).length,  // 🟡 Average (40-69%)
+      poor: students.filter(s => s.completionRate < 40).length  // 🔴 Poor (0-39%)
     };
 
     const assignmentTrends = classData.assignments.map((assignment) => {
@@ -625,7 +628,8 @@ export const getClassAnalytics = async (req: Request, res: Response): Promise<vo
         ? completionRates.reduce((sum, rate) => sum + rate, 0) / completionRates.length
         : 0;
       
-      const completionRate = completionRates.filter((rate) => rate >= 100).length / Math.max(totalStudents, 1) * 100;
+      // Change to use question-based completion rate instead of assignment-based
+      const completionRate = averageCompletion;
       
       const averageTimeToComplete = completionTimes.length > 0
         ? completionTimes.reduce((sum, time) => sum + time, 0) / completionTimes.length
@@ -642,13 +646,13 @@ export const getClassAnalytics = async (req: Request, res: Response): Promise<vo
     });
 
     const riskStudents = students
-      .filter(s => s.riskLevel === 'medium' || s.riskLevel === 'high')
+      .filter(s => s.riskLevel === 'high')
       .map(s => ({
         studentId: s.studentId,
         studentName: s.studentName,
         riskLevel: s.riskLevel,
         reasons: [
-          s.completionRate < 30 ? 'Low completion rate' : '',
+          s.completionRate < 40 ? 'Low completion rate (<40%)' : '',
           s.performanceTrend === 'declining' ? 'Declining performance' : '',
           s.performanceTrend === 'inactive' ? 'No recent activity' : '',
           s.averageCompletionTime > 72 ? 'Slow completion times' : ''
@@ -745,11 +749,13 @@ export const getStudentDetailedAnalytics = async (req: Request, res: Response): 
 
       return {
         week: format(weekStart, 'MMM dd'),
-        completedProblems,
-        timeSpent,
-        score
+        completedProblems: completedProblems, // Ensure this is always a number
+        timeSpent: timeSpent,
+        score: score
       };
     });
+
+
 
     const typedSubmissions = student.submissions as SubmissionForDetailedAnalytics[];
     const problemsByDifficulty = {
@@ -783,9 +789,20 @@ export const getStudentDetailedAnalytics = async (req: Request, res: Response): 
     };
 
     const problemsByPlatform = {
-      leetcode: typedSubmissions.filter((sub) => sub.problem.platform?.toLowerCase().includes('leetcode')),
-      hackerrank: typedSubmissions.filter((sub) => sub.problem.platform?.toLowerCase().includes('hackerrank')),
-      geeksforgeeks: typedSubmissions.filter((sub) => sub.problem.platform?.toLowerCase().includes('geeks'))
+      leetcode: typedSubmissions.filter((sub) => {
+        const platform = sub.problem.platform?.toLowerCase() || '';
+        return platform.includes('leetcode') || platform === 'leetcode';
+      }),
+      hackerrank: typedSubmissions.filter((sub) => {
+        const platform = sub.problem.platform?.toLowerCase() || '';
+        return platform.includes('hackerrank') || platform === 'hackerrank';
+      }),
+      geeksforgeeks: typedSubmissions.filter((sub) => {
+        const platform = sub.problem.platform?.toLowerCase() || '';
+        return platform.includes('geeksforgeeks') || 
+               platform.includes('geeks') ||
+               platform === 'gfg';
+      })
     };
 
     const platformStats = {

@@ -48,8 +48,9 @@ const BarChart: React.FC<BarChartProps> = ({
               tick={{ fontSize: 12 }} 
               label={{ 
                 value: xLabel || '', 
-                position: 'insideBottomRight', 
-                offset: -10 
+                position: 'insideBottom', 
+                offset: -5,
+                textAnchor: 'middle'
               }} 
             />
             <YAxis 
@@ -57,7 +58,9 @@ const BarChart: React.FC<BarChartProps> = ({
               label={{ 
                 value: yLabel || '', 
                 angle: -90, 
-                position: 'insideLeft'
+                position: 'insideLeft',
+                textAnchor: 'middle',
+                style: { textAnchor: 'middle' }
               }} 
             />
             <Tooltip 

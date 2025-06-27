@@ -48,7 +48,7 @@ const PieChart: React.FC<PieChartProps> = ({
               nameKey="name"
               label={({ name, percent }) => {
                 if (percent === 0) return null;
-                // Extracts the first word from the name, e.g., "Average (50-69%)" -> "Average"
+                // Extracts the first word from the name, e.g., "Average (40-69%)" -> "Average"
                 const shortName = name.split('(')[0].trim();
                 return `${shortName}: ${(percent * 100).toFixed(0)}%`;
               }}

@@ -6,6 +6,8 @@ import { Badge } from '../ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { Alert, AlertDescription } from '../ui/alert';
 import { Progress } from '../ui/progress';
+import { Input } from '../ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import BarChart from '../ui/charts/BarChart';
 import LineChart from '../ui/charts/LineChart';
 import PieChart from '../ui/charts/PieChart';
@@ -25,7 +27,9 @@ import {
   PieChart as PieChartIcon,
   LineChart as LineChartIcon,
   User,
-  RefreshCw
+  RefreshCw,
+  Search,
+  Filter
 } from 'lucide-react';
 import { 
   ClassAnalytics, 
@@ -68,19 +72,19 @@ const StudentDetailCard: React.FC<StudentDetailCardProps> = ({ student, onViewDe
   const getRiskColor = (risk: string) => {
     switch (risk) {
       case 'high':
-        return 'bg-red-100 text-red-800 border-red-200';
+        return 'bg-red-100 text-red-800 border-red-200';  // 🔴 HIGH RISK
       case 'medium':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';  // 🟡 MEDIUM RISK
       default:
-        return 'bg-green-100 text-green-800 border-green-200';
+        return 'bg-green-100 text-green-800 border-green-200';  // 🟢 LOW RISK
     }
   };
 
   const getCompletionColor = (rate: number) => {
-    if (rate >= 90) return 'text-green-600';
-    if (rate >= 70) return 'text-blue-600';
-    if (rate >= 50) return 'text-yellow-600';
-    return 'text-red-600';
+    if (rate >= 90) return 'text-green-600';  // 🟢 Excellent (90-100%)
+    if (rate >= 70) return 'text-blue-600';   // 🔵 Good (70-89%)
+    if (rate >= 40) return 'text-yellow-600'; // 🟡 Average (40-69%)
+    return 'text-red-600';                    // 🔴 Poor (0-39%)
   };
 
   return (
@@ -97,7 +101,7 @@ const StudentDetailCard: React.FC<StudentDetailCardProps> = ({ student, onViewDe
           <div className="flex items-center space-x-2">
             {getTrendIcon(student.performanceTrend)}
             <Badge className={getRiskColor(student.riskLevel)}>
-              {student.riskLevel} risk
+              {student.riskLevel === 'high' ? '🔴' : student.riskLevel === 'medium' ? '🟡' : '🟢'} {student.riskLevel} risk
             </Badge>
           </div>
         </div>
@@ -178,6 +182,8 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
   const [activeView, setActiveView] = useState('overview');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [riskFilter, setRiskFilter] = useState<string>('all');
   const navigate = useNavigate();
 
   // Cache key for localStorage
@@ -281,11 +287,19 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
   }
 
   const performanceData = [
-    { name: 'Excellent (90-100%)', value: analytics.performanceDistribution.excellent },
-    { name: 'Good (70-89%)', value: analytics.performanceDistribution.good },
-    { name: 'Average (50-69%)', value: analytics.performanceDistribution.average },
-    { name: 'Poor (0-49%)', value: analytics.performanceDistribution.poor },
+    { name: '🟢 Excellent (90-100%)', value: analytics.performanceDistribution.excellent },
+    { name: '🔵 Good (70-89%)', value: analytics.performanceDistribution.good },
+    { name: '🟡 Average (40-69%)', value: analytics.performanceDistribution.average },
+    { name: '🔴 Poor (0-39%)', value: analytics.performanceDistribution.poor },
   ].filter(item => item.value > 0);
+
+  // Filter students based on search term and risk level
+  const filteredStudents = analytics.students.filter(student => {
+    const matchesSearch = student.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         student.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesRisk = riskFilter === 'all' || student.riskLevel === riskFilter;
+    return matchesSearch && matchesRisk;
+  });
 
   return (
     <div className={className}>
@@ -357,7 +371,7 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{analytics.riskStudents.length}</div>
-                <p className="text-xs text-muted-foreground">High or medium risk</p>
+                <p className="text-xs text-muted-foreground">High risk only</p>
               </CardContent>
             </Card>
           </div>
@@ -370,7 +384,7 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
                   Assignment Performance Trends
                 </CardTitle>
                 <CardDescription className="text-xs sm:text-sm">
-                  Average completion rate per assignment
+                  Average question completion rate per assignment
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-2 sm:p-6">
@@ -416,7 +430,7 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
                 <span>At-Risk Students</span>
               </CardTitle>
               <CardDescription>
-                Students who might need extra help
+                High-risk students who need immediate attention
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -426,7 +440,7 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
                     <li key={student.studentId} className="flex items-center justify-between p-3 bg-muted rounded-lg">
                       <div className="flex items-center">
                         <Badge className={student.riskLevel === 'high' ? 'bg-red-500' : 'bg-yellow-500'}>
-                          {student.riskLevel}
+                          {student.riskLevel === 'high' ? '🔴' : '🟡'} {student.riskLevel}
                         </Badge>
                         <span className="ml-3 font-medium">{student.studentName}</span>
                       </div>
@@ -442,8 +456,48 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
         </TabsContent>
         
         <TabsContent value="students" className="mt-6">
-           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-              {analytics.students.map(student => (
+          {/* Search and Filter Controls */}
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  placeholder="Search students by name or email..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+            <div className="w-full sm:w-48">
+              <Select value={riskFilter} onValueChange={setRiskFilter}>
+                <SelectTrigger>
+                  <Filter className="mr-2 h-4 w-4" />
+                  <SelectValue placeholder="Filter by risk" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Risk Levels</SelectItem>
+                  <SelectItem value="high">🔴 High Risk</SelectItem>
+                  <SelectItem value="medium">🟡 Medium Risk</SelectItem>
+                  <SelectItem value="low">🟢 Low Risk</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Results Summary */}
+          <div className="mb-4">
+            <p className="text-sm text-muted-foreground">
+              Showing {filteredStudents.length} of {analytics.students.length} students
+              {searchTerm && ` matching "${searchTerm}"`}
+              {riskFilter !== 'all' && ` with ${riskFilter} risk`}
+            </p>
+          </div>
+
+          {/* Student Cards */}
+          {filteredStudents.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+              {filteredStudents.map(student => (
                 <StudentDetailCard 
                   key={student.studentId} 
                   student={student} 
@@ -451,6 +505,25 @@ export const StudentAnalyticsDashboard: React.FC<StudentAnalyticsDashboardProps>
                 />
               ))}
             </div>
+          ) : (
+            <div className="text-center py-8">
+              <div className="text-muted-foreground mb-2">
+                {searchTerm || riskFilter !== 'all' ? 'No students match your filters' : 'No students found'}
+              </div>
+              {(searchTerm || riskFilter !== 'all') && (
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setSearchTerm('');
+                    setRiskFilter('all');
+                  }}
+                  className="mt-2"
+                >
+                  Clear Filters
+                </Button>
+              )}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="trends" className="mt-6">

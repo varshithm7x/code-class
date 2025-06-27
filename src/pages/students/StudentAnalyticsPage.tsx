@@ -248,15 +248,29 @@ export const StudentAnalyticsPage: React.FC = () => {
                   <CardTitle>Progress Timeline</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <BarChart 
-                    data={analytics.weeklyProgress?.map(item => ({
-                      name: item.week,
-                      value: item.completedProblems
-                    })) || []}
-                    xKey="name"
-                    xLabel="Week"
-                    yLabel="Problems Completed"
-                  />
+                  {analytics.weeklyProgress && analytics.weeklyProgress.length > 0 ? (
+                    <div className="h-[300px] w-full">
+                      <BarChart 
+                        data={analytics.weeklyProgress.map(item => ({
+                          name: item.week,
+                          "Questions Done": item.completedProblems
+                        }))}
+                        xKey="name"
+                        yKey="Questions Done"
+                        xLabel="Week"
+                        yLabel="Questions Done"
+                        color="#3b82f6"
+                        height={300}
+                      />
+                    </div>
+                  ) : (
+                    <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                      <div className="text-center">
+                        <Activity className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                        <p>No weekly progress data available</p>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>

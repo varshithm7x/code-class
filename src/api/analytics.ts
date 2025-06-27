@@ -52,8 +52,8 @@ export interface ClassAnalytics {
   performanceDistribution: {
     excellent: number; // 90-100%
     good: number; // 70-89%
-    average: number; // 50-69%
-    poor: number; // 0-49%
+    average: number; // 40-69%
+    poor: number; // 0-39%
   };
   riskStudents: Array<{
     studentId: string;

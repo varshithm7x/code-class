@@ -224,7 +224,7 @@ const ClassDetailsPage: React.FC = () => {
     { 
       value: 'assignments', 
       label: 'Assignments', 
-      content: <AssignmentList assignments={assignments as TeacherAssignment[]} />
+      content: <AssignmentList assignments={assignments as TeacherAssignment[]} onDelete={handleDeleteAssignment} />
     },
     { value: 'students', label: 'Students', content: (
       <div className="space-y-4">

@@ -250,10 +250,17 @@ export const getLeaderboard = async (req: Request, res: Response): Promise<void>
     }
 
     const leaderboardData = students.map((student) => {
-      const completedSubmissions = student.submissions.filter(s => s.completed);
+      // Filter submissions based on class if classId is provided
+      let relevantSubmissions = student.submissions.filter(s => s.completed);
+      
+      if (classId && typeof classId === 'string') {
+        relevantSubmissions = relevantSubmissions.filter(s => 
+          s.problem?.assignment?.classId === classId
+        );
+      }
 
       const uniqueProblems = new Map<string, SubmissionForLeaderboard>();
-      for (const sub of completedSubmissions) {
+      for (const sub of relevantSubmissions) {
         if (!sub.problemId) continue; 
         
         const existing = uniqueProblems.get(sub.problemId);

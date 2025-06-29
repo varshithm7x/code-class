@@ -1,4 +1,4 @@
-import express from 'express';
+import { Router } from 'express';
 import { 
   getLeaderboard, 
   getClassCompletionData, 
@@ -8,38 +8,16 @@ import {
   getStudentDetailedAnalytics 
 } from './analytics.controller';
 import { protect } from '../auth/auth.middleware';
+import { cacheMiddleware } from '../middleware/cache';
 
-const router = express.Router();
+const router = Router();
 
-// All analytics routes require authentication
-router.use(protect);
-
-// GET /analytics/leaderboard - Get global or class-specific leaderboard
-router.get('/leaderboard', getLeaderboard);
-
-// NEW: Comprehensive analytics endpoints
-// GET /analytics/class/:classId - Get comprehensive class analytics
-router.get('/class/:classId', getClassAnalytics);
-
-// GET /analytics/student/:studentId - Get detailed student analytics
-router.get('/student/:studentId', getStudentDetailedAnalytics);
-
-// Legacy endpoints (maintained for backward compatibility)
-// GET /analytics/:classId/completion - Get class completion data over time
-router.get('/:classId/completion', getClassCompletionData);
-
-// Updated to support both class-specific and global queries
-// GET /analytics/platform - Get platform distribution 
-router.get('/platform', getPlatformData);
-
-// GET /analytics/difficulty - Get difficulty distribution
-router.get('/difficulty', getDifficultyData);
-
-// Legacy endpoints (maintained for backward compatibility)
-// GET /analytics/:classId/platforms - Get platform distribution for a class
-router.get('/:classId/platforms', getPlatformData);
-
-// GET /analytics/:classId/difficulty - Get difficulty distribution for a class
-router.get('/:classId/difficulty', getDifficultyData);
+// Apply caching middleware to the most data-intensive endpoints
+router.get('/leaderboard', protect, cacheMiddleware, getLeaderboard);
+router.get('/class/:classId/completion', protect, cacheMiddleware, getClassCompletionData);
+router.get('/class/:classId/platform', protect, cacheMiddleware, getPlatformData);
+router.get('/class/:classId/difficulty', protect, cacheMiddleware, getDifficultyData);
+router.get('/class/:classId', protect, cacheMiddleware, getClassAnalytics);
+router.get('/student/:studentId', protect, cacheMiddleware, getStudentDetailedAnalytics);
 
 export default router; 

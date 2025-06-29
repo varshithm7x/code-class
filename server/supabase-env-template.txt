@@ -7,7 +7,11 @@ DATABASE_URL="postgresql://postgres:[YOUR-PASSWORD]@db.[YOUR-PROJECT-REF].supaba
 
 # Supabase Direct URL (for migrations)
 # Same as DATABASE_URL but with ?pgbouncer=true removed if present
-DIRECT_URL="postgresql://postgres:[YOUR-PASSWORD]@db.[YOUR-PROJECT-REF].supabase.co:5432/postgres"
+DIRECT_URL="your-direct-database-url"
+
+# Redis Cache URL (optional, for performance)
+# If you are not using Redis, you can leave this commented out
+# REDIS_URL="redis://127.0.0.1:6379"
 
 # Supabase Project Details
 SUPABASE_URL="https://[YOUR-PROJECT-REF].supabase.co"
@@ -30,4 +34,7 @@ JUDGE0_API_KEY="your-judge0-api-key"
 
 # Migration specific
 # Set to 'true' during migration to skip certain validations
-MIGRATION_MODE="false" 
+MIGRATION_MODE="false"
+
+# LeetCode Integration (optional)
+# For fetching LeetCode stats and verifying problems 

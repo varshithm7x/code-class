@@ -35,6 +35,7 @@ import CreateTestPage from './pages/tests/CreateTestPage';
 import TestTakingPage from './pages/tests/TestTakingPage';
 import TestMonitoringPage from './pages/tests/TestMonitoringPage';
 import TestResultsPage from './pages/tests/TestResultsPage';
+import { StudentAnalyticsPage } from './pages/students/StudentAnalyticsPage';
 
 const queryClient = new QueryClient();
 
@@ -79,6 +80,7 @@ function App() {
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/practice" element={<PracticeQuestionsPage />} />
                 <Route path="/students/:studentId" element={<TeacherRoute><StudentProfilePage /></TeacherRoute>} />
+                <Route path="/classes/:classId/students/:studentId/analytics" element={<TeacherRoute><StudentAnalyticsPage /></TeacherRoute>} />
                 <Route path="/tests" element={<TestsPage />} />
                 <Route path="/tests/new" element={<TeacherRoute><CreateTestPage /></TeacherRoute>} />
                 <Route path="/classes/:classId/tests/new" element={<TeacherRoute><CreateTestPage /></TeacherRoute>} />

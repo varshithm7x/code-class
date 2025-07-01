@@ -242,10 +242,7 @@ const SubmissionStatusGrid: React.FC<SubmissionStatusGridProps> = ({ assignment,
                 return (
                   <TableRow key={student.id}>
                     <TableCell className="sticky left-0 bg-background z-10 font-medium">
-                      <div>
-                        <div className="font-medium">{student.name}</div>
-                        <div className="text-sm text-muted-foreground">{student.email}</div>
-                      </div>
+                      <div className="font-medium">{student.name}</div>
                     </TableCell>
                     
                     {assignment.problems.map((problem) => {

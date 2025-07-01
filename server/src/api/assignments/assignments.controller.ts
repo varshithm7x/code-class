@@ -7,6 +7,7 @@ import {
 } from '../../services/submission.service';
 import { getLeetCodeProblemDetails } from '../../services/leetcode.service';
 import { sendAssignmentEmail } from '../../services/email.service';
+import { extractProblemDetailsFromUrl } from '../../services/url-title-extractor.service';
 
 
 const getPlatformFromUrl = (url: string): string => {
@@ -358,9 +359,9 @@ export const checkMySubmissionsForAssignment = async (req: Request, res: Respons
     });
 
     if (studentInfo) {
-      const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-      if (studentInfo.lastCheckedAt > tenMinutesAgo) {
-        res.status(429).json({ message: 'You can only check for new submissions once every 10 minutes.' });
+      const oneMinuteAgo = new Date(Date.now() - 1 * 60 * 1000);
+      if (studentInfo.lastCheckedAt > oneMinuteAgo) {
+        res.status(429).json({ message: 'You can only check for new submissions once every 1 minute.' });
         return;
       }
     }
@@ -402,9 +403,18 @@ export const deleteAssignment = async (req: Request, res: Response): Promise<voi
     }
 
     try {
+        // First, verify the assignment exists and user has permission
         const assignment = await prisma.assignment.findUnique({
             where: { id: assignmentId },
-            include: { class: true }
+            include: { 
+                class: true,
+                problems: {
+                    select: { id: true }
+                },
+                studentAssignmentInfos: {
+                    select: { id: true }
+                }
+            }
         });
 
         if (!assignment) {
@@ -417,37 +427,106 @@ export const deleteAssignment = async (req: Request, res: Response): Promise<voi
             return;
         }
 
-        // Use a transaction to ensure all related data is deleted
+        // Use a transaction with timeout to ensure all related data is deleted properly
         await prisma.$transaction(async (tx) => {
-            // 1. Find all problems in the assignment
-            const problems = await tx.problem.findMany({
-                where: { assignmentId: assignmentId }
-            });
+            console.log(`🗑️ Starting deletion process for assignment: ${assignmentId}`);
+            
+            const problemIds = assignment.problems.map(p => p.id);
+            console.log(`📝 Found ${assignment.problems.length} problems to delete`);
+            console.log(`👥 Found ${assignment.studentAssignmentInfos.length} student assignment info records to delete`);
 
-            const problemIds = problems.map(p => p.id);
-
-            // 2. Delete all submissions for those problems
+            // 1. Delete all submissions for all problems in this assignment
             if (problemIds.length > 0) {
-                await tx.submission.deleteMany({
-                    where: { problemId: { in: problemIds } }
+                const deletedSubmissions = await tx.submission.deleteMany({
+                    where: { 
+                        problemId: { in: problemIds } 
+                    }
                 });
+                console.log(`📤 Deleted ${deletedSubmissions.count} submissions`);
             }
 
-            // 3. Delete all problems in the assignment
-            await tx.problem.deleteMany({
+            // 2. Delete all StudentAssignmentInfo records for this assignment
+            const deletedStudentInfo = await tx.studentAssignmentInfo.deleteMany({
                 where: { assignmentId: assignmentId }
             });
+            console.log(`👥 Deleted ${deletedStudentInfo.count} student assignment info records`);
+
+            // 3. Delete all problems in the assignment
+            if (problemIds.length > 0) {
+                const deletedProblems = await tx.problem.deleteMany({
+                    where: { assignmentId: assignmentId }
+                });
+                console.log(`📝 Deleted ${deletedProblems.count} problems`);
+            }
 
             // 4. Finally, delete the assignment itself
-            await tx.assignment.delete({
+            const deletedAssignment = await tx.assignment.delete({
                 where: { id: assignmentId }
             });
+            console.log(`✅ Successfully deleted assignment: ${deletedAssignment.id} - "${deletedAssignment.title}"`);
+        }, {
+            timeout: 30000, // 30 second timeout
+            isolationLevel: Prisma.TransactionIsolationLevel.Serializable
         });
 
-        res.status(200).json({ message: 'Assignment and all related data deleted successfully' });
+        res.status(200).json({ 
+            message: 'Assignment and all related data deleted successfully',
+            deletedAssignmentId: assignmentId
+        });
     } catch (error) {
-        console.error('Error deleting assignment:', error);
-        res.status(500).json({ message: 'Error deleting assignment', error });
+        console.error('❌ Error deleting assignment:', error);
+        
+        // Enhanced error handling with more specific cases
+        if (error instanceof Prisma.PrismaClientKnownRequestError) {
+            console.error('Prisma Error Code:', error.code);
+            console.error('Prisma Meta:', error.meta);
+            
+            switch (error.code) {
+                case 'P2003':
+                    res.status(400).json({ 
+                        message: 'Cannot delete assignment due to foreign key constraints. Some related data still exists.', 
+                        error: 'Foreign key constraint violation',
+                        code: error.code
+                    });
+                    return;
+                case 'P2025':
+                    res.status(404).json({ 
+                        message: 'Assignment not found or already deleted.', 
+                        error: 'Record not found',
+                        code: error.code
+                    });
+                    return;
+                case 'P2034':
+                    res.status(409).json({ 
+                        message: 'Transaction failed due to a write conflict. Please try again.', 
+                        error: 'Transaction conflict',
+                        code: error.code
+                    });
+                    return;
+                default:
+                    res.status(500).json({ 
+                        message: 'Database error occurred while deleting assignment.', 
+                        error: error.message,
+                        code: error.code
+                    });
+                    return;
+            }
+        }
+        
+        if (error instanceof Error) {
+            if (error.message.includes('timeout')) {
+                res.status(408).json({ 
+                    message: 'Delete operation timed out. Please try again.', 
+                    error: 'Operation timeout'
+                });
+                return;
+            }
+        }
+        
+        res.status(500).json({ 
+            message: 'An unexpected error occurred while deleting the assignment.', 
+            error: error instanceof Error ? error.message : 'Unknown error'
+        });
     }
 };
 
@@ -738,5 +817,165 @@ export const markAllAsCompleted = async (req: Request, res: Response): Promise<v
 
     console.error(`❌ [DEBUG] Error marking all as manually completed for assignment ${assignmentId}, student ${studentId}:`, dbError);
     res.status(500).json({ message: 'Error marking all problems as manually completed', error: dbError });
+  }
+};
+
+/**
+ * Extract problem title and details from URL
+ */
+export const extractProblemFromUrl = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userRole = (req as Request & { user: { role: string } }).user.role;
+
+    // Only teachers can extract problem details
+    if (userRole !== 'TEACHER') {
+      res.status(403).json({ error: 'Only teachers can extract problem details' });
+      return;
+    }
+
+    const { url } = req.body;
+
+    if (!url || typeof url !== 'string') {
+      res.status(400).json({ error: 'URL is required' });
+      return;
+    }
+
+    // Validate URL format
+    try {
+      new URL(url);
+    } catch {
+      res.status(400).json({ error: 'Invalid URL format' });
+      return;
+    }
+
+    console.log(`Extracting problem details from URL: ${url}`);
+    
+    const problemDetails = await extractProblemDetailsFromUrl(url);
+
+    if (!problemDetails) {
+      res.status(404).json({ 
+        error: 'Could not extract problem details from the provided URL. Please enter the title manually.' 
+      });
+      return;
+    }
+
+    // Map difficulty to match our schema if available
+    let difficulty = problemDetails.difficulty;
+    if (difficulty) {
+      const difficultyMap: { [key: string]: string } = {
+        'easy': 'Easy',
+        'medium': 'Medium',
+        'hard': 'Hard',
+        'Easy': 'Easy',
+        'Medium': 'Medium',
+        'Hard': 'Hard'
+      };
+      difficulty = difficultyMap[difficulty] || 'Easy';
+    }
+
+    res.json({
+      message: 'Problem details extracted successfully',
+      problem: {
+        title: problemDetails.title,
+        difficulty: difficulty || 'Easy',
+        platform: problemDetails.platform,
+        url: url
+      }
+    });
+
+  } catch (error) {
+    console.error('Error extracting problem details:', error);
+    res.status(500).json({ 
+      message: 'Error extracting problem details from URL',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+};
+
+/**
+ * Debug endpoint to test URL extraction with detailed logging
+ */
+export const debugExtractProblemFromUrl = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userRole = (req as Request & { user: { role: string } }).user.role;
+
+    // Only teachers can debug extract problem details
+    if (userRole !== 'TEACHER') {
+      res.status(403).json({ error: 'Only teachers can debug extract problem details' });
+      return;
+    }
+
+    const { url } = req.body;
+
+    if (!url || typeof url !== 'string') {
+      res.status(400).json({ error: 'URL is required' });
+      return;
+    }
+
+    // Validate URL format
+    try {
+      new URL(url);
+    } catch {
+      res.status(400).json({ error: 'Invalid URL format' });
+      return;
+    }
+
+    console.log(`[DEBUG] Extracting problem details from URL: ${url}`);
+    
+    const problemDetails = await extractProblemDetailsFromUrl(url);
+
+    console.log(`[DEBUG] Extraction result:`, problemDetails);
+
+    if (!problemDetails) {
+      res.status(404).json({ 
+        error: 'Could not extract problem details from the provided URL. Check server logs for detailed debugging information.',
+        debug: {
+          url: url,
+          timestamp: new Date().toISOString()
+        }
+      });
+      return;
+    }
+
+    // Map difficulty to match our schema if available
+    let difficulty = problemDetails.difficulty;
+    if (difficulty) {
+      const difficultyMap: { [key: string]: string } = {
+        'easy': 'Easy',
+        'medium': 'Medium',
+        'hard': 'Hard',
+        'Easy': 'Easy',
+        'Medium': 'Medium',
+        'Hard': 'Hard'
+      };
+      difficulty = difficultyMap[difficulty] || 'Easy';
+    }
+
+    res.json({
+      message: 'Problem details extracted successfully',
+      problem: {
+        title: problemDetails.title,
+        difficulty: difficulty || 'Easy',
+        platform: problemDetails.platform,
+        url: url
+      },
+      debug: {
+        originalDifficulty: problemDetails.difficulty,
+        platform: problemDetails.platform,
+        timestamp: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error('[DEBUG] Error extracting problem details:', error);
+    res.status(500).json({ 
+      message: 'Error extracting problem details from URL',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      debug: {
+        url: req.body.url,
+        timestamp: new Date().toISOString(),
+        stack: error instanceof Error ? error.stack : undefined
+      }
+    });
   }
 };

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { getAssignmentDetails, checkSubmissionsForAssignment, checkMySubmissionsForAssignment } from '../../api/assignments';
 import { AssignmentWithSubmissions, StudentAssignmentDetails, ProblemWithUserSubmission } from '../../types';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
@@ -11,19 +11,21 @@ import CompletionStats from '../../components/assignments/CompletionStats';
 import ProblemCompletionList from '../../components/assignments/ProblemCompletionList';
 import { Button } from '../../components/ui/button';
 import { toast } from 'sonner';
-import { RefreshCw, Pencil, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
+import { RefreshCw, Pencil, CheckCircle2, Clock, AlertCircle, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Progress } from '../../components/ui/progress';
 import { isAxiosError } from 'axios';
 
 const AssignmentDetailsPage: React.FC = () => {
   const { assignmentId } = useParams<{ assignmentId: string }>();
+  const navigate = useNavigate();
   const [assignment, setAssignment] = useState<AssignmentWithSubmissions | StudentAssignmentDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isChecking, setIsChecking] = useState(false);
   const [cooldown, setCooldown] = useState(0);
   const { user } = useAuth();
   const isTeacher = user?.role === 'TEACHER';
+  const cooldownDuration = 60; // 1 minute
 
   const fetchAssignment = async () => {
     if (!assignmentId) return;
@@ -33,12 +35,11 @@ const AssignmentDetailsPage: React.FC = () => {
 
       if (user?.role === 'STUDENT' && data && 'problems' in data) {
         const studentData = data as StudentAssignmentDetails;
-        if (studentData.lastSubmissionCheck) {
-          const lastChecked = new Date(studentData.lastSubmissionCheck).getTime();
+        if (studentData.lastCheckedAt) {
+          const lastChecked = new Date(studentData.lastCheckedAt).getTime();
           const now = new Date().getTime();
           const diffInSeconds = Math.floor((now - lastChecked) / 1000);
-          const cooldownDuration = 600; // 10 minutes
-
+          
           if (diffInSeconds < cooldownDuration) {
             setCooldown(cooldownDuration - diffInSeconds);
           }
@@ -82,16 +83,15 @@ const AssignmentDetailsPage: React.FC = () => {
   const handleCheckMySubmissions = async () => {
     if (!assignmentId) return;
     setIsChecking(true);
+    setCooldown(cooldownDuration);
     try {
-      const result = await checkMySubmissionsForAssignment(assignmentId);
-      toast.success(result.message);
-      setCooldown(600); // 10 minutes
+      const response = await checkMySubmissionsForAssignment(assignmentId);
+      toast.success(response.message || 'Checked for new submissions!');
       fetchAssignment();
     } catch (error) {
       console.error('Failed to check my submissions', error);
       if (isAxiosError(error) && error.response?.status === 429) {
-        toast.error('You can only check for new submissions once every 10 minutes.');
-        setCooldown(600); // Start cooldown even if rate-limited
+        toast.error('You can only check for new submissions once every 1 minute.');
       } else {
         toast.error('Failed to check your submissions.');
       }
@@ -118,6 +118,18 @@ const AssignmentDetailsPage: React.FC = () => {
   
   return (
     <div className="container py-8">
+      {/* Back Button Header */}
+      <div className="mb-6">
+        <Button
+          variant="outline"
+          onClick={() => navigate(`/classes/${assignment.classId}?tab=assignments`)}
+          className="mb-4"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Assignments
+        </Button>
+      </div>
+
       <Card>
         <CardHeader>
           <div className="flex justify-between items-start">

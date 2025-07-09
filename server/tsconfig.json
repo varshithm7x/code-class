@@ -3,6 +3,16 @@
     "target": "es2020",
     "module": "commonjs",
     "moduleResolution": "node",
+    "baseUrl": "./src",
+    "paths": {
+      "@/*": ["*"],
+      "@/types": ["types/index"],
+      "@/types/*": ["types/*"],
+      "@/utils/*": ["utils/*"],
+      "@/lib/*": ["lib/*"],
+      "@/services/*": ["services/*"],
+      "@/api/*": ["api/*"]
+    },
     "rootDir": "./src",
     "outDir": "./dist",
     "esModuleInterop": true,
@@ -22,6 +32,8 @@
     "*.ts",
     "**/*.test.ts",
     "**/*.spec.ts"
-  ]
-  // Restarting TS server
+  ],
+  "ts-node": {
+    "require": ["tsconfig-paths/register"]
+  }
 } 

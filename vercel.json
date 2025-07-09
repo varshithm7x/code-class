@@ -1,6 +1,8 @@
 {
-  "env": {
-    "VITE_API_URL": "https://code-class.up.railway.app/api/v1"
+  "build": {
+    "env": {
+      "VITE_API_URL": "https://code-class.up.railway.app/api/v1"
+    }
   },
   "rewrites": [
     {

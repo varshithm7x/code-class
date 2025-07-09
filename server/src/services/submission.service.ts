@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { PrismaClient, Submission, User, Problem } from '@prisma/client';
-import { GfgAPIResponse } from '../types';
+import { GfgAPIResponse } from '../types/index';
 import prisma from '../lib/prisma';
 import { groupBy } from '../utils/array.utils';
 import { syncAllLinkedLeetCodeUsers, forceCheckLeetCodeSubmissionsForAssignment } from './enhanced-leetcode.service';

@@ -3,6 +3,7 @@
     "target": "es2020",
     "module": "commonjs",
     "moduleResolution": "node",
+    "baseUrl": "./src",
     "rootDir": "./src",
     "outDir": "./dist",
     "esModuleInterop": true,
@@ -23,5 +24,4 @@
     "**/*.test.ts",
     "**/*.spec.ts"
   ]
-  // Restarting TS server
 } 

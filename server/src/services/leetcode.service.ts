@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { LeetCodeGraphQLResponse, LeetCodeQuestionData } from '../types/index';
+import { LeetCodeGraphQLResponse, LeetCodeQuestionData } from '../types/index.js';
 
 const LEETCODE_API_ENDPOINT = 'https://leetcode.com/graphql';
 

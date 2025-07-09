@@ -2,7 +2,7 @@ import axios from 'axios';
 import { PrismaClient, Submission, User, Problem } from '@prisma/client';
 import { GfgAPIResponse } from '../types/index.js';
 import prisma from '../lib/prisma';
-import { groupBy } from '../utils/array.utils.js';
+import { groupBy } from '../utils/array.utils';
 import { syncAllLinkedLeetCodeUsers, forceCheckLeetCodeSubmissionsForAssignment } from './enhanced-leetcode.service';
 import { syncAllLinkedHackerRankUsers, forceCheckHackerRankSubmissionsForAssignment } from './hackerrank.service';
 

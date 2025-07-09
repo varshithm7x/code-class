@@ -2,8 +2,16 @@ import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import { WebSocketService } from '../../services/websocket.service';
+import { Judge0AutomationService } from '../../services/judge0-automation.service';
+import { TestCompletionDetectorService } from '../../services/test-completion-detector.service';
+import { AdminNotificationService } from '../../services/admin-notification.service';
+import { CostTrackingService } from '../../services/cost-tracking.service';
 
 const prisma = new PrismaClient() as any;
+const judge0Service = new Judge0AutomationService();
+const completionDetector = new TestCompletionDetectorService();
+const notificationService = new AdminNotificationService();
+const costTracker = new CostTrackingService();
 
 // Validation schemas
 const realTimeExecutionSchema = z.object({
@@ -967,5 +975,327 @@ int main() {
     }
     console.error('Error processing multi-test final solutions:', error);
     res.status(500).json({ error: 'Multi-test submission processing failed' });
+  }
+}; 
+
+/**
+ * Schedule test with automated EC2 Judge0 instance launch
+ */
+export const scheduleAutomatedTest = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { testId } = req.params;
+    const userRole = (req as any).user.role;
+
+    // Only teachers can schedule tests
+    if (userRole !== 'TEACHER') {
+      res.status(403).json({ error: 'Only teachers can schedule automated tests' });
+      return;
+    }
+
+    // Get test details
+    const test = await prisma.codingTest.findUnique({
+      where: { id: testId },
+      include: {
+        class: {
+          include: {
+            students: true
+          }
+        },
+        problems: {
+          include: {
+            testCases: true
+          }
+        }
+      }
+    });
+
+    if (!test) {
+      res.status(404).json({ error: 'Test not found' });
+      return;
+    }
+
+    // Calculate expected student count
+    const studentCount = test.class.students.length;
+    
+    // Prepare test schedule
+    const testSchedule = {
+      testId: test.id,
+      studentCount,
+      durationMinutes: test.duration,
+      problems: test.problems,
+      startTime: test.startTime
+    };
+
+    // Launch automated Judge0 instance
+    const judgeUrl = await judge0Service.scheduleTest(testSchedule);
+
+    // Start monitoring in the background
+    judge0Service.monitorTestProgress(testId).catch(error => {
+      console.error('Test monitoring failed:', error);
+    });
+
+    res.json({
+      message: 'Automated test scheduled successfully',
+      testId,
+      judgeUrl,
+      expectedStudents: studentCount,
+      estimatedCost: '$0.31-0.53',
+      status: 'LAUNCHING'
+    });
+
+  } catch (error) {
+    console.error('Error scheduling automated test:', error);
+    res.status(500).json({ error: 'Failed to schedule automated test' });
+  }
+};
+
+/**
+ * Execute real-time code using automated Judge0 EC2 instance
+ */
+export const executeRealTimeAutomated = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = (req as any).user.id;
+    const { testId } = req.params;
+
+    const validatedData = realTimeExecutionSchema.parse(req.body);
+
+    // Get Judge0 instance for this test
+    const instance = await prisma.judge0Instance.findUnique({
+      where: { testId }
+    });
+
+    const problem = await prisma.testProblem.findUnique({
+      where: { id: validatedData.problemId },
+      include: { testCases: true }
+    });
+
+    if (!problem) {
+      res.status(404).json({ error: 'Problem not found' });
+      return;
+    }
+
+    // Map language to Judge0 language ID
+    const languageMap = {
+      'cpp': 54,
+      'c': 50,
+      'java': 62,
+      'python': 71,
+      'javascript': 63
+    };
+
+    const languageId = languageMap[validatedData.language];
+    if (!languageId) {
+      res.status(400).json({ error: 'Unsupported language' });
+      return;
+    }
+
+    // Prepare submission for quick test (first 3 test cases)
+    const testCases = JSON.parse(problem.testCases).slice(0, 3);
+    
+    const quickSubmission = {
+      testId,
+      studentId: userId,
+      problemId: validatedData.problemId,
+      sourceCode: validatedData.code,
+      languageId,
+      testCases: testCases.map((tc: any) => ({
+        input: tc.input,
+        expectedOutput: tc.output
+      }))
+    };
+
+    // Execute using automated Judge0 service
+    const result = await judge0Service.runQuickTest(quickSubmission);
+
+    res.json({
+      success: result.success,
+      passedTests: result.passedTests,
+      totalTests: result.totalTests,
+      score: result.score,
+      details: result.details,
+      automated: true,
+      instanceUrl: instance?.judgeUrl
+    });
+
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      res.status(400).json({ error: 'Validation failed', details: error.errors });
+      return;
+    }
+    console.error('Error executing automated real-time code:', error);
+    res.status(500).json({ error: 'Automated code execution failed' });
+  }
+};
+
+/**
+ * Submit final solutions using automated Judge0 EC2 instance
+ */
+export const submitFinalSolutionsAutomated = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = (req as any).user.id;
+    const { testId } = req.params;
+
+    const validatedData = finalSubmissionSchema.parse(req.body);
+
+    // Get Judge0 instance for this test
+    const instance = await prisma.judge0Instance.findUnique({
+      where: { testId }
+    });
+
+    if (!instance) {
+      res.status(400).json({ error: 'Automated Judge0 instance not found for this test' });
+      return;
+    }
+
+    // Process each final submission
+    const results = [];
+
+    for (const submission of validatedData.submissions) {
+      const problem = await prisma.testProblem.findUnique({
+        where: { id: submission.problemId },
+        include: { testCases: true }
+      });
+
+      if (!problem) {
+        continue;
+      }
+
+      // Map language to Judge0 language ID
+      const languageMap = {
+        'cpp': 54,
+        'c': 50,
+        'java': 62,
+        'python': 71,
+        'javascript': 63
+      };
+
+      const languageId = languageMap[submission.language];
+      if (!languageId) {
+        continue;
+      }
+
+      // Prepare final submission with all test cases
+      const allTestCases = JSON.parse(problem.testCases);
+      
+      const finalSubmission = {
+        testId,
+        studentId: userId,
+        problemId: submission.problemId,
+        sourceCode: submission.code,
+        languageId,
+        testCases: allTestCases.map((tc: any) => ({
+          input: tc.input,
+          expectedOutput: tc.output
+        }))
+      };
+
+      try {
+        // Execute final submission with all test cases
+        const result = await judge0Service.runFinalSubmission(finalSubmission);
+
+        // Store submission result
+        const testSubmission = await prisma.testSubmission.create({
+          data: {
+            sessionId: (await prisma.testSession.findFirst({
+              where: { testId, userId }
+            }))?.id || '',
+            problemId: submission.problemId,
+            code: submission.code,
+            language: submission.language,
+            status: result.success ? 'ACCEPTED' : 'WRONG_ANSWER',
+            score: result.score,
+            executionTime: result.executionTime,
+            memoryUsed: result.memoryUsed,
+            judgeOutput: {
+              automated: true,
+              passedTests: result.passedTests,
+              totalTests: result.totalTests,
+              details: result.details
+            }
+          }
+        });
+
+        results.push({
+          submissionId: testSubmission.id,
+          problemId: submission.problemId,
+          score: result.score,
+          passedTests: result.passedTests,
+          totalTests: result.totalTests,
+          automated: true
+        });
+
+      } catch (error) {
+        console.error('Final submission execution failed:', error);
+        results.push({
+          problemId: submission.problemId,
+          error: 'Execution failed',
+          automated: true
+        });
+      }
+    }
+
+    res.json({
+      message: 'Final solutions processed successfully',
+      results,
+      automated: true,
+      instanceUrl: instance.judgeUrl
+    });
+
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      res.status(400).json({ error: 'Validation failed', details: error.errors });
+      return;
+    }
+    console.error('Error processing automated final solutions:', error);
+    res.status(500).json({ error: 'Automated final submission processing failed' });
+  }
+};
+
+/**
+ * Get Judge0 instance status for a test
+ */
+export const getJudge0InstanceStatus = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { testId } = req.params;
+
+    const instance = await prisma.judge0Instance.findUnique({
+      where: { testId },
+      include: {
+        test: {
+          select: {
+            title: true,
+            startTime: true,
+            endTime: true
+          }
+        }
+      }
+    });
+
+    if (!instance) {
+      res.status(404).json({ error: 'Judge0 instance not found for this test' });
+      return;
+    }
+
+    // Calculate runtime if active
+    const runtime = instance.status === 'ACTIVE' 
+      ? Math.round((Date.now() - instance.launchedAt.getTime()) / 1000 / 60) // minutes
+      : 0;
+
+    res.json({
+      instanceId: instance.instanceId,
+      status: instance.status,
+      judgeUrl: instance.judgeUrl,
+      launchedAt: instance.launchedAt,
+      readyAt: instance.readyAt,
+      runtime,
+      cost: instance.cost,
+      studentsServed: instance.studentsServed,
+      submissionsCount: instance.submissionsCount,
+      automated: true
+    });
+
+  } catch (error) {
+    console.error('Error getting Judge0 instance status:', error);
+    res.status(500).json({ error: 'Failed to get instance status' });
   }
 }; 

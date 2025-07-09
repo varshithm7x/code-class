@@ -11,7 +11,11 @@ import {
   getTestSessionStatus,
   submitSingleProblem,
   executeRealTimeMultiTest,
-  submitFinalSolutionsMultiTest
+  submitFinalSolutionsMultiTest,
+  scheduleAutomatedTest,
+  executeRealTimeAutomated,
+  submitFinalSolutionsAutomated,
+  getJudge0InstanceStatus
 } from './test-session.controller';
 
 const router = Router();
@@ -37,6 +41,12 @@ router.post('/:testId/submit', submitSingleProblem);
 // Multi-test execution endpoints (Phase 2 enhancement)
 router.post('/:testId/execute-multi-test', executeRealTimeMultiTest);
 router.post('/:testId/submit-multi-test', submitFinalSolutionsMultiTest);
+
+// Automated Judge0 EC2 endpoints (Phase 3 enhancement)
+router.post('/:testId/schedule-automated', scheduleAutomatedTest);
+router.post('/:testId/execute-automated', executeRealTimeAutomated);
+router.post('/:testId/submit-automated', submitFinalSolutionsAutomated);
+router.get('/:testId/judge0-status', getJudge0InstanceStatus);
 
 // Join test endpoint (POST)
 router.post('/:testId/join', async (req, res) => {

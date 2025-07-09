@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { LeetCodeGraphQLResponse, LeetCodeQuestionData } from '@/types';
+import { LeetCodeGraphQLResponse, LeetCodeQuestionData } from '../types';
 
 const LEETCODE_API_ENDPOINT = 'https://leetcode.com/graphql';
 
@@ -57,8 +57,9 @@ export const getLeetCodeProblemDetails = async (url: string): Promise<{ title: s
             title: question.title,
             difficulty: question.difficulty.charAt(0).toUpperCase() + question.difficulty.slice(1).toLowerCase(), // Capitalize difficulty
         };
-    } catch (error: any) {
-        console.error(`API Error fetching LeetCode details for slug '${slug}'. Status: ${error.response?.status}`, error.response?.data || error.message);
+    } catch (error: unknown) {
+        const axiosError = error as { response?: { status: number; data: unknown }; message?: string };
+        console.error(`API Error fetching LeetCode details for slug '${slug}'. Status: ${axiosError.response?.status}`, axiosError.response?.data || axiosError.message);
         return null;
     }
 } 

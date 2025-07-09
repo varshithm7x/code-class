@@ -5,10 +5,33 @@ import axios from 'axios';
 // - VITE_API_URL should be set in .env.local or .env files
 // - For local development: VITE_API_URL=http://localhost:4000/api/v1 in .env file
 // - For production: VITE_API_URL=https://code-class.up.railway.app/api/v1 in .env file
+
+// Ensure the base URL always includes /api/v1
+const getBaseURL = () => {
+  const envURL = import.meta.env.VITE_API_URL;
+  
+  // If environment variable is set, use it
+  if (envURL) {
+    // Ensure it ends with /api/v1 if not already present
+    if (envURL.endsWith('/api/v1')) {
+      return envURL;
+    } else if (envURL.endsWith('/')) {
+      return envURL + 'api/v1';
+    } else {
+      return envURL + '/api/v1';
+    }
+  }
+  
+  // Default fallback
+  return 'https://code-class.up.railway.app/api/v1';
+};
+
 const api = axios.create({
-  // Vite automatically loads .env files, no need for .env.local
-  baseURL: import.meta.env.VITE_API_URL || 'https://code-class.up.railway.app/api/v1',
+  baseURL: getBaseURL(),
 });
+
+// Debug log to help identify any issues (remove in production)
+console.log('API Base URL:', api.defaults.baseURL);
 
 // Interceptor to add JWT token to request headers
 api.interceptors.request.use(

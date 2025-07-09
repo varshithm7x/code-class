@@ -12,11 +12,7 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "allowImportingTsExtensions": false,
-    "noEmit": false,
-    "baseUrl": "./src",
-    "paths": {
-      "@/*": ["*"]
-    }
+    "noEmit": false
   },
   "include": ["src/**/*"],
   "exclude": [

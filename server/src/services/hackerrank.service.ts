@@ -69,9 +69,15 @@ export const fetchHackerRankSubmissions = async (sessionCookie: string, limit: n
     const submissions = response.data.models
       .filter((sub) => sub.status === 'Accepted') // Only accepted submissions
       .map((sub, index) => {
-        // Debug: Log the full challenge object to see available fields (only for first submission)
-        if (index === 0) {
-          console.log(`🔍 DEBUG: Full challenge object:`, JSON.stringify(sub.challenge, null, 2));
+        // Debug: Log the full submission object for first few submissions to understand date format
+        if (index < 2) {
+          console.log(`🔍 DEBUG: Full submission object ${index + 1}:`, JSON.stringify({
+            id: sub.id,
+            status: sub.status,
+            created_at: sub.created_at,
+            created_at_type: typeof sub.created_at,
+            challenge: sub.challenge
+          }, null, 2));
         }
         
         return {
@@ -150,13 +156,54 @@ const normalizeHackerRankChallengeName = (challengeName: string): string => {
 };
 
 /**
- * Safe date conversion from timestamp
+ * Safe date conversion that handles multiple formats from HackerRank API
  */
-const safeDateFromTimestamp = (timestamp: unknown): Date => {
+const safeDateFromHackerRank = (dateValue: unknown): Date => {
   try {
-    const date = new Date((timestamp as number) * 1000); // HackerRank uses seconds
-    return isNaN(date.getTime()) ? new Date() : date;
-  } catch {
+    // Handle null/undefined
+    if (!dateValue) {
+      console.warn('🔍 HackerRank: Received null/undefined date, using current time');
+      return new Date();
+    }
+
+    // If it's already a Date object
+    if (dateValue instanceof Date) {
+      return isNaN(dateValue.getTime()) ? new Date() : dateValue;
+    }
+
+    // If it's a string
+    if (typeof dateValue === 'string') {
+      // Try parsing as ISO string first
+      const isoDate = new Date(dateValue);
+      if (!isNaN(isoDate.getTime())) {
+        console.log(`🔍 HackerRank: Parsed ISO date: ${dateValue} -> ${isoDate.toISOString()}`);
+        return isoDate;
+      }
+
+      // Try parsing as Unix timestamp in seconds (string format)
+      const timestamp = parseFloat(dateValue);
+      if (!isNaN(timestamp)) {
+        const date = new Date(timestamp * 1000); // Convert seconds to milliseconds
+        if (!isNaN(date.getTime())) {
+          console.log(`🔍 HackerRank: Parsed timestamp string: ${dateValue} -> ${date.toISOString()}`);
+          return date;
+        }
+      }
+    }
+
+    // If it's a number (Unix timestamp in seconds)
+    if (typeof dateValue === 'number') {
+      const date = new Date(dateValue * 1000); // Convert seconds to milliseconds
+      if (!isNaN(date.getTime())) {
+        console.log(`🔍 HackerRank: Parsed timestamp number: ${dateValue} -> ${date.toISOString()}`);
+        return date;
+      }
+    }
+
+    console.warn(`🔍 HackerRank: Could not parse date value: ${dateValue}, using current time`);
+    return new Date();
+  } catch (error) {
+    console.error(`🔍 HackerRank: Error parsing date: ${dateValue}`, error);
     return new Date();
   }
 };
@@ -228,19 +275,21 @@ const processHackerRankSubmissions = async (
     });
     
     if (matchingSubmission) {
-      const submissionTime = new Date(matchingSubmission.created_at);
+      const submissionTime = safeDateFromHackerRank(matchingSubmission.created_at);
       
       await prisma.submission.update({
         where: { id: data.submissionId },
         data: {
           completed: true,
-          submissionTime
+          submissionTime,
+          updatedAt: new Date() // Track when we updated this submission
         }
       });
       
       updatedCount++;
       console.log(`🔶 HackerRank: Marked ${slug} as completed for ${user.hackerrankUsername}`);
       console.log(`   Matched via: ${matchingSubmission.challenge_slug ? 'slug' : 'normalized name'} (${matchingSubmission.challenge_name})`);
+      console.log(`   Submission time: ${submissionTime.toISOString()} (processed at: ${new Date().toISOString()})`);
     } else {
       console.log(`🔶 HackerRank: No submission found for ${slug} by ${user.hackerrankUsername}`);
     }
@@ -404,11 +453,14 @@ export const forceCheckHackerRankSubmissionsForAssignment = async (
         const submissionSlug = sub.challenge_slug || normalizeHackerRankChallengeName(sub.challenge_name);
         if (problemSlugMap.has(submissionSlug)) {
           const problemId = problemSlugMap.get(submissionSlug)!;
+          const submissionTime = safeDateFromHackerRank(sub.created_at);
+          console.log(`🔍 HackerRank: Found matching submission for ${sub.challenge_name} (${submissionSlug})`);
+          console.log(`   Original created_at: ${sub.created_at}, Parsed time: ${submissionTime.toISOString()}`);
           submissionsToUpdate.push({
             userId: user.id,
             problemId: problemId,
             completed: true,
-            submissionTime: new Date(sub.created_at),
+            submissionTime: submissionTime,
           });
         }
       }

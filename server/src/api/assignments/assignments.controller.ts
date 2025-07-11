@@ -546,62 +546,84 @@ export const updateAssignment = async (req: Request, res: Response): Promise<voi
         },
       });
 
-      // 2. Handle problems: Delete old ones, create new ones
-      // This is a simple approach. A more complex diffing logic could be used
-      // to preserve existing problem IDs if they haven't changed.
-      
-      // First, delete the submissions associated with the old problems to
-      // avoid foreign key constraint violations.
-      await tx.submission.deleteMany({
-        where: { problem: { assignmentId: assignmentId } },
-      });
-
-      // Now, it's safe to delete the old problems.
-      // NOTE: The 'where' clause below may have a type error, but the
-      // 'assignmentId' is the correct logical field to use. Please adjust
-      // the relation query based on your Prisma schema.
-      await tx.problem.deleteMany({
-        where: { assignmentId: assignmentId },
-      });
-
-      if (problems && problems.length > 0) {
-        // Create new problems
-        await tx.problem.createMany({
-          data: problems.map((p: { url: string; title: string; difficulty: string }) => ({
-            title: p.title,
-            url: p.url,
-            difficulty: p.difficulty,
-            platform: getPlatformFromUrl(p.url),
-            assignmentId: assignment.id,
-          })),
+      // 2. Handle problem updates
+      if (problems) {
+        // Fetch existing problems to compare against incoming data
+        const existingProblems = await tx.problem.findMany({
+          where: { assignmentId: assignmentId },
+          select: { id: true, url: true, title: true, difficulty: true },
         });
 
-        // 3. Re-create submissions for the new problems for all students
-        const createdProblems = await tx.problem.findMany({
-          where: { assignmentId: assignment.id },
-        });
+        const existingProblemMap = new Map(existingProblems.map(p => [p.url, p]));
 
-        const students = await tx.usersOnClasses.findMany({
-          where: { classId: assignment.classId },
-          select: { userId: true },
-        });
+        // Process incoming problems: update existing or create new
+        for (const problemData of problems) {
+          const existingProblem = existingProblemMap.get(problemData.url);
 
-        if (students.length > 0 && createdProblems.length > 0) {
-          const submissions = students.flatMap(student =>
-            createdProblems.map(problem => ({
-              userId: student.userId,
-              problemId: problem.id,
-            }))
-          );
+          if (existingProblem) {
+            // This problem exists, check if an update is needed
+            if (
+              existingProblem.title !== problemData.title ||
+              existingProblem.difficulty !== problemData.difficulty
+            ) {
+              await tx.problem.update({
+                where: { id: existingProblem.id },
+                data: {
+                  title: problemData.title,
+                  difficulty: problemData.difficulty,
+                },
+              });
+            }
+            // Remove from map to track which problems were processed
+            existingProblemMap.delete(problemData.url);
+          } else {
+            // This is a new problem, create it
+            const newProblem = await tx.problem.create({
+              data: {
+                title: problemData.title,
+                url: problemData.url,
+                difficulty: problemData.difficulty,
+                platform: getPlatformFromUrl(problemData.url),
+                assignmentId: assignmentId,
+              },
+            });
 
-          await tx.submission.createMany({
-            data: submissions,
+            // For new problems, create submissions for all students in the class
+            const students = await tx.usersOnClasses.findMany({
+              where: { classId: assignment.classId },
+              select: { userId: true },
+            });
+
+            if (students.length > 0) {
+              const newSubmissions = students.map(student => ({
+                userId: student.userId,
+                problemId: newProblem.id,
+              }));
+              await tx.submission.createMany({
+                data: newSubmissions,
+              });
+            }
+          }
+        }
+
+        // Problems remaining in the map were not in the incoming data, so delete them
+        const problemsToDelete = Array.from(existingProblemMap.values());
+        if (problemsToDelete.length > 0) {
+          const problemIdsToDelete = problemsToDelete.map(p => p.id);
+          
+          // Before deleting problems, delete their associated submissions
+          await tx.submission.deleteMany({
+            where: { problemId: { in: problemIdsToDelete } },
+          });
+
+          await tx.problem.deleteMany({
+            where: { id: { in: problemIdsToDelete } },
           });
         }
       }
 
-      return await tx.assignment.findUnique({
-        where: { id: assignment.id },
+      return tx.assignment.findUnique({
+        where: { id: assignmentId },
         include: { problems: true },
       });
     });

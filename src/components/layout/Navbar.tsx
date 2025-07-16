@@ -4,7 +4,6 @@ import { useAuth } from '../../context/AuthContext';
 import { useSidebar } from '../../context/SidebarContext';
 import { Button } from '../ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
-import { ThemeToggle } from '../ui/theme-toggle';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -57,8 +56,6 @@ const Navbar: React.FC = () => {
             <span className="text-sm text-muted-foreground hidden sm:inline-block">
               {user?.role.toLowerCase() === 'teacher' ? 'Teacher' : 'Student'}
             </span>
-            
-            <ThemeToggle />
             
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

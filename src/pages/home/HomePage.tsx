@@ -4,7 +4,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
-import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { 
   Code2, 
   Users, 
@@ -439,11 +438,6 @@ const HomePage = () => {
           </div>
         </div>
       </footer>
-
-      {/* Theme Toggle Switch - Fixed Bottom Right */}
-      <div className="fixed bottom-6 right-6 z-50">
-        <ThemeToggle />
-      </div>
     </div>
   );
 };

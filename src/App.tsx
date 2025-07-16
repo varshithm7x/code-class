@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { Analytics } from "@vercel/analytics/react";
+import { ThemeToggle } from "./components/ui/theme-toggle";
 
 // Layouts
 import AppLayout from "./components/layout/AppLayout";
@@ -101,6 +102,12 @@ function App() {
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </BrowserRouter>
+          
+          {/* Global Theme Toggle - Fixed Bottom Right */}
+          <div className="fixed bottom-6 right-6 z-50">
+            <ThemeToggle />
+          </div>
+          
           <Analytics />
         </TooltipProvider>
       </AuthProvider>

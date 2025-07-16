@@ -216,26 +216,6 @@ export const getClassAssignments = async (req: Request, res: Response): Promise<
   // @ts-expect-error: req.user is added by the protect middleware
   const { userId, role } = req.user;
 
-  // Authorization check
-  const classInfo = await prisma.class.findUnique({ where: { id: classId } });
-  if (!classInfo) {
-    res.status(404).json({ message: 'Class not found' });
-    return;
-  }
-  if (role === 'TEACHER' && classInfo.teacherId !== userId) {
-    res.status(403).json({ message: 'Access denied' });
-    return;
-  }
-  if (role === 'STUDENT') {
-    const isEnrolled = await prisma.usersOnClasses.findUnique({
-      where: { userId_classId: { userId, classId } }
-    });
-    if (!isEnrolled) {
-      res.status(403).json({ message: 'Not enrolled in this class' });
-      return;
-    }
-  }
-
   try {
     const assignments = await prisma.assignment.findMany({
       where: { classId },
@@ -243,8 +223,12 @@ export const getClassAssignments = async (req: Request, res: Response): Promise<
         problems: true,
       },
       orderBy: [
-        { updatedAt: 'desc' },
-        { createdAt: 'desc' },
+        {
+          updatedAt: 'desc', // Recently updated assignments first (for edited assignments)
+        },
+        {
+          createdAt: 'desc', // Then by creation date (actual posting time)
+        },
       ],
     });
 
@@ -339,8 +323,6 @@ export const getClassAssignments = async (req: Request, res: Response): Promise<
 
 export const getClassDetails = async (req: Request, res: Response): Promise<void> => {
   const { classId } = req.params;
-  // @ts-expect-error: req.user is added by the protect middleware
-  const { userId, role } = req.user;
 
   try {
     const classInfo = await prisma.class.findUnique({
@@ -358,28 +340,6 @@ export const getClassDetails = async (req: Request, res: Response): Promise<void
     if (!classInfo) {
       res.status(404).json({ message: 'Class not found' });
       return;
-    }
-
-    // Authorization checks
-    if (role === 'TEACHER' && classInfo.teacherId !== userId) {
-      res.status(403).json({ message: 'Access denied' });
-      return;
-    }
-
-    if (role === 'STUDENT') {
-      const isEnrolled = await prisma.usersOnClasses.findUnique({
-        where: {
-          userId_classId: {
-            userId,
-            classId,
-          },
-        },
-      });
-
-      if (!isEnrolled) {
-        res.status(403).json({ message: 'Not enrolled in this class' });
-        return;
-      }
     }
 
     const { teacher, students, ...classData } = classInfo;

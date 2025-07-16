@@ -17,6 +17,7 @@ import LoginPage from "./pages/auth/LoginPage";
 import SignupPage from "./pages/auth/SignupPage";
 
 // App Pages
+import HomePage from "./pages/home/HomePage";
 import DashboardPage from "./pages/dashboard/DashboardPage";
 import ProfilePage from "./pages/user/ProfilePage";
 import ClassesPage from "./pages/classes/ClassesPage";
@@ -51,12 +52,16 @@ function App() {
             <Sonner />
             <BrowserRouter>
             <Routes>
+              {/* Public homepage route */}
+              <Route path="/" element={<HomePage />} />
+              
               <Route element={<AuthLayout />}>
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/signup" element={<SignupPage />} />
               </Route>
 
               <Route element={<AppLayout />}>
+                <Route path="/dashboard" element={<Navigate to="/classes" replace />} />
                 <Route path="/classes" element={<ClassesPage />} />
                 <Route path="/classes/create" element={<TeacherRoute><CreateClassPage /></TeacherRoute>} />
                 <Route path="/classes/:classId" element={<ClassDetailsPage />} />
@@ -89,7 +94,6 @@ function App() {
                 <Route path="/classes/:classId/tests/new" element={<TeacherRoute><CreateTestPage /></TeacherRoute>} />
                 <Route path="/tests/:testId/monitor" element={<TeacherRoute><TestMonitoringPage /></TeacherRoute>} />
                 <Route path="/tests/:testId/results" element={<TestResultsPage />} />
-                <Route path="/" element={<Navigate to="/classes" replace />} />
               </Route>
               
               {/* Test taking route - outside AppLayout for fullscreen */}

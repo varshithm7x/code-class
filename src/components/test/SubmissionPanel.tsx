@@ -63,7 +63,7 @@ const SubmissionPanel: React.FC<SubmissionPanelProps> = ({
       case 'pending':
         return <Clock className="h-4 w-4 text-yellow-500" />;
       default:
-        return <AlertTriangle className="h-4 w-4 text-gray-500" />;
+        return <AlertTriangle className="h-4 w-4 text-gray-500 dark:text-gray-400" />;
     }
   };
 
@@ -134,7 +134,7 @@ const SubmissionPanel: React.FC<SubmissionPanelProps> = ({
         <div className="flex-1 overflow-hidden">
           <TabsContent value="submissions" className="h-full m-0 p-4 overflow-y-auto">
             {filteredSubmissions.length === 0 ? (
-              <div className="text-center text-gray-500 mt-8">
+              <div className="text-center text-gray-500 dark:text-gray-400 mt-8">
                 <Code className="h-8 w-8 mx-auto mb-2 opacity-50" />
                 <p>No submissions yet</p>
               </div>
@@ -150,11 +150,11 @@ const SubmissionPanel: React.FC<SubmissionPanelProps> = ({
                             {submission.status}
                           </Badge>
                           <Badge variant="outline">{submission.language}</Badge>
-                          <span className="text-sm text-gray-500">
+                          <span className="text-sm text-gray-500 dark:text-gray-400">
                             #{filteredSubmissions.length - index}
                           </span>
                         </div>
-                        <span className="text-sm text-gray-500">
+                        <span className="text-sm text-gray-500 dark:text-gray-400">
                           {formatTime(submission.submissionTime)}
                         </span>
                       </div>
@@ -195,7 +195,7 @@ const SubmissionPanel: React.FC<SubmissionPanelProps> = ({
 
           <TabsContent value="penalties" className="h-full m-0 p-4 overflow-y-auto">
             {penalties.length === 0 ? (
-              <div className="text-center text-gray-500 mt-8">
+              <div className="text-center text-gray-500 dark:text-gray-400 mt-8">
                 <CheckCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
                 <p>No penalties recorded</p>
                 <p className="text-sm">Keep up the good work!</p>
@@ -211,11 +211,11 @@ const SubmissionPanel: React.FC<SubmissionPanelProps> = ({
                           <Badge className={getPenaltyColor(penalty.type)}>
                             {penalty.type.replace('_', ' ')}
                           </Badge>
-                          <span className="text-sm text-gray-500">
+                          <span className="text-sm text-gray-500 dark:text-gray-400">
                             #{penalties.length - index}
                           </span>
                         </div>
-                        <span className="text-sm text-gray-500">
+                        <span className="text-sm text-gray-500 dark:text-gray-400">
                           {formatTime(penalty.timestamp)}
                         </span>
                       </div>

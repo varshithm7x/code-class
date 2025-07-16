@@ -214,8 +214,3 @@ terraform.tfstate.backup
 infrastructure/.terraform/
 infrastructure/terraform.tfstate*
 src/lib/questions.json
-
-# Test files and temporary files for development
-dark-theme-test.html
-test-dark-theme.js
-DARK_THEME_IMPLEMENTATION.md

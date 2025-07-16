@@ -31,8 +31,8 @@ const LoadingScreen: React.FC = () => {
           
           <div className="space-y-2">
             <div className="text-center">
-              <h1 className="text-xl font-semibold text-gray-900">Loading</h1>
-              <p className="text-sm text-gray-500">Please wait...</p>
+              <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Loading</h1>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Please wait...</p>
             </div>
             
             <div className="flex justify-center">

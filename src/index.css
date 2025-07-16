@@ -140,4 +140,31 @@
       opacity: 1;
     }
   }
+  
+  /* Gradient background for hero section */
+  .hero-gradient {
+    background: radial-gradient(ellipse at top, hsl(var(--primary) / 0.1) 0%, transparent 70%);
+  }
+  
+  /* Code syntax highlighting */
+  .syntax-keyword {
+    @apply text-purple-400 dark:text-purple-300;
+  }
+  
+  .syntax-string {
+    @apply text-green-600 dark:text-green-400;
+  }
+  
+  .syntax-function {
+    @apply text-blue-600 dark:text-blue-400;
+  }
+  
+  .syntax-comment {
+    @apply text-gray-500 italic;
+  }
+  
+  /* Code editor styling */
+  .code-editor {
+    background: linear-gradient(135deg, hsl(var(--card)) 0%, hsl(var(--muted)) 100%);
+  }
 }

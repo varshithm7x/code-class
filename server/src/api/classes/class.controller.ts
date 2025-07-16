@@ -353,9 +353,9 @@ export const getClassDetails = async (req: Request, res: Response): Promise<void
         if (user.gfgUsername) platformCount++;
         if (user.leetcodeUsername) platformCount++;
         
-        const { password, ...userWithoutPassword } = user;
+        const { password, leetcodeCookie, hackerrankCookie, ...strippedUser } = user;
         return {
-          ...userWithoutPassword,
+          ...strippedUser,
           platformCount,
         };
       }),

@@ -96,8 +96,8 @@ const AnalyticsPage: React.FC = () => {
         </div>
 
         <div className="text-center py-12">
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No classes available</h3>
-          <p className="text-gray-500">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">No classes available</h3>
+          <p className="text-gray-500 dark:text-gray-400">
             You need to have at least one class to view analytics.
           </p>
         </div>

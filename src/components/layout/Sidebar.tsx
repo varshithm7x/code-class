@@ -85,10 +85,10 @@ const Sidebar: React.FC = () => {
         onClick={handleClick}
             className={cn(
           'flex items-center rounded-md text-sm font-medium transition-all duration-200',
-          'hover:bg-gray-100 hover:scale-105',
+          'hover:bg-gray-100 dark:hover:bg-gray-700 hover:scale-105',
           isActive
             ? 'bg-brand-blue text-white shadow-md'
-            : 'text-gray-700',
+            : 'text-gray-700 dark:text-gray-300',
           isCollapsed && !isMobile 
             ? 'justify-center p-2 mx-1' // Smaller padding for collapsed state
             : 'gap-3 px-3 py-2' // Normal padding for expanded state
@@ -174,7 +174,7 @@ const Sidebar: React.FC = () => {
       {/* Mobile Overlay */}
       {isMobileOpen && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+          className="fixed inset-0 bg-black bg-opacity-50 dark:bg-black dark:bg-opacity-70 z-40 md:hidden"
           onClick={closeMobileSidebar}
         />
       )}
@@ -182,7 +182,7 @@ const Sidebar: React.FC = () => {
       {/* Desktop Sidebar */}
       <aside 
         className={cn(
-          'shrink-0 border-r border-gray-200 hidden md:block overflow-y-auto bg-white transition-all duration-300 ease-in-out',
+          'shrink-0 border-r border-gray-200 dark:border-gray-700 hidden md:block overflow-y-auto bg-white dark:bg-gray-900 transition-all duration-300 ease-in-out',
           isCollapsed ? 'w-12' : 'w-64'
         )}
       >
@@ -210,11 +210,11 @@ const Sidebar: React.FC = () => {
       {/* Mobile Sidebar */}
       <aside 
         className={cn(
-          'fixed top-0 left-0 h-full w-64 bg-white border-r border-gray-200 z-50 md:hidden transition-transform duration-300 ease-in-out',
+          'fixed top-0 left-0 h-full w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 z-50 md:hidden transition-transform duration-300 ease-in-out',
           isMobileOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
           <span className="font-semibold text-lg">Menu</span>
           <Button
             variant="ghost"

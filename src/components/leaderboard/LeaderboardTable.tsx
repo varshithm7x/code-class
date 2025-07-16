@@ -63,10 +63,10 @@ const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ entries }) => {
 
   const getMedalColor = (rank: number) => {
     switch(rank) {
-      case 1: return "text-yellow-500";
-      case 2: return "text-gray-400";
-      case 3: return "text-amber-700";
-      default: return "text-gray-600";
+      case 1: return "text-yellow-500 dark:text-yellow-400";
+      case 2: return "text-gray-400 dark:text-gray-300";
+      case 3: return "text-amber-700 dark:text-amber-500";
+      default: return "text-gray-600 dark:text-gray-400";
     }
   };
 
@@ -128,7 +128,7 @@ const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ entries }) => {
           </TableHead>
           <TableHead className="text-center">
             <div className="flex items-center justify-center">
-              <Code className="h-4 w-4 mr-1 text-orange-500" />
+              <Code className="h-4 w-4 mr-1 text-orange-500 dark:text-orange-400" />
               LeetCode
             </div>
           </TableHead>
@@ -136,7 +136,7 @@ const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ entries }) => {
       </TableHeader>
       <TableBody>
         {sortedEntries.map((entry) => (
-          <TableRow key={entry.id} className={entry.rank <= 3 ? "bg-yellow-50" : ""}>
+          <TableRow key={entry.id} className={entry.rank <= 3 ? "bg-yellow-50 dark:bg-yellow-900/20" : ""}>
             <TableCell className="font-medium">
               <div className="flex items-center">
                 {entry.rank <= 3 ? (
@@ -165,13 +165,13 @@ const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ entries }) => {
                     {entry.leetcodeTotalSolved} solved
                   </div>
                   <div className="flex justify-center space-x-1">
-                    <Badge variant="outline" className="text-xs bg-green-50 text-green-700">
+                    <Badge variant="outline" className="text-xs bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800">
                       E: {entry.leetcodeEasySolved || 0}
                     </Badge>
-                    <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700">
+                    <Badge variant="outline" className="text-xs bg-yellow-50 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800">
                       M: {entry.leetcodeMediumSolved || 0}
                     </Badge>
-                    <Badge variant="outline" className="text-xs bg-red-50 text-red-700">
+                    <Badge variant="outline" className="text-xs bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800">
                       H: {entry.leetcodeHardSolved || 0}
                     </Badge>
                   </div>

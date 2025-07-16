@@ -5,7 +5,7 @@ import {
     checkSubmissionsForAssignment as checkSubmissionsForAssignmentService,
     checkClassSubmissionStatus as checkClassSubmissionStatusService
 } from '../../services/submission.service';
-import { checkTeacherAuthorization } from '@/services/authorization.service';
+import { checkTeacherAuthorization } from '../../services/authorization.service';
 
 // Type for the class query result
 type ClassWithRelations = {

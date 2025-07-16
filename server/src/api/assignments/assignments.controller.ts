@@ -11,7 +11,7 @@ import { extractProblemDetailsFromUrl } from "../../services/url-title-extractor
 import {
   checkTeacherAuthorization,
   checkTeacherAuthorizationForAssignment,
-} from "@/services/authorization.service";
+} from "../../services/authorization.service";
 
 const getPlatformFromUrl = (url: string): string => {
   if (typeof url !== "string" || !url) {

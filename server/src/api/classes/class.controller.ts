@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import prisma from '../../lib/prisma';
 import { customAlphabet } from 'nanoid';
 import { Prisma } from '@prisma/client';
-import { checkAuthorizationForClass, checkTeacherAuthorization } from '@/services/authorization.service';
+import { checkAuthorizationForClass, checkTeacherAuthorization } from '../../services/authorization.service';
 
 // Generate a unique 6-character code for joining a class
 const nanoid = customAlphabet('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', 6);

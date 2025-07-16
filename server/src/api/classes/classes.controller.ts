@@ -7,6 +7,32 @@ import {
 } from '../../services/submission.service';
 import { checkTeacherAuthorization } from '@/services/authorization.service';
 
+// Type for the class query result
+type ClassWithRelations = {
+    id: string;
+    name: string;
+    joinCode: string;
+    teacherId: string;
+    createdAt: Date;
+    updatedAt: Date;
+    students?: Array<{
+        user: {
+            id: string;
+            name: string;
+            email: string;
+        };
+    }>;
+    assignments?: Array<{
+        id: string;
+        title: string;
+        description?: string;
+        dueDate?: Date;
+        classId: string;
+        createdAt: Date;
+        updatedAt: Date;
+    }>;
+};
+
 export const getClasses = async (req: Request, res: Response): Promise<void> => {
     // @ts-expect-error: req.user is added by the protect middleware
     const { userId, role } = req.user;
@@ -28,7 +54,7 @@ export const getClasses = async (req: Request, res: Response): Promise<void> => 
                 orderBy: { createdAt: 'desc' }
             });
 
-            const classesWithCounts = classes.map((cls: any) => ({
+            const classesWithCounts = classes.map((cls: ClassWithRelations) => ({
                 ...cls,
                 studentCount: cls.students?.length || 0,
                 assignmentCount: cls.assignments?.length || 0

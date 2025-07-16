@@ -162,7 +162,7 @@ const LeaderboardPage: React.FC = () => {
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center space-x-2">
-            <Trophy className="h-6 w-6 text-yellow-500" />
+            <Trophy className="h-6 w-6 text-yellow-500 dark:text-yellow-400" />
             <CardTitle>Top Students</CardTitle>
           </div>
           <CardDescription>

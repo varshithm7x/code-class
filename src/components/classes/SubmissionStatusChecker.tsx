@@ -272,7 +272,7 @@ const SubmissionStatusChecker: React.FC<SubmissionStatusCheckerProps> = ({ class
                             size="sm"
                             onClick={() => handleCheckStudentStatus(student.userId, student.name)}
                             disabled={checkingStudentId === student.userId}
-                            className="h-8 px-3 bg-white hover:bg-gray-50"
+                            className="h-8 px-3 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 border-gray-200 dark:border-gray-600"
                             title={`Check ${student.name}'s status`}
                           >
                             {checkingStudentId === student.userId ? (

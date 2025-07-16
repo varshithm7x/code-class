@@ -323,7 +323,6 @@ const TestResultsPage: React.FC = () => {
                                 problem.difficulty === 'EASY' ? 'default' :
                                 problem.difficulty === 'MEDIUM' ? 'secondary' : 'destructive'
                               }
-                              size="sm"
                             >
                               {problem.difficulty}
                             </Badge>
@@ -369,7 +368,7 @@ const TestResultsPage: React.FC = () => {
                   session.submissions.map((submission) => (
                     <div 
                       key={submission.id} 
-                      className="border rounded-lg p-4 cursor-pointer hover:bg-gray-50"
+                      className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800"
                       onClick={() => setSelectedSubmission(submission)}
                     >
                       <div className="flex items-center justify-between mb-2">
@@ -425,18 +424,18 @@ const TestResultsPage: React.FC = () => {
               <CardContent>
                 <div className="space-y-6">
                   {/* Submission Overview */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded">
                     <div className="text-center">
-                      <div className="text-2xl font-bold">{selectedSubmission.score}%</div>
-                      <div className="text-sm text-gray-600">Overall Score</div>
+                      <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{selectedSubmission.score}%</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">Overall Score</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-2xl font-bold">{selectedSubmission.executionTime.toFixed(3)}s</div>
-                      <div className="text-sm text-gray-600">Execution Time</div>
+                      <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{selectedSubmission.executionTime.toFixed(3)}s</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">Execution Time</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-2xl font-bold">{selectedSubmission.memoryUsed}KB</div>
-                      <div className="text-sm text-gray-600">Memory Used</div>
+                      <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{selectedSubmission.memoryUsed}KB</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">Memory Used</div>
                     </div>
                   </div>
 
@@ -467,20 +466,22 @@ const TestResultsPage: React.FC = () => {
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                               <div>
                                 <strong>Input:</strong>
-                                <pre className="mt-1 p-2 bg-gray-100 rounded border text-xs overflow-x-auto">
+                                <pre className="mt-1 p-2 bg-gray-100 dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-600 text-xs overflow-x-auto text-gray-900 dark:text-gray-100">
                                   {testCase.input}
                                 </pre>
                               </div>
                               <div>
                                 <strong>Expected Output:</strong>
-                                <pre className="mt-1 p-2 bg-gray-100 rounded border text-xs overflow-x-auto">
+                                <pre className="mt-1 p-2 bg-gray-100 dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-600 text-xs overflow-x-auto text-gray-900 dark:text-gray-100">
                                   {testCase.expectedOutput}
                                 </pre>
                               </div>
                               <div>
                                 <strong>Your Output:</strong>
-                                <pre className={`mt-1 p-2 rounded border text-xs overflow-x-auto ${
-                                  testCase.passed ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
+                                <pre className={`mt-1 p-2 rounded border text-xs overflow-x-auto text-gray-900 dark:text-gray-100 ${
+                                  testCase.passed 
+                                    ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' 
+                                    : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
                                 }`}>
                                   {testCase.actualOutput || '(no output)'}
                                 </pre>

@@ -60,22 +60,22 @@ const HackerRankKeySection: React.FC = () => {
   const getCookieStatusColor = (status?: string) => {
     switch (status) {
       case 'LINKED':
-        return 'text-green-600';
+        return 'text-green-600 dark:text-green-400';
       case 'EXPIRED':
-        return 'text-red-600';
+        return 'text-red-600 dark:text-red-400';
       default:
-        return 'text-gray-600';
+        return 'text-gray-600 dark:text-gray-400';
     }
   };
 
   const getCookieStatusIcon = (status?: string) => {
     switch (status) {
       case 'LINKED':
-        return <Link className="h-4 w-4 text-green-600" />;
+        return <Link className="h-4 w-4 text-green-600 dark:text-green-400" />;
       case 'EXPIRED':
-        return <Unlink className="h-4 w-4 text-red-600" />;
+        return <Unlink className="h-4 w-4 text-red-600 dark:text-red-400" />;
       default:
-        return <Clock className="h-4 w-4 text-gray-600" />;
+        return <Clock className="h-4 w-4 text-gray-600 dark:text-gray-400" />;
     }
   };
 
@@ -92,11 +92,11 @@ const HackerRankKeySection: React.FC = () => {
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Status Display */}
-        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+        <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
           <div className="flex items-center gap-2">
             {getCookieStatusIcon(user?.hackerrankCookieStatus)}
             <div>
-              <div className="font-medium">HackerRank Account</div>
+              <div className="font-medium text-gray-900 dark:text-gray-100">HackerRank Account</div>
               <div className={`text-sm ${getCookieStatusColor(user?.hackerrankCookieStatus)}`}>
                 {user?.hackerrankCookieStatus === 'LINKED' && 'Connected and tracking submissions'}
                 {user?.hackerrankCookieStatus === 'EXPIRED' && 'Session expired - please update your cookie'}
@@ -108,9 +108,9 @@ const HackerRankKeySection: React.FC = () => {
 
         {/* Success/Error Messages */}
         {success && (
-          <Alert className="bg-green-50 border-green-200">
-            <CheckCircle className="h-4 w-4 text-green-500" />
-            <AlertDescription className="text-green-700">{success}</AlertDescription>
+          <Alert className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
+            <CheckCircle className="h-4 w-4 text-green-500 dark:text-green-400" />
+            <AlertDescription className="text-green-700 dark:text-green-300">{success}</AlertDescription>
           </Alert>
         )}
 
@@ -123,9 +123,9 @@ const HackerRankKeySection: React.FC = () => {
 
         {/* Cookie Form */}
         <div className="space-y-4">
-          <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-            <h4 className="font-medium text-orange-900 mb-2">How to get your HackerRank session cookie:</h4>
-            <ol className="text-sm text-orange-800 space-y-1 list-decimal list-inside">
+          <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-4">
+            <h4 className="font-medium text-orange-900 dark:text-orange-100 mb-2">How to get your HackerRank session cookie:</h4>
+            <ol className="text-sm text-orange-800 dark:text-orange-300 space-y-1 list-decimal list-inside">
               <li>Open your web browser and log in to your HackerRank account</li>
               <li>Open Developer Tools (F12 or Ctrl+Shift+I)</li>
               <li>Go to the "Application" (Chrome) or "Storage" (Firefox) tab</li>
@@ -172,9 +172,9 @@ const HackerRankKeySection: React.FC = () => {
         </div>
 
         {/* Additional Info */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h4 className="font-medium text-blue-900 mb-2">🔒 Privacy & Security</h4>
-          <div className="text-sm text-blue-800 space-y-1">
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+          <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">🔒 Privacy & Security</h4>
+          <div className="text-sm text-blue-800 dark:text-blue-300 space-y-1">
             <p>• Your session cookie is stored securely and encrypted</p>
             <p>• We only read submission data, never modify your account</p>
             <p>• You can disconnect anytime by updating your HackerRank password</p>

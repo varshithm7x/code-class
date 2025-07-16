@@ -19,7 +19,7 @@ const AppLayoutContent: React.FC = () => {
         <main 
           className={cn(
             'flex-1 overflow-y-auto animate-in-right transition-all duration-300',
-            'bg-gradient-to-br from-gray-50/30 to-white',
+            'bg-gradient-to-br from-gray-50/30 to-white dark:from-gray-900/30 dark:to-gray-800',
             // Adjust padding based on sidebar state - less padding when collapsed for more space
             isCollapsed ? 'p-3 md:p-4' : 'p-4 md:p-6'
           )}

@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useSidebar } from '../../context/SidebarContext';
 import { Button } from '../ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
+import { ThemeToggle } from '../ui/theme-toggle';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,7 +28,7 @@ const Navbar: React.FC = () => {
   };
 
   return (
-    <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
+    <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-30">
       <div className="container mx-auto px-4 md:px-6">
         <div className="flex h-16 items-center justify-between">
           <div className="flex items-center gap-2">
@@ -36,7 +37,7 @@ const Navbar: React.FC = () => {
               variant="ghost"
               size="icon"
               onClick={toggleMobileSidebar}
-              className="md:hidden h-9 w-9 hover:bg-gray-100"
+              className="md:hidden h-9 w-9 hover:bg-gray-100 dark:hover:bg-gray-800"
               title="Open menu"
             >
               <Menu className="h-4 w-4" />
@@ -56,6 +57,8 @@ const Navbar: React.FC = () => {
             <span className="text-sm text-muted-foreground hidden sm:inline-block">
               {user?.role.toLowerCase() === 'teacher' ? 'Teacher' : 'Student'}
             </span>
+            
+            <ThemeToggle />
             
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

@@ -259,8 +259,8 @@ const LeetCodeStyleProblemViewer: React.FC<LeetCodeStyleProblemViewerProps> = ({
                       ))}
                     </div>
                   ) : (
-                    <div className="text-center py-8 text-gray-500">
-                      <FileText className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                    <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                      <FileText className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500 mb-4" />
                       <p>No public test cases available</p>
                     </div>
                   )}
@@ -302,8 +302,8 @@ const LeetCodeStyleProblemViewer: React.FC<LeetCodeStyleProblemViewerProps> = ({
                         ))}
                     </div>
                   ) : (
-                    <div className="text-center py-8 text-gray-500">
-                      <FileText className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                    <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                      <FileText className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500 mb-4" />
                       <p>No submissions yet</p>
                       <p className="text-sm">Submit your solution to see results here</p>
                     </div>

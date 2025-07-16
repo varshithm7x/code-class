@@ -19,8 +19,8 @@ const ProblemCompletionList: React.FC<ProblemCompletionListProps> = ({ problems,
         return (
         <Card key={problem.id} className={`border transition-all duration-200 ${
           isAutoCompleted 
-                ? 'border-green-200 bg-green-50/50 hover:bg-green-50' 
-            : 'border-gray-200 hover:bg-gray-50'
+                ? 'border-green-200 bg-green-50/50 hover:bg-green-50 dark:border-green-700 dark:bg-green-900/20 dark:hover:bg-green-900/30' 
+            : 'border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800'
         }`}>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -32,8 +32,8 @@ const ProblemCompletionList: React.FC<ProblemCompletionListProps> = ({ problems,
                       <CheckCircle2 className="h-5 w-5 text-white" />
                     </div>
                   ) : (
-                    <div className="flex items-center justify-center w-8 h-8 bg-gray-200 rounded-full">
-                      <Clock className="h-5 w-5 text-gray-500" />
+                    <div className="flex items-center justify-center w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-full">
+                      <Clock className="h-5 w-5 text-gray-500 dark:text-gray-400" />
                     </div>
                   )}
                 </div>
@@ -41,7 +41,7 @@ const ProblemCompletionList: React.FC<ProblemCompletionListProps> = ({ problems,
                 {/* Problem Details */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-sm font-medium text-gray-500">
+                    <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
                       Problem #{index + 1}
                     </span>
                     {isAutoCompleted && (
@@ -49,27 +49,27 @@ const ProblemCompletionList: React.FC<ProblemCompletionListProps> = ({ problems,
                     )}
                   </div>
                   
-                  <h4 className="font-medium text-gray-900 mb-1 line-clamp-1">
+                  <h4 className="font-medium text-gray-900 dark:text-white mb-1 line-clamp-1">
                     {problem.title}
                   </h4>
                   
-                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
                     <Badge variant="outline" className="text-xs">
                       {problem.platform}
                     </Badge>
                     <Badge 
                       variant="outline" 
                       className={`text-xs ${
-                        problem.difficulty === 'Easy' ? 'border-green-300 text-green-700' :
-                        problem.difficulty === 'Medium' ? 'border-yellow-300 text-yellow-700' :
-                        'border-red-300 text-red-700'
+                        problem.difficulty === 'Easy' ? 'border-green-300 text-green-700 dark:border-green-600 dark:text-green-400' :
+                        problem.difficulty === 'Medium' ? 'border-yellow-300 text-yellow-700 dark:border-yellow-600 dark:text-yellow-400' :
+                        'border-red-300 text-red-700 dark:border-red-600 dark:text-red-400'
                       }`}
                     >
                       {problem.difficulty}
                     </Badge>
                     
                     {isAutoCompleted && problem.submissionTime && (
-                      <div className="flex items-center gap-1 text-xs text-green-600">
+                      <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
                         <Calendar className="h-3 w-3" />
                         <span>
                           Auto-completed {new Date(problem.submissionTime).toLocaleDateString()}

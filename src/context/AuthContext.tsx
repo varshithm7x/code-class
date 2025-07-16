@@ -26,24 +26,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Load user data from localStorage on initial render
   useEffect(() => {
     const loadUser = async () => {
-      // TEMPORARY: Skip login for dark theme testing
-      const mockUser: User = {
-        id: 'test-user-1',
-        name: 'Test User',
-        email: 'test@example.com',
-        role: 'TEACHER',
-        createdAt: new Date().toISOString(),
-      };
-      
-      setAuthState({
-        user: mockUser,
-        token: 'mock-token',
-        isAuthenticated: true,
-        isLoading: false,
-        error: null,
-      });
-      
-      /* Original authentication logic - commented out for testing
       try {
         const token = localStorage.getItem('token');
         
@@ -77,7 +59,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           error: "Session expired, please log in again.",
         });
       }
-      */
     };
 
     loadUser();

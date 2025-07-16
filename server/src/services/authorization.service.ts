@@ -1,4 +1,5 @@
-import prisma from '@/lib/prisma';
+import prisma from '../lib/prisma';
+
 
 export const checkTeacherAuthorization = async (userId: string, classId: string): Promise<boolean> => {
     const course = await prisma.class.findFirst({

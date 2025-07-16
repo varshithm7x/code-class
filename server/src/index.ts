@@ -35,14 +35,23 @@ const corsOptions = {
     'https://code-class.up.railway.app', // Railway backend (same domain)
     'https://code-class-eight.vercel.app', // Deployed frontend on Vercel
     // Add your deployed frontend URL here when you deploy it
+    ...(process.env.ADDITIONAL_CORS_ORIGINS ? process.env.ADDITIONAL_CORS_ORIGINS.split(',') : [])
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
+  optionsSuccessStatus: 200, // some legacy browsers (IE11, various SmartTVs) choke on 204
 };
 
+console.log('CORS Origins:', corsOptions.origin);
 app.use(cors(corsOptions));
 app.use(express.json());
+
+// Debug middleware to log incoming requests
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.path} - Origin: ${req.headers.origin || 'none'}`);
+  next();
+});
 
 // API Routes
 app.use('/api/v1/auth', authRoutes);

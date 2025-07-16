@@ -190,7 +190,7 @@ const ViolationWarningModal: React.FC<ViolationWarningModalProps> = ({
           {/* Timer for auto-close (non-termination only) */}
           {!penalty.shouldTerminate && (
             <div className="text-center">
-              <div className="flex items-center justify-center gap-1 text-xs text-gray-500">
+              <div className="flex items-center justify-center gap-1 text-xs text-gray-500 dark:text-gray-400">
                 <Clock className="h-3 w-3" />
                 This dialog will close in 10 seconds
               </div>

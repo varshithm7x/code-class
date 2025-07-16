@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import prisma from '../../lib/prisma';
 import { customAlphabet } from 'nanoid';
 import { Prisma } from '@prisma/client';
+import { checkAuthorizationForClass, checkTeacherAuthorization } from '@/services/authorization.service';
 
 // Generate a unique 6-character code for joining a class
 const nanoid = customAlphabet('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', 6);
@@ -36,8 +37,6 @@ interface AssignmentWithProblems {
     id: string;
   }[];
 }
-
-
 
 export const createClass = async (req: Request, res: Response): Promise<void> => {
   const { name } = req.body;
@@ -122,12 +121,12 @@ export const joinClass = async (req: Request, res: Response): Promise<void> => {
       console.log(`[DEBUG] Found ${assignmentsInClass.length} assignments in class ${classToJoin.id}`);
 
       if (assignmentsInClass.length > 0) {
-        const problems = assignmentsInClass.flatMap(a => a.problems);
-        
+        const problems = assignmentsInClass.flatMap((a) => a.problems);
+
         console.log(`[DEBUG] Found ${problems.length} total problems across all assignments`);
-        
+
         if (problems.length > 0) {
-          const submissions = problems.map(problem => ({
+          const submissions = problems.map((problem) => ({
             userId,
             problemId: problem.id,
           }));
@@ -153,16 +152,22 @@ export const joinClass = async (req: Request, res: Response): Promise<void> => {
     }
     console.error('Full Error Object:', JSON.stringify(error, null, 2));
     console.error('--- END DETAILED ERROR LOG ---');
-    
-    const errorResponse = error instanceof Error ? {
-      name: error.name,
-      message: error.message,
-      ...(error instanceof Prisma.PrismaClientKnownRequestError && { code: error.code, meta: error.meta }),
-    } : { message: 'Unknown error occurred' };
-    
-    res.status(500).json({ 
-      message: 'Error joining class', 
-      error: errorResponse
+
+    const errorResponse =
+      error instanceof Error
+        ? {
+            name: error.name,
+            message: error.message,
+            ...(error instanceof Prisma.PrismaClientKnownRequestError && {
+              code: error.code,
+              meta: error.meta,
+            }),
+          }
+        : { message: 'Unknown error occurred' };
+
+    res.status(500).json({
+      message: 'Error joining class',
+      error: errorResponse,
     });
   }
 };
@@ -172,10 +177,7 @@ export const getClasses = async (req: Request, res: Response): Promise<void> => 
   const { userId, role } = req.user;
 
   try {
-    const whereClause: Prisma.ClassWhereInput =
-      role === 'TEACHER'
-        ? { teacherId: userId }
-        : { students: { some: { userId } } };
+    const whereClause: Prisma.ClassWhereInput = role === 'TEACHER' ? { teacherId: userId } : { students: { some: { userId } } };
 
     const classes = await prisma.class.findMany({
       where: whereClause,
@@ -195,14 +197,12 @@ export const getClasses = async (req: Request, res: Response): Promise<void> => 
       },
     });
 
-    const formattedClasses = (classes as ClassWithCounts[]).map(
-      ({ _count, teacher, ...rest }) => ({
-        ...rest,
-        studentCount: _count.students,
-        assignmentCount: _count.assignments,
-        teacherName: teacher.name,
-      })
-    );
+    const formattedClasses = (classes as ClassWithCounts[]).map(({ _count, teacher, ...rest }) => ({
+      ...rest,
+      studentCount: _count.students,
+      assignmentCount: _count.assignments,
+      teacherName: teacher.name,
+    }));
 
     res.status(200).json({ classes: formattedClasses });
   } catch (error) {
@@ -217,6 +217,12 @@ export const getClassAssignments = async (req: Request, res: Response): Promise<
   const { userId, role } = req.user;
 
   try {
+    const isAuthorized = await checkAuthorizationForClass(userId, classId);
+    if (!isAuthorized) {
+      res.status(403).json({ message: 'You are not authorized to view this class.' });
+      return;
+    }
+
     const assignments = await prisma.assignment.findMany({
       where: { classId },
       include: {
@@ -237,16 +243,16 @@ export const getClassAssignments = async (req: Request, res: Response): Promise<
       const assignmentsWithStats = await Promise.all(
         (assignments as AssignmentWithProblems[]).map(async (assignment) => {
           const problemIds = assignment.problems.map((p: { id: string }) => p.id);
-          
+
           // Get all students in the class
           const classStudents = await prisma.usersOnClasses.findMany({
             where: { classId },
             select: { userId: true },
           });
-          
+
           const totalStudents = classStudents.length;
           const totalProblems = assignment.problems.length;
-          
+
           if (totalStudents === 0 || totalProblems === 0) {
             return {
               ...assignment,
@@ -258,7 +264,7 @@ export const getClassAssignments = async (req: Request, res: Response): Promise<
               },
             };
           }
-          
+
           // Get completed submissions for this assignment
           const completedSubmissions = await prisma.submission.count({
             where: {
@@ -266,9 +272,9 @@ export const getClassAssignments = async (req: Request, res: Response): Promise<
               completed: true,
             },
           });
-          
+
           const averageCompletion = Math.round((completedSubmissions / (totalStudents * totalProblems)) * 100);
-          
+
           return {
             ...assignment,
             progress: {
@@ -280,14 +286,14 @@ export const getClassAssignments = async (req: Request, res: Response): Promise<
           };
         })
       );
-      
+
       res.status(200).json(assignmentsWithStats);
     } else {
       // For students, add their own progress
       const assignmentsWithProgress = await Promise.all(
         (assignments as AssignmentWithProblems[]).map(async (assignment) => {
           const problemIds = assignment.problems.map((p: { id: string }) => p.id);
-          
+
           const userSubmissions = await prisma.submission.findMany({
             where: {
               problemId: { in: problemIds },
@@ -297,11 +303,11 @@ export const getClassAssignments = async (req: Request, res: Response): Promise<
               completed: true,
             },
           });
-          
-          const completedCount = userSubmissions.filter(s => s.completed).length;
+
+          const completedCount = userSubmissions.filter((s) => s.completed).length;
           const totalProblems = assignment.problems.length;
           const percentage = totalProblems > 0 ? Math.round((completedCount / totalProblems) * 100) : 0;
-          
+
           return {
             ...assignment,
             progress: {
@@ -312,7 +318,7 @@ export const getClassAssignments = async (req: Request, res: Response): Promise<
           };
         })
       );
-      
+
       res.status(200).json(assignmentsWithProgress);
     }
   } catch (error) {
@@ -323,8 +329,15 @@ export const getClassAssignments = async (req: Request, res: Response): Promise<
 
 export const getClassDetails = async (req: Request, res: Response): Promise<void> => {
   const { classId } = req.params;
-
+  // @ts-expect-error: req.user is added by the protect middleware
+  const { userId } = req.user;
   try {
+    const isAuthorized = await checkAuthorizationForClass(userId, classId);
+    if (!isAuthorized) {
+      res.status(403).json({ message: 'You are not authorized to view this class.' });
+      return;
+    }
+
     const classInfo = await prisma.class.findUnique({
       where: { id: classId },
       include: {
@@ -352,7 +365,7 @@ export const getClassDetails = async (req: Request, res: Response): Promise<void
         if (user.hackerrankUsername) platformCount++;
         if (user.gfgUsername) platformCount++;
         if (user.leetcodeUsername) platformCount++;
-        
+
         const { password, leetcodeCookie, hackerrankCookie, ...strippedUser } = user;
         return {
           ...strippedUser,
@@ -372,8 +385,9 @@ export const deleteClass = async (req: Request, res: Response): Promise<void> =>
   const { classId } = req.params;
   // @ts-expect-error: req.user is added by the protect middleware
   const { userId, role } = req.user;
+  const isTeacherAuthorized = await checkTeacherAuthorization(userId, classId);
 
-  if (role !== 'TEACHER') {
+  if (role !== 'TEACHER' || !isTeacherAuthorized) {
     res.status(403).json({ message: 'Only teachers can delete classes.' });
     return;
   }
@@ -400,41 +414,41 @@ export const deleteClass = async (req: Request, res: Response): Promise<void> =>
       // 1. Find all assignments in the class
       const assignments = await tx.assignment.findMany({
         where: { classId: classId },
-        include: { problems: true }
+        include: { problems: true },
       });
 
-      const assignmentIds = assignments.map(a => a.id);
-      const problemIds = assignments.flatMap(a => a.problems.map(p => p.id));
+      const assignmentIds = assignments.map((a) => a.id);
+      const problemIds = assignments.flatMap((a) => a.problems.map((p) => p.id));
 
       // 2. Delete all submissions for the problems in those assignments
       if (problemIds.length > 0) {
         await tx.submission.deleteMany({
-          where: { problemId: { in: problemIds } }
+          where: { problemId: { in: problemIds } },
         });
       }
 
       // 3. Delete all problems in those assignments
       if (assignmentIds.length > 0) {
         await tx.problem.deleteMany({
-          where: { assignmentId: { in: assignmentIds } }
+          where: { assignmentId: { in: assignmentIds } },
         });
       }
 
       // 4. Delete all assignments in the class
       if (assignmentIds.length > 0) {
         await tx.assignment.deleteMany({
-          where: { id: { in: assignmentIds } }
+          where: { id: { in: assignmentIds } },
         });
       }
 
       // 5. Delete all student enrollments (UsersOnClasses)
       await tx.usersOnClasses.deleteMany({
-        where: { classId: classId }
+        where: { classId: classId },
       });
 
       // 6. Finally, delete the class itself
       await tx.class.delete({
-        where: { id: classId }
+        where: { id: classId },
       });
     });
 
@@ -443,9 +457,7 @@ export const deleteClass = async (req: Request, res: Response): Promise<void> =>
     console.error('Error deleting class:', error);
     res.status(500).json({ message: 'Error deleting class', error });
   }
-}; 
-
- 
+};
 
 /**
  * Allow a student to leave a class
@@ -484,15 +496,15 @@ export const leaveClass = async (req: Request, res: Response): Promise<void> => 
         include: { problems: true },
       });
 
-      const problemIds = assignments.flatMap(a => a.problems.map(p => p.id));
+      const problemIds = assignments.flatMap((a) => a.problems.map((p) => p.id));
 
       // Delete all submissions for the problems in those assignments for this student
       if (problemIds.length > 0) {
         await tx.submission.deleteMany({
-          where: { 
+          where: {
             userId,
-            problemId: { in: problemIds }
-          }
+            problemId: { in: problemIds },
+          },
         });
       }
 
@@ -521,8 +533,9 @@ export const removeStudentFromClass = async (req: Request, res: Response): Promi
   const { classId, studentId } = req.params;
   // @ts-expect-error: req.user is added by the protect middleware
   const { userId, role } = req.user;
+  const isTeacherAuthorized = await checkTeacherAuthorization(userId, classId);
 
-  if (role !== 'TEACHER') {
+  if (role !== 'TEACHER' || !isTeacherAuthorized) {
     res.status(403).json({ message: 'Only teachers can remove students from classes.' });
     return;
   }
@@ -530,10 +543,10 @@ export const removeStudentFromClass = async (req: Request, res: Response): Promi
   try {
     // Verify teacher owns this class
     const classInfo = await prisma.class.findFirst({
-      where: { 
+      where: {
         id: classId,
-        teacherId: userId 
-      }
+        teacherId: userId,
+      },
     });
 
     if (!classInfo) {
@@ -564,15 +577,15 @@ export const removeStudentFromClass = async (req: Request, res: Response): Promi
         include: { problems: true },
       });
 
-      const problemIds = assignments.flatMap(a => a.problems.map(p => p.id));
+      const problemIds = assignments.flatMap((a) => a.problems.map((p) => p.id));
 
       // Delete all submissions for the problems in those assignments for this student
       if (problemIds.length > 0) {
         await tx.submission.deleteMany({
-          where: { 
+          where: {
             userId: studentId,
-            problemId: { in: problemIds }
-          }
+            problemId: { in: problemIds },
+          },
         });
       }
 
@@ -592,4 +605,4 @@ export const removeStudentFromClass = async (req: Request, res: Response): Promi
     console.error('Error removing student from class:', error);
     res.status(500).json({ message: 'Error removing student from class', error });
   }
-}; 
+};

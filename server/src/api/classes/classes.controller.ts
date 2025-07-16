@@ -27,7 +27,13 @@ export const getClasses = async (req: Request, res: Response): Promise<void> => 
         orderBy: { createdAt: 'desc' }
       });
 
-      const classesWithCounts = classes.map((cls: any) => ({
+      interface ClassWithCounts {
+        students?: Array<{ user: { id: string; name: string; email: string } }>;
+        assignments?: Array<unknown>;
+        [key: string]: unknown;
+      }
+
+      const classesWithCounts = classes.map((cls: ClassWithCounts) => ({
         ...cls,
         studentCount: cls.students?.length || 0,
         assignmentCount: cls.assignments?.length || 0
@@ -127,6 +133,10 @@ export const getClassById = async (req: Request, res: Response): Promise<void> =
         res.status(403).json({ message: 'Not enrolled in this class' });
         return;
       }
+    } else if (role !== 'TEACHER') {
+      // Deny access for any other roles
+      res.status(403).json({ message: 'Unauthorized' });
+      return;
     }
 
     // Format the response

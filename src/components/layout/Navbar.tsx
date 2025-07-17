@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { useSidebar } from '../../context/SidebarContext';
 import { Button } from '../ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
@@ -12,10 +13,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
-import { LogOut, Settings, User, Menu } from 'lucide-react';
+import { LogOut, Settings, User, Menu, Sun, Moon } from 'lucide-react';
 
 const Navbar: React.FC = () => {
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const { toggleMobileSidebar } = useSidebar();
 
   const getInitials = (name: string) => {
@@ -27,7 +29,7 @@ const Navbar: React.FC = () => {
   };
 
   return (
-    <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-30">
+    <header className="bg-background border-b border-border sticky top-0 z-30">
       <div className="container mx-auto px-4 md:px-6">
         <div className="flex h-16 items-center justify-between">
           <div className="flex items-center gap-2">
@@ -36,18 +38,18 @@ const Navbar: React.FC = () => {
               variant="ghost"
               size="icon"
               onClick={toggleMobileSidebar}
-              className="md:hidden h-9 w-9 hover:bg-gray-100 dark:hover:bg-gray-800"
+              className="md:hidden h-9 w-9 hover:bg-accent"
               title="Open menu"
             >
               <Menu className="h-4 w-4" />
             </Button>
             
             <Link to="/classes" className="flex items-center space-x-2">
-              <div className="h-8 w-8 rounded-full bg-brand-blue flex items-center justify-center">
-                <span className="text-white text-sm font-bold">CC</span>
+              <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
+                <span className="text-primary-foreground text-sm font-bold">CC</span>
               </div>
-              <span className="hidden sm:inline-block font-semibold text-xl">
-                Coding Classroom
+              <span className="hidden sm:inline-block font-semibold text-xl text-foreground">
+                Code Class
               </span>
             </Link>
           </div>
@@ -57,12 +59,27 @@ const Navbar: React.FC = () => {
               {user?.role.toLowerCase() === 'teacher' ? 'Teacher' : 'Student'}
             </span>
             
+            {/* Theme Toggle Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggleTheme}
+              className="h-9 w-9 p-0 hover:bg-muted hover:text-foreground text-muted-foreground"
+              title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+            >
+              {theme === 'dark' ? (
+                <Sun className="h-4 w-4" />
+              ) : (
+                <Moon className="h-4 w-4" />
+              )}
+            </Button>
+            
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                   <Avatar>
                     <AvatarImage src="" alt={user?.name || 'User'} />
-                    <AvatarFallback className="bg-brand-teal text-white">
+                    <AvatarFallback className="bg-secondary text-secondary-foreground">
                       {user?.name ? getInitials(user.name) : 'U'}
                     </AvatarFallback>
                   </Avatar>

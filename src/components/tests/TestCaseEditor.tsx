@@ -206,7 +206,7 @@ const TestCaseEditor: React.FC<TestCaseEditorProps> = ({
               <Button 
                 onClick={generateTestCases} 
                 disabled={isGenerating || hasGeminiKey === false}
-                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 disabled:opacity-50"
+                className="bg-primary hover:bg-primary/90 disabled:opacity-50"
               >
                 {isGenerating ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

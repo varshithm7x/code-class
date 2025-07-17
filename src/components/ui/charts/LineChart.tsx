@@ -34,7 +34,7 @@ const LineChart: React.FC<LineChartProps> = ({
   const lineConfigs = lines || (yKey ? [{ key: yKey, name: yKey, color }] : []);
 
   return (
-    <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+    <div className="bg-white dark:bg-black p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-800">
       {title && <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">{title}</h3>}
       <div style={{ height: `${height}px` }}>
         <ResponsiveContainer width="100%" height="100%">

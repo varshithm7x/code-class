@@ -49,43 +49,44 @@
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    /* VS Code Dark Theme Colors - Extra Dark */
+    --background: 220 13% 8%;   /* #141414 - Much darker background */
+    --foreground: 0 0% 86%;     /* #cccccc - VS Code editor foreground */
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card: 220 13% 10%;        /* #1a1a1a - Darker card background */
+    --card-foreground: 0 0% 86%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 220 13% 10%;
+    --popover-foreground: 0 0% 86%;
 
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 207 60% 45%;     /* #4a90e2 - Muted blue, less bright */
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 220 13% 12%;   /* #1e1e1e - Darker secondary */
+    --secondary-foreground: 0 0% 86%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 220 13% 12%;       /* #1e1e1e - Darker muted background */
+    --muted-foreground: 0 0% 60%; /* #969696 - VS Code muted text */
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 220 13% 12%;      
+    --accent-foreground: 0 0% 86%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 100% 67%;  /* #f44747 - VS Code error red */
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
+    --border: 0 0% 15%;         /* #262626 - Darker border */
+    --input: 220 13% 12%;       /* #1e1e1e - Darker input background */
+    --ring: 207 60% 45%;        /* #4a90e2 - Muted focus ring */
 
-    /* Sidebar colors for dark mode */
-    --sidebar-background: 217.2 32.6% 15%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 217.2 91.2% 59.8%;
-    --sidebar-primary-foreground: 222.2 47.4% 11.2%;
-    --sidebar-accent: 217.2 32.6% 20%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 217.2 32.6% 17.5%;
-    --sidebar-ring: 224.3 76.3% 48%;
+    /* Sidebar colors for VS Code dark mode - Extra Dark */
+    --sidebar-background: 220 14% 6%; /* #101010 - Much darker sidebar */
+    --sidebar-foreground: 0 0% 86%;
+    --sidebar-primary: 207 60% 45%;   /* #4a90e2 - Muted blue for sidebar */
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 13% 10%;     /* #1a1a1a - Darker hover background */
+    --sidebar-accent-foreground: 0 0% 86%;
+    --sidebar-border: 0 0% 15%;        /* #262626 - Darker border */
+    --sidebar-ring: 207 60% 45%;
   }
 }
 
@@ -102,22 +103,30 @@
     @apply bg-background text-foreground;
   }
   
-  /* Custom scrollbar styling */
+  /* VS Code style scrollbar */
   ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 14px;
+    height: 14px;
   }
   
   ::-webkit-scrollbar-track {
-    @apply bg-muted rounded-full;
+    background: transparent;
   }
   
   ::-webkit-scrollbar-thumb {
-    @apply bg-primary/30 rounded-full;
+    background: rgba(121, 121, 121, 0.4);
+    border: 3px solid transparent;
+    background-clip: content-box;
+    border-radius: 7px;
   }
   
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-primary/50;
+    background: rgba(100, 100, 100, 0.7);
+    background-clip: content-box;
+  }
+  
+  ::-webkit-scrollbar-corner {
+    background: transparent;
   }
 }
 
@@ -141,30 +150,54 @@
     }
   }
   
-  /* Gradient background for hero section */
+  /* Solid background for hero section - no gradients */
   .hero-gradient {
-    background: radial-gradient(ellipse at top, hsl(var(--primary) / 0.1) 0%, transparent 70%);
+    background: hsl(var(--background));
   }
   
-  /* Code syntax highlighting */
+  /* VS Code syntax highlighting colors */
   .syntax-keyword {
-    @apply text-purple-400 dark:text-purple-300;
+    color: #569cd6; /* VS Code keyword blue */
   }
   
   .syntax-string {
-    @apply text-green-600 dark:text-green-400;
+    color: #ce9178; /* VS Code string orange */
   }
   
   .syntax-function {
-    @apply text-blue-600 dark:text-blue-400;
+    color: #dcdcaa; /* VS Code function yellow */
   }
   
   .syntax-comment {
-    @apply text-gray-500 italic;
+    color: #6a9955; /* VS Code comment green */
+    font-style: italic;
   }
   
-  /* Code editor styling */
+  .syntax-variable {
+    color: #9cdcfe; /* VS Code variable light blue */
+  }
+  
+  .syntax-type {
+    color: #4ec9b0; /* VS Code type teal */
+  }
+  
+  /* VS Code editor styling */
   .code-editor {
-    background: linear-gradient(135deg, hsl(var(--card)) 0%, hsl(var(--muted)) 100%);
+    background: hsl(220, 13%, 13%); /* VS Code editor background */
+    border: 1px solid hsl(0, 0%, 19%); /* VS Code border */
+    font-family: 'Consolas', 'Courier New', monospace;
+  }
+  
+  /* VS Code tab styling */
+  .vscode-tab {
+    background: hsl(220, 13%, 16%);
+    border-bottom: 1px solid hsl(0, 0%, 19%);
+    color: hsl(0, 0%, 60%);
+  }
+  
+  .vscode-tab.active {
+    background: hsl(220, 13%, 13%);
+    color: hsl(0, 0%, 86%);
+    border-bottom: 2px solid hsl(207, 100%, 62%);
   }
 }

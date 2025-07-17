@@ -169,7 +169,7 @@ const ProfilePage: React.FC = () => {
             </CardHeader>
             <CardContent>
               {/* Current Status */}
-              <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+              <div className="mb-6 p-4 bg-gray-50 dark:bg-black rounded-lg">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="font-medium text-sm text-gray-900 dark:text-gray-100">Connection Status</h3>
                   <div className="flex items-center gap-2">
@@ -199,7 +199,7 @@ const ProfilePage: React.FC = () => {
 
               {/* Cookie Form */}
               <div className="space-y-4">
-                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                <div className="bg-gray-50 dark:bg-gray-800/20 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                   <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">How to get your LeetCode session cookie:</h4>
                   <ol className="text-sm text-blue-800 dark:text-blue-300 space-y-1 list-decimal list-inside">
                     <li>Open your web browser and log in to your LeetCode account</li>

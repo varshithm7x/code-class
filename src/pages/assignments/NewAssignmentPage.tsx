@@ -75,7 +75,7 @@ const ProblemCard = ({
     switch (problem.status) {
       case 'success': return 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950';
       case 'failed': return 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950';
-      case 'edited': return 'border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950';
+      case 'edited': return 'border-blue-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900';
       default: return '';
     }
   };
@@ -98,7 +98,7 @@ const ProblemCard = ({
         );
       case 'edited':
         return (
-          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200">
             <Edit3 className="w-3 h-3 mr-1" />
             Manually edited
           </span>
@@ -161,7 +161,7 @@ const ProblemCard = ({
               <Input
                 value={problem.title}
                 readOnly
-                className="flex-1 bg-gray-50 dark:bg-gray-900"
+                className="flex-1 bg-gray-50 dark:bg-black"
               />
               {problem.status !== 'failed' && (
                 <Button
@@ -184,7 +184,7 @@ const ProblemCard = ({
           <Input
             value={problem.url}
             readOnly
-            className="bg-gray-50 dark:bg-gray-900 font-mono text-xs"
+            className="bg-gray-50 dark:bg-black font-mono text-xs"
           />
         </div>
 
@@ -589,7 +589,7 @@ const NewAssignmentPage = () => {
                 {showBulkInput ? (
                   // Bulk URL Input Interface
                   <div className="space-y-4">
-                    <div className="p-6 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg">
+                    <div className="p-6 border-2 border-dashed border-gray-300 dark:border-gray-800 rounded-lg">
                       <div className="text-center">
                         <FileText className="mx-auto h-12 w-12 text-gray-400 mb-4" />
                         <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
@@ -639,16 +639,16 @@ https://codeforces.com/problemset/problem/1/A`}
                     </div>
 
                     {extractionProgress && (
-                      <div className="p-4 bg-blue-50 dark:bg-blue-950 rounded-lg border">
+                      <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg border">
                         <div className="flex items-center justify-between text-sm mb-2">
                           <span className="font-medium">Extracting problem details...</span>
                           <span className="text-blue-600 dark:text-blue-400">
                             {extractionProgress.current}/{extractionProgress.total}
                           </span>
                         </div>
-                        <div className="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-2 mb-2">
+                        <div className="w-full bg-gray-200 dark:bg-blue-800 rounded-full h-2 mb-2">
                           <div 
-                            className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                            className="bg-gray-600 h-2 rounded-full transition-all duration-300" 
                             style={{ width: `${(extractionProgress.current / extractionProgress.total) * 100}%` }}
                           />
                         </div>

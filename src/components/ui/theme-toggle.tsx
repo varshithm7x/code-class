@@ -1,21 +1,51 @@
-import { Moon, Sun } from 'lucide-react';
-import { Button } from './button';
 import { useTheme } from '../../context/ThemeContext';
 
 export function ThemeToggle() {
   const { theme, toggleTheme } = useTheme();
+  const isDark = theme === 'dark';
 
   return (
-    <Button
-      variant="ghost"
-      size="icon"
+    <button
       onClick={toggleTheme}
-      className="h-9 w-9 hover:bg-gray-100 dark:hover:bg-gray-800"
+      className="relative inline-flex items-center cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-full"
       title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
     >
-      <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-      <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-      <span className="sr-only">Toggle theme</span>
-    </Button>
+      {/* Toggle Switch Background */}
+      <div className={`
+        relative w-20 h-8 rounded-full transition-all duration-300 ease-in-out
+        ${isDark 
+          ? 'bg-slate-700 shadow-inner' 
+          : 'bg-gray-200 shadow-inner'
+        }
+      `}>
+        {/* Toggle Circle */}
+        <div className={`
+          absolute top-0.5 left-0.5 w-7 h-7 bg-white rounded-full shadow-md
+          transition-transform duration-300 ease-in-out
+          ${isDark ? 'translate-x-12' : 'translate-x-0'}
+        `}>
+          {/* Optional icon inside circle */}
+          <div className="w-full h-full flex items-center justify-center">
+            {isDark ? (
+              <div className="w-3 h-3 bg-slate-600 rounded-full"></div>
+            ) : (
+              <div className="w-3 h-3 bg-yellow-400 rounded-full"></div>
+            )}
+          </div>
+        </div>
+        
+        {/* Text Label */}
+        <div className={`
+          absolute inset-0 flex items-center text-xs font-medium pointer-events-none
+          transition-all duration-300
+          ${isDark 
+            ? 'text-white justify-start pl-2' 
+            : 'text-gray-600 justify-end pr-2'
+          }
+        `}>
+          {isDark ? 'Dark' : 'Light'}
+        </div>
+      </div>
+    </button>
   );
 }

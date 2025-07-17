@@ -4,6 +4,15 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { 
   Code2, 
   Users, 
@@ -17,14 +26,20 @@ import {
   Clock,
   Award,
   GraduationCap,
-  FileText
+  FileText,
+  LogOut,
+  Settings,
+  User,
+  LayoutDashboard
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '@/context/ThemeContext';
+import { useAuth } from '@/context/AuthContext';
 
 const HomePage = () => {
   const navigate = useNavigate();
   const { theme } = useTheme();
+  const { user, isAuthenticated, logout } = useAuth();
   const [completionProgress, setCompletionProgress] = useState(0);
 
   // Progress animation
@@ -32,6 +47,14 @@ const HomePage = () => {
     const timer = setTimeout(() => setCompletionProgress(75), 500);
     return () => clearTimeout(timer);
   }, []);
+
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase();
+  };
 
   const platforms = [
     {
@@ -114,13 +137,58 @@ const HomePage = () => {
               <a href="#platforms" className="text-foreground/80 hover:text-foreground transition-colors">Platforms</a>
               <a href="#how-it-works" className="text-foreground/80 hover:text-foreground transition-colors">How it Works</a>
             </nav>
-            <div className="flex items-center space-x-4">
-              <Button variant="ghost" onClick={() => navigate('/login')}>
-                Sign In
-              </Button>
-              <Button onClick={() => navigate('/signup')}>
-                Get Started
-              </Button>
+                                      <div className="flex items-center space-x-4">
+              {isAuthenticated ? (
+                <>
+                  <Button onClick={() => navigate('/classes')}>
+                    <LayoutDashboard className="mr-2 h-4 w-4" />
+                    Dashboard
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="flex items-center space-x-2">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src="" alt={user?.name || 'User'} />
+                          <AvatarFallback className="bg-primary text-primary-foreground">
+                            {user?.name ? getInitials(user.name) : 'U'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="hidden md:inline-flex">{user?.name || 'User'}</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => navigate('/dashboard')}>
+                        <LayoutDashboard className="mr-2 h-4 w-4" />
+                        Dashboard
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate('/profile')}>
+                        <User className="mr-2 h-4 w-4" />
+                        Profile
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate('/settings')}>
+                        <Settings className="mr-2 h-4 w-4" />
+                        Settings
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={logout}>
+                        <LogOut className="mr-2 h-4 w-4" />
+                        Log Out
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </>
+              ) : (
+                <>
+                  <Button variant="ghost" onClick={() => navigate('/login')}>
+                    Sign In
+                  </Button>
+                  <Button onClick={() => navigate('/signup')}>
+                    Get Started
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>

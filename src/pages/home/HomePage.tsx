@@ -258,7 +258,7 @@ const HomePage = () => {
                     <div className="text-xs text-muted-foreground">In Progress</div>
                   </div>
                   <div>
-                    <div className="text-2xl font-bold text-orange-600">3</div>
+                    <div className="text-2xl font-bold text-gray-500 dark:text-gray-400">3</div>
                     <div className="text-xs text-muted-foreground">Pending</div>
                   </div>
                 </div>
@@ -396,11 +396,11 @@ const HomePage = () => {
                       <div className="text-xs text-muted-foreground">Easy</div>
                     </div>
                     <div>
-                      <div className="text-lg font-semibold text-yellow-600">52</div>
+                      <div className="text-lg font-semibold text-gray-500 dark:text-gray-400">52</div>
                       <div className="text-xs text-muted-foreground">Medium</div>
                     </div>
                     <div>
-                      <div className="text-lg font-semibold text-red-600">15</div>
+                      <div className="text-lg font-semibold text-gray-500 dark:text-gray-400">15</div>
                       <div className="text-xs text-muted-foreground">Hard</div>
                     </div>
                   </div>
@@ -423,7 +423,7 @@ const HomePage = () => {
 
       {/* CTA Section */}
       <section className="container mx-auto px-4 py-20">
-        <Card className="bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20">
+        <Card className="bg-card border-primary/20">
           <CardContent className="p-12 text-center space-y-6">
             <h2 className="text-3xl font-bold">Ready to Transform Your DSA Teaching?</h2>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">

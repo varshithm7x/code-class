@@ -84,7 +84,7 @@ const ViolationMonitoringPanel: React.FC<ViolationMonitoringPanelProps> = ({
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
-              <UserIcon className="h-5 w-5 text-blue-600" />
+              <UserIcon className="h-5 w-5 text-gray-600 dark:text-gray-300" />
               <div>
                 <p className="text-sm font-medium">Students Flagged</p>
                 <p className="text-2xl font-bold">

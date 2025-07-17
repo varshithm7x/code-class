@@ -612,7 +612,7 @@ const CreateTestPage: React.FC = () => {
                   <div className={`p-4 rounded-lg ${
                     formData.startTime && formData.endTime && new Date(formData.endTime) <= new Date(formData.startTime)
                       ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
-                      : 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800'
+                      : 'bg-gray-50 dark:bg-gray-800/20 border border-gray-200 dark:border-gray-700'
                   }`}>
                     <div className={`flex items-center gap-2 ${
                       formData.startTime && formData.endTime && new Date(formData.endTime) <= new Date(formData.startTime)
@@ -862,7 +862,7 @@ const CreateTestPage: React.FC = () => {
         {/* Sidebar */}
         <div className="space-y-4">
           {/* Judge0 Pool Status */}
-          <Card className="border-blue-200 bg-blue-50/50">
+          <Card className="border-gray-200 bg-gray-50/50">
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center gap-2">
                 <Terminal className="h-5 w-5 text-blue-600" />

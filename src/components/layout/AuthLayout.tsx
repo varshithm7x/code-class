@@ -15,7 +15,7 @@ const AuthLayout: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-brand-blue/5 to-brand-teal/5 dark:from-gray-900 dark:to-gray-800 flex flex-col">
+    <div className="min-h-screen bg-background dark:bg-background flex flex-col">
       <div className="flex min-h-full flex-1 flex-col justify-center px-6 py-12 lg:px-8">
         <div className="sm:mx-auto sm:w-full sm:max-w-md">
           <div className="flex justify-center">
@@ -28,7 +28,7 @@ const AuthLayout: React.FC = () => {
           </h2>
         </div>
         <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-[480px]">
-          <div className="bg-white dark:bg-gray-800 px-6 py-12 shadow border border-gray-200 dark:border-gray-700 sm:rounded-lg sm:px-12">
+          <div className="bg-white dark:bg-black px-6 py-12 shadow border border-gray-200 dark:border-gray-800 sm:rounded-lg sm:px-12">
             <Outlet />
           </div>
         </div>

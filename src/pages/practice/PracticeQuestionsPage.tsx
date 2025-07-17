@@ -103,7 +103,7 @@ const PracticeQuestionsPage: React.FC = () => {
       case 'Hard':
         return 'text-red-600 bg-red-100 border-red-200 dark:text-red-400 dark:bg-red-900/50 dark:border-red-700';
       default:
-        return 'text-gray-600 bg-gray-100 border-gray-200 dark:text-gray-400 dark:bg-gray-900/50 dark:border-gray-700';
+        return 'text-gray-600 bg-gray-100 border-gray-200 dark:text-gray-400 dark:bg-black/50 dark:border-gray-800';
     }
   };
   

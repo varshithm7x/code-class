@@ -15,7 +15,7 @@ const MonitoringDashboard = () => {
         </div>
         <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow border border-gray-200 dark:border-gray-700">
           <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">Avg Efficiency</h3>
-          <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">0x</p>
+          <p className="text-2xl font-bold text-gray-600 dark:text-gray-300">0x</p>
         </div>
         <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow border border-gray-200 dark:border-gray-700">
           <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">Success Rate</h3>

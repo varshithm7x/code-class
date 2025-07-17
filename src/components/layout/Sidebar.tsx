@@ -85,10 +85,9 @@ const Sidebar: React.FC = () => {
         onClick={handleClick}
             className={cn(
           'flex items-center rounded-md text-sm font-medium transition-all duration-200',
-          'hover:bg-gray-100 dark:hover:bg-gray-700 hover:scale-105',
           isActive
-            ? 'bg-brand-blue text-white shadow-md'
-            : 'text-gray-700 dark:text-gray-300',
+            ? 'bg-primary/10 text-primary border-l-2 border-primary shadow-sm'
+            : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground',
           isCollapsed && !isMobile 
             ? 'justify-center p-2 mx-1' // Smaller padding for collapsed state
             : 'gap-3 px-3 py-2' // Normal padding for expanded state
@@ -133,7 +132,7 @@ const Sidebar: React.FC = () => {
         size="sm"
         onClick={toggleSidebar}
         className={cn(
-          'transition-all duration-200 hover:bg-gray-200',
+          'transition-all duration-200 hover:bg-sidebar-accent text-sidebar-foreground/60 hover:text-sidebar-foreground',
           isCollapsed 
             ? 'h-8 w-8 p-0' // Smaller for collapsed state
             : 'h-8 px-2' // Normal for expanded state
@@ -174,7 +173,7 @@ const Sidebar: React.FC = () => {
       {/* Mobile Overlay */}
       {isMobileOpen && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 dark:bg-black dark:bg-opacity-70 z-40 md:hidden"
+          className="fixed inset-0 bg-black bg-opacity-50 dark:bg-black dark:bg-opacity-80 z-40 md:hidden"
           onClick={closeMobileSidebar}
         />
       )}
@@ -182,7 +181,7 @@ const Sidebar: React.FC = () => {
       {/* Desktop Sidebar */}
       <aside 
         className={cn(
-          'shrink-0 border-r border-gray-200 dark:border-gray-700 hidden md:block overflow-y-auto bg-white dark:bg-gray-900 transition-all duration-300 ease-in-out',
+          'shrink-0 border-r border-sidebar-border hidden md:block overflow-y-auto bg-sidebar transition-all duration-300 ease-in-out',
           isCollapsed ? 'w-12' : 'w-64'
         )}
       >
@@ -210,11 +209,11 @@ const Sidebar: React.FC = () => {
       {/* Mobile Sidebar */}
       <aside 
         className={cn(
-          'fixed top-0 left-0 h-full w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 z-50 md:hidden transition-transform duration-300 ease-in-out',
+          'fixed top-0 left-0 h-full w-64 bg-white dark:bg-black border-r border-gray-200 dark:border-gray-800 z-50 md:hidden transition-transform duration-300 ease-in-out',
           isMobileOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800">
           <span className="font-semibold text-lg">Menu</span>
           <Button
             variant="ghost"

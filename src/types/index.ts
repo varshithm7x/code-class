@@ -278,3 +278,72 @@ export interface AssignmentWithSubmissions extends Assignment {
   };
 }
 
+// DSA Sheet Types
+export interface DSAQuestion {
+  mapping_id: string;
+  topic: string;
+  sub_topic: string;
+  title: string;
+  resource: string;
+  is_solved: boolean;
+  question_id: string;
+  name: string;
+  slug: string;
+  platform: string;
+  difficulty: 'Easy' | 'Medium' | 'Hard' | 'Basic';
+  problem_url: string;
+  description: string;
+  topics: string[];
+  company_tags: string[];
+  verified: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DSASheetInfo {
+  name: string;
+  description: string;
+  author: string;
+  followers: number;
+  tags: string[];
+  visibility: string;
+  created_at: string;
+  updated_at: string;
+  link: string;
+  banner: string;
+  slug: string;
+}
+
+export interface DSASheet {
+  sheet_info: DSASheetInfo;
+  questions: DSAQuestion[];
+}
+
+export interface DSATopic {
+  name: string;
+  sub_topics: DSASubTopic[];
+  total_questions: number;
+  completed_questions: number;
+  progress_percentage: number;
+}
+
+export interface DSASubTopic {
+  name: string;
+  questions: DSAQuestion[];
+  total_questions: number;
+  completed_questions: number;
+  progress_percentage: number;
+}
+
+export interface DSAStats {
+  total_questions: number;
+  completed_questions: number;
+  easy_completed: number;
+  easy_total: number;
+  medium_completed: number;
+  medium_total: number;
+  hard_completed: number;
+  hard_total: number;
+  overall_progress: number;
+}
+

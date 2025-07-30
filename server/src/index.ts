@@ -15,7 +15,8 @@ import analyticsRoutes from './api/analytics';
 import studentRoutes from './api/students';
 import announcementRoutes from './api/announcements';
 import testRoutes from './api/tests/tests.routes';                                                                                                      
-import monitoringRoutes from './api/monitoring/monitoring.routes';                                                                                                      
+import monitoringRoutes from './api/monitoring/monitoring.routes';
+import { dsaProgressRoutes } from './api/dsa-progress';                                                                                                      
 
 import { initializeScheduledJobs } from './cron';
 import { WebSocketService } from './services/websocket.service';
@@ -62,6 +63,7 @@ app.use('/api/v1/students', studentRoutes);
 app.use('/api/v1/announcements', announcementRoutes);
 app.use('/api/v1/tests', testRoutes);
 app.use('/api/v1/monitoring', monitoringRoutes);
+app.use('/api/v1/dsa', dsaProgressRoutes);
 
 // Initialize all scheduled jobs
 initializeScheduledJobs();

@@ -3,9 +3,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "./context/AuthContext";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { Analytics } from "@vercel/analytics/react";
+import LoadingScreen from "./components/ui/LoadingScreen";
 
 // Layouts
 import AppLayout from "./components/layout/AppLayout";
@@ -42,6 +43,77 @@ import { StudentAnalyticsPage } from './pages/students/StudentAnalyticsPage';
 
 const queryClient = new QueryClient();
 
+// Component to handle root route logic
+const RootRoute: React.FC = () => {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
+
+  if (isAuthenticated) {
+    return <Navigate to="/classes" replace />;
+  }
+
+  return <HomePage />;
+};
+
+function AppContent() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        {/* Root route - redirect authenticated users to classes, show HomePage for guests */}
+        <Route path="/" element={<RootRoute />} />
+        
+        <Route element={<AuthLayout />}>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
+        </Route>
+
+        <Route element={<AppLayout />}>
+          <Route path="/dashboard" element={<Navigate to="/classes" replace />} />
+          <Route path="/classes" element={<ClassesPage />} />
+          <Route path="/classes/create" element={<TeacherRoute><CreateClassPage /></TeacherRoute>} />
+          <Route path="/classes/:classId" element={<ClassDetailsPage />} />
+          <Route path="/classes/:classId/settings" element={<TeacherRoute><ClassSettingsPage /></TeacherRoute>} />
+          <Route
+            path="/classes/:classId/assignments/new"
+            element={
+              <TeacherRoute>
+                <NewAssignmentPage />
+              </TeacherRoute>
+            }
+          />
+          <Route path="/assignments/:assignmentId" element={<AssignmentDetailsPage />} />
+          <Route
+            path="/assignments/:assignmentId/edit"
+            element={
+              <TeacherRoute>
+                <EditAssignmentPage />
+              </TeacherRoute>
+            }
+          />
+          <Route path="/join-class" element={<JoinClassPage />} />
+          <Route path="/leaderboard" element={<LeaderboardPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/practice" element={<PracticeQuestionsPage />} />
+          <Route path="/students/:studentId" element={<TeacherRoute><StudentProfilePage /></TeacherRoute>} />
+          <Route path="/classes/:classId/students/:studentId/analytics" element={<TeacherRoute><StudentAnalyticsPage /></TeacherRoute>} />
+          <Route path="/tests" element={<TestsPage />} />
+          <Route path="/tests/new" element={<TeacherRoute><CreateTestPage /></TeacherRoute>} />
+          <Route path="/classes/:classId/tests/new" element={<TeacherRoute><CreateTestPage /></TeacherRoute>} />
+          <Route path="/tests/:testId/monitor" element={<TeacherRoute><TestMonitoringPage /></TeacherRoute>} />
+          <Route path="/tests/:testId/results" element={<TestResultsPage />} />
+        </Route>
+        
+        {/* Test taking route - outside AppLayout for fullscreen */}
+        <Route path="/tests/:testId/take" element={<TestTakingPage />} />
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -50,62 +122,11 @@ function App() {
           <TooltipProvider>
             <Toaster />
             <Sonner />
-            <BrowserRouter>
-            <Routes>
-              {/* Public homepage route */}
-              <Route path="/" element={<HomePage />} />
-              
-              <Route element={<AuthLayout />}>
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/signup" element={<SignupPage />} />
-              </Route>
-
-              <Route element={<AppLayout />}>
-                <Route path="/dashboard" element={<Navigate to="/classes" replace />} />
-                <Route path="/classes" element={<ClassesPage />} />
-                <Route path="/classes/create" element={<TeacherRoute><CreateClassPage /></TeacherRoute>} />
-                <Route path="/classes/:classId" element={<ClassDetailsPage />} />
-                <Route path="/classes/:classId/settings" element={<TeacherRoute><ClassSettingsPage /></TeacherRoute>} />
-                <Route
-                  path="/classes/:classId/assignments/new"
-                  element={
-                    <TeacherRoute>
-                      <NewAssignmentPage />
-                    </TeacherRoute>
-                  }
-                />
-                <Route path="/assignments/:assignmentId" element={<AssignmentDetailsPage />} />
-                <Route
-                  path="/assignments/:assignmentId/edit"
-                  element={
-                    <TeacherRoute>
-                      <EditAssignmentPage />
-                    </TeacherRoute>
-                  }
-                />
-                <Route path="/join-class" element={<JoinClassPage />} />
-                <Route path="/leaderboard" element={<LeaderboardPage />} />
-                <Route path="/profile" element={<ProfilePage />} />
-                <Route path="/practice" element={<PracticeQuestionsPage />} />
-                <Route path="/students/:studentId" element={<TeacherRoute><StudentProfilePage /></TeacherRoute>} />
-                <Route path="/classes/:classId/students/:studentId/analytics" element={<TeacherRoute><StudentAnalyticsPage /></TeacherRoute>} />
-                <Route path="/tests" element={<TestsPage />} />
-                <Route path="/tests/new" element={<TeacherRoute><CreateTestPage /></TeacherRoute>} />
-                <Route path="/classes/:classId/tests/new" element={<TeacherRoute><CreateTestPage /></TeacherRoute>} />
-                <Route path="/tests/:testId/monitor" element={<TeacherRoute><TestMonitoringPage /></TeacherRoute>} />
-                <Route path="/tests/:testId/results" element={<TestResultsPage />} />
-              </Route>
-              
-              {/* Test taking route - outside AppLayout for fullscreen */}
-              <Route path="/tests/:testId/take" element={<TestTakingPage />} />
-              <Route path="*" element={<NotFoundPage />} />
-            </Routes>
-          </BrowserRouter>
-          
-          <Analytics />
-        </TooltipProvider>
-      </AuthProvider>
-    </ThemeProvider>
+            <AppContent />
+            <Analytics />
+          </TooltipProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

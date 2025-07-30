@@ -32,7 +32,7 @@ import LeaderboardPage from "./pages/leaderboard/LeaderboardPage";
 import NotFoundPage from "./pages/NotFound";
 import ClassSettingsPage from './pages/classes/ClassSettingsPage';
 import EditAssignmentPage from './pages/assignments/EditAssignmentPage';
-import PracticeQuestionsPage from './pages/practice/PracticeQuestionsPage';
+import PracticeQuestionsPage from  './pages/practice/PracticeQuestionsPage';
 import StudentProfilePage from './pages/students/StudentProfilePage';
 import TestsPage from './pages/tests/TestsPage';
 import CreateTestPage from './pages/tests/CreateTestPage';
@@ -94,9 +94,9 @@ function AppContent() {
             }
           />
           <Route path="/join-class" element={<JoinClassPage />} />
+          <Route path="/practice" element={<PracticeQuestionsPage />} />
           <Route path="/leaderboard" element={<LeaderboardPage />} />
           <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/practice" element={<PracticeQuestionsPage />} />
           <Route path="/students/:studentId" element={<TeacherRoute><StudentProfilePage /></TeacherRoute>} />
           <Route path="/classes/:classId/students/:studentId/analytics" element={<TeacherRoute><StudentAnalyticsPage /></TeacherRoute>} />
           <Route path="/tests" element={<TestsPage />} />

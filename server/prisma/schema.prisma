@@ -48,6 +48,7 @@ model User {
   classes                UsersOnClasses[]
   judge0Keys             Judge0KeyPool?
   studentAssignmentInfos StudentAssignmentInfo[]
+  dsaProgress            DSAProgress[]
 }
 
 model Class {
@@ -243,6 +244,24 @@ model StudentAssignmentInfo {
   updatedAt     DateTime   @updatedAt
 
   @@unique([userId, assignmentId])
+}
+
+// DSA Practice Sheet Progress Tracking
+model DSAProgress {
+  id               String    @id @default(cuid())
+  userId           String
+  questionId       String    // mapping_id from JSON
+  isCompleted      Boolean   @default(false)
+  isRevision       Boolean   @default(false)
+  notes            String?
+  completedAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, questionId])
+  @@index([userId])
+  @@index([questionId])
 }
 
 enum Role {

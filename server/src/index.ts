@@ -28,6 +28,41 @@ const port = process.env.PORT || 4000;
 // Initialize WebSocket service
 const webSocketService = new WebSocketService(server);
 
+// AGGRESSIVE CORS SOLUTION - Set headers before any middleware
+app.use((req, res, next) => {
+  // Always set CORS headers for every request
+  const origin = req.headers.origin;
+  
+  // Log everything for debugging
+  console.log(`=== REQUEST START ===`);
+  console.log(`${req.method} ${req.path}`);
+  console.log(`Origin: ${origin || 'none'}`);
+  console.log(`User-Agent: ${req.headers['user-agent'] || 'none'}`);
+  console.log(`All headers:`, JSON.stringify(req.headers, null, 2));
+  
+  // Set CORS headers for ALL requests
+  if (origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  
+  // Handle preflight requests immediately
+  if (req.method === 'OPTIONS') {
+    console.log(`=== HANDLING OPTIONS PREFLIGHT ===`);
+    console.log(`Path: ${req.path}`);
+    console.log(`Setting CORS headers and ending preflight`);
+    
+    // Set status and end response
+    res.status(200).end();
+    return;
+  }
+  
+  console.log(`=== REQUEST CONTINUING ===`);
+  next();
+});
+
 // Configure CORS to allow requests from frontend
 const corsOptions = {
   origin: function (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
@@ -64,31 +99,6 @@ const corsOptions = {
 console.log('CORS Origins:', corsOptions.origin);
 app.use(cors(corsOptions));
 
-// Ensure CORS headers are set for all responses
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  
-  // Log all requests for debugging
-  console.log(`${req.method} ${req.path} - Origin: ${origin || 'none'}`);
-  console.log('Request headers:', JSON.stringify(req.headers, null, 2));
-  
-  if (origin) {
-    res.header('Access-Control-Allow-Origin', origin);
-  }
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  
-  // Handle preflight requests immediately
-  if (req.method === 'OPTIONS') {
-    console.log('Handling OPTIONS preflight request for:', req.path);
-    console.log('Setting CORS headers for preflight response');
-    res.status(200).end();
-    return;
-  }
-  
-  next();
-});
 app.use(express.json());
 
 // Debug middleware to log incoming requests
@@ -108,6 +118,19 @@ app.use('/api/v1/tests', testRoutes);
 app.use('/api/v1/monitoring', monitoringRoutes);
 app.use('/api/v1/dsa', dsaProgressRoutes);
 
+// Explicit OPTIONS handler for auth endpoints
+app.options('/api/v1/auth/*', (req, res) => {
+  console.log('=== EXPLICIT OPTIONS HANDLER FOR AUTH ===');
+  const origin = req.headers.origin;
+  if (origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.status(200).end();
+});
+
 // Initialize all scheduled jobs
 initializeScheduledJobs();
 
@@ -123,6 +146,16 @@ app.get('/api/v1/cors-test', (req, res) => {
     timestamp: new Date().toISOString(),
     origin: req.headers.origin,
     method: req.method
+  });
+});
+
+// Health check endpoint (no CORS required)
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+    cors_enabled: true
   });
 });
 

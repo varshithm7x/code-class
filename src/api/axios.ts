@@ -4,7 +4,7 @@ import axios from 'axios';
 // Environment Configuration:
 // - VITE_API_URL should be set in .env.local or .env files
 // - For local development: VITE_API_URL=http://localhost:4000/api/v1 in .env file
-// - For production: VITE_API_URL=https://code-class.up.railway.app/api/v1 in .env file
+// - For production: VITE_API_URL=https://codeclass.up.railway.app/api/v1 in .env file
 
 // Ensure the base URL always includes /api/v1
 const getBaseURL = () => {
@@ -23,7 +23,7 @@ const getBaseURL = () => {
   }
   
   // Default fallback
-  return 'https://code-class.up.railway.app/api/v1';
+  return 'https://codeclass.up.railway.app/api/v1';
 };
 
 const api = axios.create({

@@ -29,7 +29,7 @@ export class WebSocketService {
         origin: [
           'http://localhost:8080',
           'http://localhost:3000',
-          'https://code-class.up.railway.app',
+          'https://codeclass.up.railway.app',
           'https://code-class-eight.vercel.app'
         ],
         credentials: true

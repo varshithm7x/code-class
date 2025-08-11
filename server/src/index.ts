@@ -30,38 +30,60 @@ const webSocketService = new WebSocketService(server);
 
 // Configure CORS to allow requests from frontend
 const corsOptions = {
-  origin: [
-    'http://localhost:8080', // Local development
-    'http://localhost:3000', // Alternative local port
-    'https://code-class.up.railway.app', // Railway backend (same domain)
-    'https://code-class-eight.vercel.app', // Deployed frontend on Vercel
-    // Add your deployed frontend URL here when you deploy it
-    ...(process.env.ADDITIONAL_CORS_ORIGINS ? process.env.ADDITIONAL_CORS_ORIGINS.split(',') : [])
-  ],
+  origin: function (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    const allowedOrigins = [
+      'http://localhost:8080',
+      'http://localhost:3000',
+      'https://code-class.up.railway.app',
+      'https://code-class-eight.vercel.app'
+    ];
+    
+    // Add any additional origins from environment variable
+    if (process.env.ADDITIONAL_CORS_ORIGINS) {
+      allowedOrigins.push(...process.env.ADDITIONAL_CORS_ORIGINS.split(','));
+    }
+    
+    console.log('CORS check for origin:', origin, 'Allowed origins:', allowedOrigins);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
   preflightContinue: false,
-  optionsSuccessStatus: 200 // some legacy browsers (IE11, various SmartTVs) choke on 204
+  optionsSuccessStatus: 200
 };
 
 console.log('CORS Origins:', corsOptions.origin);
 app.use(cors(corsOptions));
 
-// Additional CORS headers for Railway deployment
+// Ensure CORS headers are set for all responses
 app.use((req, res, next) => {
-  // Log CORS requests for debugging
-  console.log(`CORS Request: ${req.method} ${req.path} from ${req.headers.origin}`);
+  const origin = req.headers.origin;
   
-  res.header('Access-Control-Allow-Origin', req.headers.origin);
+  // Log all requests for debugging
+  console.log(`${req.method} ${req.path} - Origin: ${origin || 'none'}`);
+  console.log('Request headers:', JSON.stringify(req.headers, null, 2));
+  
+  if (origin) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
   res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
   
-  // Handle preflight requests
+  // Handle preflight requests immediately
   if (req.method === 'OPTIONS') {
-    console.log('Handling OPTIONS preflight request');
-    res.status(204).end();
+    console.log('Handling OPTIONS preflight request for:', req.path);
+    console.log('Setting CORS headers for preflight response');
+    res.status(200).end();
     return;
   }
   
@@ -86,16 +108,22 @@ app.use('/api/v1/tests', testRoutes);
 app.use('/api/v1/monitoring', monitoringRoutes);
 app.use('/api/v1/dsa', dsaProgressRoutes);
 
-// Handle OPTIONS requests for all routes
-app.options('*', (req, res) => {
-  res.status(204).end();
-});
-
 // Initialize all scheduled jobs
 initializeScheduledJobs();
 
 app.get('/', (req, res) => {
   res.send('Hello from the backend! Milestone 1 Core Infrastructure Ready.');
+});
+
+// CORS test endpoint
+app.get('/api/v1/cors-test', (req, res) => {
+  console.log('CORS test endpoint hit');
+  res.json({ 
+    message: 'CORS is working!', 
+    timestamp: new Date().toISOString(),
+    origin: req.headers.origin,
+    method: req.method
+  });
 });
 
 server.listen(port, () => {

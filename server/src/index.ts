@@ -15,7 +15,8 @@ import analyticsRoutes from './api/analytics';
 import studentRoutes from './api/students';
 import announcementRoutes from './api/announcements';
 import testRoutes from './api/tests/tests.routes';                                                                                                      
-import monitoringRoutes from './api/monitoring/monitoring.routes';                                                                                                      
+import monitoringRoutes from './api/monitoring/monitoring.routes';
+import { dsaProgressRoutes } from './api/dsa-progress';                                                                                                      
 
 import { initializeScheduledJobs } from './cron';
 import { WebSocketService } from './services/websocket.service';
@@ -35,14 +36,16 @@ const corsOptions = {
     'https://code-class.up.railway.app', // Railway backend (same domain)
     'https://code-class-eight.vercel.app', // Deployed frontend on Vercel
     // Add your deployed frontend URL here when you deploy it
+    ...(process.env.ADDITIONAL_CORS_ORIGINS ? process.env.ADDITIONAL_CORS_ORIGINS.split(',') : [])
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
   preflightContinue: false,
-  optionsSuccessStatus: 204
+  optionsSuccessStatus: 200 // some legacy browsers (IE11, various SmartTVs) choke on 204
 };
 
+console.log('CORS Origins:', corsOptions.origin);
 app.use(cors(corsOptions));
 
 // Additional CORS headers for Railway deployment
@@ -66,6 +69,12 @@ app.use((req, res, next) => {
 });
 app.use(express.json());
 
+// Debug middleware to log incoming requests
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.path} - Origin: ${req.headers.origin || 'none'}`);
+  next();
+});
+
 // API Routes
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/classes', classRoutes);
@@ -75,6 +84,7 @@ app.use('/api/v1/students', studentRoutes);
 app.use('/api/v1/announcements', announcementRoutes);
 app.use('/api/v1/tests', testRoutes);
 app.use('/api/v1/monitoring', monitoringRoutes);
+app.use('/api/v1/dsa', dsaProgressRoutes);
 
 // Handle OPTIONS requests for all routes
 app.options('*', (req, res) => {

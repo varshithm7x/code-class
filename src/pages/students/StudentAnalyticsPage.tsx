@@ -175,7 +175,7 @@ export const StudentAnalyticsPage: React.FC = () => {
                     <div className="text-sm text-muted-foreground mt-1">Average Score</div>
                   </div>
                   <div className="text-center p-4 rounded-lg bg-muted">
-                    <div className="text-3xl font-bold text-purple-600">
+                    <div className="text-3xl font-bold text-gray-600 dark:text-gray-300">
                       {analytics.performanceMetrics.completionRate.toFixed(1)}%
                     </div>
                     <div className="text-sm text-muted-foreground mt-1">Completion Rate</div>
@@ -187,7 +187,7 @@ export const StudentAnalyticsPage: React.FC = () => {
                     <div className="text-sm text-muted-foreground mt-1">Time Efficiency</div>
                   </div>
                   <div className="text-center p-4 rounded-lg bg-muted">
-                    <div className="text-3xl font-bold text-indigo-600">
+                    <div className="text-3xl font-bold text-gray-600 dark:text-gray-300">
                       {analytics.performanceMetrics.consistencyScore.toFixed(1)}
                     </div>
                     <div className="text-sm text-muted-foreground mt-1">Consistency Score</div>

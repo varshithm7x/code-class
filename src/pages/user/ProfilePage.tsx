@@ -91,17 +91,17 @@ const ProfilePage: React.FC = () => {
 
   const getLeetCodeStatusColor = (status: string) => {
     switch (status) {
-      case 'LINKED': return 'text-green-600';
-      case 'EXPIRED': return 'text-yellow-600';
-      default: return 'text-gray-600';
+      case 'LINKED': return 'text-green-600 dark:text-green-400';
+      case 'EXPIRED': return 'text-yellow-600 dark:text-yellow-400';
+      default: return 'text-gray-600 dark:text-gray-400';
     }
   };
 
   const getLeetCodeStatusIcon = (status: string) => {
     switch (status) {
-      case 'LINKED': return <CheckCircle className="h-4 w-4 text-green-600" />;
-      case 'EXPIRED': return <Clock className="h-4 w-4 text-yellow-600" />;
-      default: return <Unlink className="h-4 w-4 text-gray-600" />;
+      case 'LINKED': return <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />;
+      case 'EXPIRED': return <Clock className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />;
+      default: return <Unlink className="h-4 w-4 text-gray-600 dark:text-gray-400" />;
     }
   };
 
@@ -169,9 +169,9 @@ const ProfilePage: React.FC = () => {
             </CardHeader>
             <CardContent>
               {/* Current Status */}
-              <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+              <div className="mb-6 p-4 bg-gray-50 dark:bg-black rounded-lg">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-medium text-sm">Connection Status</h3>
+                  <h3 className="font-medium text-sm text-gray-900 dark:text-gray-100">Connection Status</h3>
                   <div className="flex items-center gap-2">
                     {getLeetCodeStatusIcon((user as any)?.leetcodeCookieStatus || 'NOT_LINKED')}
                     <span className={`text-sm font-medium ${getLeetCodeStatusColor((user as any)?.leetcodeCookieStatus || 'NOT_LINKED')}`}>
@@ -184,9 +184,9 @@ const ProfilePage: React.FC = () => {
 
               {/* Success/Error Messages */}
               {leetCodeSuccess && (
-                <Alert className="mb-6 bg-green-50 border-green-200">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <AlertDescription className="text-green-700">{leetCodeSuccess}</AlertDescription>
+                <Alert className="mb-6 bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
+                  <CheckCircle className="h-4 w-4 text-green-500 dark:text-green-400" />
+                  <AlertDescription className="text-green-700 dark:text-green-300">{leetCodeSuccess}</AlertDescription>
                 </Alert>
               )}
 
@@ -199,9 +199,9 @@ const ProfilePage: React.FC = () => {
 
               {/* Cookie Form */}
               <div className="space-y-4">
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <h4 className="font-medium text-blue-900 mb-2">How to get your LeetCode session cookie:</h4>
-                  <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
+                <div className="bg-gray-50 dark:bg-gray-800/20 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                  <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">How to get your LeetCode session cookie:</h4>
+                  <ol className="text-sm text-blue-800 dark:text-blue-300 space-y-1 list-decimal list-inside">
                     <li>Open your web browser and log in to your LeetCode account</li>
                     <li>Open Developer Tools (F12 or Ctrl+Shift+I)</li>
                     <li>Go to the "Application" (Chrome) or "Storage" (Firefox) tab</li>
@@ -275,9 +275,9 @@ const ProfilePage: React.FC = () => {
             </CardHeader>
             <CardContent>
               {successMessage && (
-                <Alert className="mb-6 bg-green-50 border-green-200">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <AlertDescription className="text-green-700">{successMessage}</AlertDescription>
+                <Alert className="mb-6 bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
+                  <CheckCircle className="h-4 w-4 text-green-500 dark:text-green-400" />
+                  <AlertDescription className="text-green-700 dark:text-green-300">{successMessage}</AlertDescription>
                 </Alert>
               )}
 

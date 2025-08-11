@@ -84,7 +84,7 @@ const ViolationMonitoringPanel: React.FC<ViolationMonitoringPanelProps> = ({
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
-              <UserIcon className="h-5 w-5 text-blue-600" />
+              <UserIcon className="h-5 w-5 text-gray-600 dark:text-gray-300" />
               <div>
                 <p className="text-sm font-medium">Students Flagged</p>
                 <p className="text-2xl font-bold">
@@ -123,9 +123,9 @@ const ViolationMonitoringPanel: React.FC<ViolationMonitoringPanelProps> = ({
         <CardContent>
           {violations.length === 0 ? (
             <div className="text-center py-8">
-              <ShieldIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500">No violations detected</p>
-              <p className="text-sm text-gray-400">Students are following test guidelines</p>
+              <ShieldIcon className="h-12 w-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+              <p className="text-gray-500 dark:text-gray-400">No violations detected</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500">Students are following test guidelines</p>
             </div>
           ) : (
             <Table>

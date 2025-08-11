@@ -191,7 +191,7 @@ const GeminiKeySection: React.FC<GeminiKeySectionProps> = ({ onKeyUpdate }) => {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-4">
+        <div className="bg-muted border border-border rounded-lg p-4">
           <div className="flex items-start gap-3">
             <Lightbulb className="h-5 w-5 text-purple-600 mt-1 flex-shrink-0" />
             <div>

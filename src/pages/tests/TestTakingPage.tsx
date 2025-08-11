@@ -654,7 +654,7 @@ console.log("Hello World");`
   return (
     <div className="h-screen flex flex-col">
       {/* Header */}
-      <div className="bg-white border-b p-4 flex items-center justify-between">
+      <div className="bg-white dark:bg-black border-b border-gray-200 dark:border-gray-800 p-4 flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold">{test.title}</h1>
           <p className="text-sm text-gray-600">
@@ -671,7 +671,7 @@ console.log("Hello World");`
           <Button 
             onClick={handleFinalSubmit} 
             disabled={hasSubmitted}
-            className="bg-green-600 hover:bg-green-700"
+            className="bg-gray-600 hover:bg-gray-700"
           >
             <SendIcon className="h-4 w-4 mr-2" />
             {hasSubmitted ? 'Submitted' : 'Final Submit'}
@@ -759,16 +759,16 @@ console.log("Hello World");`
                 <div>
                   <h3 className="font-semibold mb-2">Sample Test Cases:</h3>
                   {(currentProblem.testCases as Array<{id: string; input: string; expectedOutput: string; isPublic: boolean}>).map((testCase, index) => (
-                    <div key={testCase.id} className="mb-4 p-3 bg-gray-50 rounded">
-                      <h4 className="font-medium mb-1">Test Case {index + 1}:</h4>
+                    <div key={testCase.id} className="mb-4 p-3 bg-gray-50 dark:bg-black rounded">
+                      <h4 className="font-medium mb-1 text-gray-900 dark:text-gray-100">Test Case {index + 1}:</h4>
                       <div className="text-sm">
                         <div className="mb-1">
-                          <strong>Input:</strong>
-                          <pre className="mt-1 p-2 bg-white rounded border text-xs">{testCase.input}</pre>
+                          <strong className="text-gray-900 dark:text-gray-100">Input:</strong>
+                          <pre className="mt-1 p-2 bg-white dark:bg-black rounded border border-gray-200 dark:border-gray-700 text-xs text-gray-900 dark:text-gray-100">{testCase.input}</pre>
                         </div>
                         <div>
-                          <strong>Expected Output:</strong>
-                          <pre className="mt-1 p-2 bg-white rounded border text-xs">{testCase.expectedOutput}</pre>
+                          <strong className="text-gray-900 dark:text-gray-100">Expected Output:</strong>
+                          <pre className="mt-1 p-2 bg-white dark:bg-black rounded border border-gray-200 dark:border-gray-700 text-xs text-gray-900 dark:text-gray-100">{testCase.expectedOutput}</pre>
                         </div>
                       </div>
                     </div>
@@ -782,7 +782,7 @@ console.log("Hello World");`
         {/* Right Panel - Code Editor */}
         <div className="w-1/2 flex flex-col">
           {/* Editor Header */}
-          <div className="p-4 bg-gray-50 border-b space-y-3">
+          <div className="p-4 bg-gray-50 dark:bg-black border-b border-gray-200 dark:border-gray-800 space-y-3">
             {/* Code Mode Toggle */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
@@ -902,9 +902,9 @@ console.log("Hello World");`
 
           {/* Execution Results */}
           {executionResults && (
-            <div className="p-4 border-t bg-gray-50 max-h-80 overflow-y-auto">
+            <div className="p-4 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-black max-h-80 overflow-y-auto">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="font-semibold">Test Results:</h3>
+                <h3 className="font-semibold text-gray-900 dark:text-gray-100">Test Results:</h3>
                 {executionResults.multiTestUsed && (
                   <Badge variant="outline" className="text-xs">
                     <ZapIcon className="h-3 w-3 mr-1" />
@@ -922,8 +922,8 @@ console.log("Hello World");`
                 <div className="space-y-2">
                   {/* Multi-test summary */}
                   {executionResults.multiTestUsed && (
-                    <div className="p-2 bg-green-50 rounded border border-green-200">
-                      <div className="flex items-center gap-2 text-sm text-green-700">
+                    <div className="p-2 bg-green-50 dark:bg-gray-800/20 rounded border border-gray-200 dark:border-gray-700">
+                      <div className="flex items-center gap-2 text-sm text-green-700 dark:text-green-300">
                         <ZapIcon className="h-4 w-4" />
                         <span className="font-medium">
                           Multi-Test Optimization: {executionResults.passedTestCases}/{executionResults.totalTestCases} passed
@@ -935,7 +935,7 @@ console.log("Hello World");`
 
                   {/* Regular results display */}
                   {executionResults.results?.map((result, index) => (
-                    <div key={index} className="p-2 bg-white rounded border">
+                    <div key={index} className="p-2 bg-white dark:bg-black rounded border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100">
                       <div className="flex items-center gap-2 mb-1">
                         {result.passed ? (
                           <CheckCircleIcon className="h-4 w-4 text-green-500" />
@@ -969,7 +969,7 @@ console.log("Hello World");`
                       <h4 className="font-medium text-sm mb-2">Detailed Results:</h4>
                       <div className="space-y-1 max-h-32 overflow-y-auto">
                         {executionResults.testCaseResults.map((result, index) => (
-                          <div key={index} className="flex items-center gap-2 text-xs p-1 bg-white rounded">
+                          <div key={index} className="flex items-center gap-2 text-xs p-1 bg-white dark:bg-black rounded border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100">
                             {result.passed ? (
                               <CheckCircleIcon className="h-3 w-3 text-green-500" />
                             ) : (

@@ -15,7 +15,7 @@ const AuthLayout: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-brand-blue/5 to-brand-teal/5 flex flex-col">
+    <div className="min-h-screen bg-background dark:bg-background flex flex-col">
       <div className="flex min-h-full flex-1 flex-col justify-center px-6 py-12 lg:px-8">
         <div className="sm:mx-auto sm:w-full sm:max-w-md">
           <div className="flex justify-center">
@@ -23,12 +23,12 @@ const AuthLayout: React.FC = () => {
               <span className="text-white text-xl font-bold">CC</span>
             </div>
           </div>
-          <h2 className="mt-6 text-center text-2xl font-bold leading-9 tracking-tight text-gray-900">
+          <h2 className="mt-6 text-center text-2xl font-bold leading-9 tracking-tight text-gray-900 dark:text-gray-100">
             Coding Classroom
           </h2>
         </div>
         <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-[480px]">
-          <div className="bg-white px-6 py-12 shadow sm:rounded-lg sm:px-12">
+          <div className="bg-white dark:bg-black px-6 py-12 shadow border border-gray-200 dark:border-gray-800 sm:rounded-lg sm:px-12">
             <Outlet />
           </div>
         </div>

@@ -8,9 +8,9 @@ interface PieDataItem {
 }
 
 interface PieChartProps {
-  data: PieDataItem[];
-  nameKey?: string; // Legacy support
-  dataKey?: string; // Legacy support
+  data: any[]; // More flexible to accept various data structures
+  nameKey?: string; // Legacy support - key for name field
+  dataKey?: string; // Legacy support - key for value field
   title?: string;
   colors?: string[];
   height?: number;
@@ -26,14 +26,14 @@ const PieChart: React.FC<PieChartProps> = ({
 }) => {
   // Transform data if it's in the new format with embedded colors
   const chartData = data.map(item => ({
-    name: item.name || item[nameKey as keyof typeof item],
-    value: item.value || item[dataKey as keyof typeof item],
+    name: item.name || item[nameKey] || item.difficulty || item.label,
+    value: item.value || item[dataKey] || item.count || item.amount,
     color: item.color
   }));
 
   return (
-    <div className="bg-white p-4 rounded-lg shadow-sm">
-      {title && <h3 className="text-lg font-semibold mb-4">{title}</h3>}
+    <div className="bg-white dark:bg-black p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-800">
+      {title && <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">{title}</h3>}
       <div style={{ height: `${height}px` }}>
         <ResponsiveContainer width="100%" height="100%">
           <RechartsPieChart>
@@ -63,13 +63,14 @@ const PieChart: React.FC<PieChartProps> = ({
             <Tooltip
               formatter={(value) => [`${value}`, '']}
               contentStyle={{ 
-                backgroundColor: 'white', 
-                border: '1px solid #f0f0f0',
+                backgroundColor: 'var(--background)', 
+                border: '1px solid var(--border)',
                 borderRadius: '6px',
-                boxShadow: '0 2px 5px rgba(0,0,0,0.1)' 
+                boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
+                color: 'var(--foreground)'
               }}
             />
-            <Legend verticalAlign="bottom" height={36} />
+            <Legend verticalAlign="bottom" height={36} wrapperStyle={{ color: 'var(--foreground)' }} />
           </RechartsPieChart>
         </ResponsiveContainer>
       </div>

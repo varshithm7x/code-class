@@ -199,7 +199,7 @@ const ProblemViewer: React.FC<ProblemViewerProps> = ({
                         {example.input && (
                           <div>
                             <div className="text-sm font-medium text-gray-700 mb-1">Input:</div>
-                            <pre className="bg-white p-2 rounded text-sm border">
+                            <pre className="bg-white dark:bg-gray-900 p-2 rounded text-sm border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100">
                               {example.input}
                             </pre>
                           </div>
@@ -207,7 +207,7 @@ const ProblemViewer: React.FC<ProblemViewerProps> = ({
                         
                         <div>
                           <div className="text-sm font-medium text-gray-700 mb-1">Output:</div>
-                          <pre className="bg-white p-2 rounded text-sm border">
+                          <pre className="bg-white dark:bg-gray-900 p-2 rounded text-sm border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100">
                             {example.output}
                           </pre>
                         </div>
@@ -241,7 +241,7 @@ const ProblemViewer: React.FC<ProblemViewerProps> = ({
                           <div className="text-sm font-medium text-blue-700 mb-1">
                             Test Case {index + 1} - Input:
                           </div>
-                          <pre className="bg-white p-2 rounded text-sm border">
+                          <pre className="bg-white dark:bg-gray-900 p-2 rounded text-sm border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100">
                             {testCase.input}
                           </pre>
                         </div>
@@ -250,7 +250,7 @@ const ProblemViewer: React.FC<ProblemViewerProps> = ({
                           <div className="text-sm font-medium text-blue-700 mb-1">
                             Expected Output:
                           </div>
-                          <pre className="bg-white p-2 rounded text-sm border">
+                          <pre className="bg-white dark:bg-gray-900 p-2 rounded text-sm border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100">
                             {testCase.expectedOutput}
                           </pre>
                         </div>
@@ -303,7 +303,7 @@ const ProblemViewer: React.FC<ProblemViewerProps> = ({
                       </span>
                     </div>
                     
-                    <div className="text-xs text-gray-500">
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
                       {new Date(submission.submissionTime).toLocaleTimeString()}
                     </div>
                   </div>

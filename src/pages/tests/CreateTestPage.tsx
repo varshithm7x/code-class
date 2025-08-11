@@ -611,18 +611,18 @@ const CreateTestPage: React.FC = () => {
                   
                   <div className={`p-4 rounded-lg ${
                     formData.startTime && formData.endTime && new Date(formData.endTime) <= new Date(formData.startTime)
-                      ? 'bg-red-50 border border-red-200'
-                      : 'bg-blue-50'
+                      ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
+                      : 'bg-gray-50 dark:bg-gray-800/20 border border-gray-200 dark:border-gray-700'
                   }`}>
                     <div className={`flex items-center gap-2 ${
                       formData.startTime && formData.endTime && new Date(formData.endTime) <= new Date(formData.startTime)
-                        ? 'text-red-800'
-                        : 'text-blue-800'
+                        ? 'text-red-800 dark:text-red-300'
+                        : 'text-blue-800 dark:text-blue-300'
                     }`}>
                       <Clock className="h-4 w-4" />
                       <span className="font-medium">Test Schedule</span>
                       {formData.startTime && formData.endTime && new Date(formData.endTime) <= new Date(formData.startTime) && (
-                        <span className="text-xs bg-red-200 text-red-800 px-2 py-1 rounded">⚠️ Invalid Time Range</span>
+                        <span className="text-xs bg-red-200 dark:bg-red-800 text-red-800 dark:text-red-200 px-2 py-1 rounded">⚠️ Invalid Time Range</span>
                       )}
                     </div>
                     <p className={`text-sm mt-1 ${
@@ -662,13 +662,13 @@ const CreateTestPage: React.FC = () => {
 
             <TabsContent value="problems" className="space-y-6">
               {/* LeetCode Import Section */}
-              <Card className="border-dashed border-2 border-orange-200 bg-orange-50/50">
+              <Card className="border-dashed border-2 border-orange-200 dark:border-orange-800 bg-orange-50/50 dark:bg-orange-900/20">
                 <CardHeader>
                   <div className="flex items-center gap-2">
-                    <Link className="h-5 w-5 text-orange-600" />
-                    <CardTitle className="text-lg text-orange-800">Import from LeetCode</CardTitle>
+                    <Link className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                    <CardTitle className="text-lg text-orange-800 dark:text-orange-200">Import from LeetCode</CardTitle>
                   </div>
-                  <CardDescription className="text-orange-700">
+                  <CardDescription className="text-orange-700 dark:text-orange-300">
                     Paste a LeetCode problem URL to automatically import problem details
                   </CardDescription>
                 </CardHeader>
@@ -862,7 +862,7 @@ const CreateTestPage: React.FC = () => {
         {/* Sidebar */}
         <div className="space-y-4">
           {/* Judge0 Pool Status */}
-          <Card className="border-blue-200 bg-blue-50/50">
+          <Card className="border-gray-200 bg-gray-50/50">
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center gap-2">
                 <Terminal className="h-5 w-5 text-blue-600" />

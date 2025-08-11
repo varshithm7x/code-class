@@ -55,9 +55,9 @@ api.interceptors.response.use(
     if (error.response && error.response.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      // Redirect to login if unauthorized
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
+      // Redirect to homepage if unauthorized
+      if (window.location.pathname !== '/') {
+        window.location.href = '/';
       }
     }
     return Promise.reject(error);

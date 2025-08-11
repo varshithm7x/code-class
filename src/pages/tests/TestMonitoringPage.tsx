@@ -366,7 +366,7 @@ const TestMonitoringPage: React.FC = () => {
             </div>
             <div className="flex gap-2">
               {!test.isActive ? (
-                <Button onClick={handleStartTest} className="bg-green-600 hover:bg-green-700">
+                <Button onClick={handleStartTest} className="bg-gray-600 hover:bg-gray-700">
                   <PlayIcon className="h-4 w-4 mr-2" />
                   Start Test
                 </Button>
@@ -407,7 +407,7 @@ const TestMonitoringPage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Submitted</p>
-                  <p className="text-2xl font-bold text-green-600">{submittedCount}</p>
+                  <p className="text-2xl font-bold text-gray-600">{submittedCount}</p>
                 </div>
                 <CheckCircleIcon className="h-8 w-8 text-green-500" />
               </div>
@@ -646,12 +646,12 @@ const TestMonitoringPage: React.FC = () => {
               <div className="space-y-4">
                 {students.filter(s => s.submissions.length > 0).map((student) => (
                   <div key={student.id} className="border rounded p-4">
-                    <div className="font-medium mb-2">{student.name}</div>
+                    <div className="font-medium mb-2 text-gray-900 dark:text-gray-100">{student.name}</div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                       {student.submissions.map((submission) => (
-                        <div key={submission.id} className="p-2 bg-gray-50 rounded">
+                        <div key={submission.id} className="p-2 bg-gray-50 dark:bg-black rounded">
                           <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium">
+                            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                               Problem {test.problems.findIndex(p => p.id === submission.problemId) + 1}
                             </span>
                             <Badge 

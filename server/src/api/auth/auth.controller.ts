@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import prisma from '../../lib/prisma';
 import { Role } from '@prisma/client';
+import { sanitizeUser } from '../../utils/user-sanitization';
 
 export const signup = async (req: Request, res: Response): Promise<void> => {
   const { name, email, password, role } = req.body;
@@ -40,7 +41,9 @@ export const signup = async (req: Request, res: Response): Promise<void> => {
     });
     console.log('JWT token generated successfully');
 
-    res.status(201).json({ token, user });
+    // Sanitize user data before sending to frontend
+    const sanitizedUser = sanitizeUser(user);
+    res.status(201).json({ token, user: sanitizedUser });
   } catch (error) {
     console.error('Error in signup:', error);
     if (error instanceof Error) {
@@ -75,7 +78,9 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       expiresIn: '1d',
     });
 
-    res.status(200).json({ token, user });
+    // Sanitize user data before sending to frontend
+    const sanitizedUser = sanitizeUser(user);
+    res.status(200).json({ token, user: sanitizedUser });
   } catch (error) {
     res.status(500).json({ message: 'Error logging in', error });
   }

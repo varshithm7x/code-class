@@ -3,6 +3,7 @@ import prisma from '../../lib/prisma';
 import { LeetCode } from 'leetcode-query';
 import { Credential } from 'leetcode-query';
 import { fetchAuthenticatedStats } from '../../services/enhanced-leetcode.service';
+import { sanitizeUser } from '../../utils/user-sanitization';
 
 export const getProfile = async (req: Request, res: Response): Promise<void> => {
   // @ts-ignore
@@ -34,7 +35,9 @@ export const getProfile = async (req: Request, res: Response): Promise<void> => 
       return;
     }
 
-    res.status(200).json(user);
+    // Sanitize user data before sending to frontend
+    const sanitizedUser = sanitizeUser(user);
+    res.status(200).json(sanitizedUser);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching profile', error });
   }
@@ -130,11 +133,13 @@ export const linkLeetCodeCredentials = async (req: Request, res: Response): Prom
       console.log(`📈 Stats populated: Total=${leetcodeStats.totalSolved}, Easy=${leetcodeStats.easySolved}, Medium=${leetcodeStats.mediumSolved}, Hard=${leetcodeStats.hardSolved}`);
     }
 
+    // Sanitize user data before sending to frontend
+    const sanitizedUser = sanitizeUser(updatedUser);
     res.status(200).json({ 
       message: leetcodeStats 
         ? `LeetCode account linked successfully! Found ${leetcodeStats.totalSolved} solved problems.`
         : 'LeetCode account linked successfully! Statistics will be synced shortly.',
-      user: updatedUser
+      user: sanitizedUser
     });
     
   } catch (error: any) {
@@ -418,9 +423,11 @@ export const linkHackerRankCredentials = async (req: Request, res: Response): Pr
 
     console.log(`✅ Successfully linked HackerRank account for user ${updatedUser.email}`);
 
+    // Sanitize user data before sending to frontend
+    const sanitizedUser = sanitizeUser(updatedUser);
     res.status(200).json({ 
       message: 'HackerRank account linked successfully! Submissions will be synced shortly.',
-      user: updatedUser
+      user: sanitizedUser
     });
     
   } catch (error: any) {

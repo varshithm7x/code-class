@@ -208,7 +208,7 @@ const AssignmentDetailsPage: React.FC = () => {
 
                 {/* Problems List */}
                 <h3 className="font-semibold mb-4">Problems</h3>
-                <ProblemCompletionList problems={studentProblems} />
+                <ProblemCompletionList problems={studentProblems} dueDate={(assignment as any).dueDate} />
               </>
             )}
           </div>

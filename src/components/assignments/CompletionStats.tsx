@@ -11,6 +11,7 @@ interface CompletionStatsProps {
         userId: string;
         completed: boolean;
         submissionTime?: string;
+        isLate?: boolean;
         user: {
           id: string;
           name: string;
@@ -18,6 +19,7 @@ interface CompletionStatsProps {
         };
       }>;
     }>;
+    dueDate?: string;
   };
 }
 
@@ -64,8 +66,20 @@ const CompletionStats: React.FC<CompletionStatsProps> = ({ assignment }) => {
     }
   });
 
+  // Count late submissions (completed after dueDate)
+  let lateCount = 0;
+  const due = assignment?.dueDate ? new Date(assignment.dueDate).getTime() : null;
+  assignment.problems?.forEach(problem => {
+    problem.submissions.forEach(submission => {
+      if (submission.completed) {
+        const isLate = submission.isLate ?? (due && submission.submissionTime ? (new Date(submission.submissionTime).getTime() > due) : false);
+        if (isLate) lateCount++;
+      }
+    });
+  });
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">All Questions Completed</CardTitle>
@@ -101,6 +115,19 @@ const CompletionStats: React.FC<CompletionStatsProps> = ({ assignment }) => {
           <div className="text-2xl font-bold text-gray-600">{notStarted}</div>
           <p className="text-xs text-muted-foreground">
             {notStarted === 1 ? 'student has' : 'students have'} not started yet
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Late Submissions</CardTitle>
+          <Clock className="h-4 w-4 text-orange-600" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold text-orange-600">{lateCount}</div>
+          <p className="text-xs text-muted-foreground">
+            {lateCount === 1 ? 'submission was' : 'submissions were'} completed after the deadline
           </p>
         </CardContent>
       </Card>

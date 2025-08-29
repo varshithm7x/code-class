@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { LeaderboardEntry } from '../../types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
-import { Award, ChevronDown, ChevronUp, Code, Trophy } from 'lucide-react';
+import { Award, ChevronDown, ChevronUp, Code, Trophy, Info } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { cn } from '../../lib/utils';
@@ -148,7 +148,14 @@ const LeaderboardTable: React.FC<LeaderboardTableProps> = ({ entries }) => {
             </TableCell>
             <TableCell>
               <div>
-                <div className="font-medium">{entry.name}</div>
+                <div className="font-medium flex items-center gap-2">
+                  {entry.name}
+                  {typeof (entry as any).lateCount === 'number' && (entry as any).lateCount > 0 && (
+                    <span className="text-xs text-orange-600" title={`Late ${ (entry as any).lateCount }`}>
+                      (Late {(entry as any).lateCount})
+                    </span>
+                  )}
+                </div>
                 {entry.leetcodeUsername && (
                   <div className="text-sm text-muted-foreground">
                     @{entry.leetcodeUsername}

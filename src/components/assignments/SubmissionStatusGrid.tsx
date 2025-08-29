@@ -21,6 +21,7 @@ interface SubmissionStatusGridProps {
         userId: string;
         completed: boolean;
         submissionTime?: string;
+        isLate?: boolean;
         user: {
           id: string;
           name: string;
@@ -35,6 +36,7 @@ interface SubmissionStatusGridProps {
         email: string;
       }>;
     };
+    dueDate?: string;
   };
   onRefresh?: () => void;
 }
@@ -134,7 +136,8 @@ const SubmissionStatusGrid: React.FC<SubmissionStatusGridProps> = ({ assignment,
     const submission = problem.submissions.find(s => s?.userId === studentId);
     return {
       completed: submission?.completed || false,
-      submissionTime: submission?.submissionTime
+      submissionTime: submission?.submissionTime,
+      isLate: submission?.isLate ?? (submission?.submissionTime && assignment?.dueDate ? (new Date(submission.submissionTime).getTime() > new Date(assignment.dueDate!).getTime()) : false)
     };
   };
 
@@ -246,20 +249,25 @@ const SubmissionStatusGrid: React.FC<SubmissionStatusGridProps> = ({ assignment,
                     </TableCell>
                     
                     {assignment.problems.map((problem) => {
-                      const { completed, submissionTime } = getStudentCompletion(student.id, problem.id);
+                      const { completed, submissionTime, isLate } = getStudentCompletion(student.id, problem.id);
                       
                       return (
                         <TableCell key={`${student.id}-${problem.id}`} className="text-center">
-                          <div className="flex items-center justify-center">
+                          <div className="flex flex-col items-center justify-center gap-1">
                             {completed ? (
-                              <div className="flex flex-col items-center gap-1">
-                                <CheckCircle2 className="h-5 w-5 text-green-500" />
-                                {submissionTime && (
-                                  <span className="text-xs text-muted-foreground">
-                                    {new Date(submissionTime).toLocaleDateString()}
-                                  </span>
-                                )}
-                              </div>
+                              <>
+                                <CheckCircle2 className={`h-5 w-5 ${isLate ? 'text-yellow-600' : 'text-green-500'}`} />
+                                <div className="flex items-center gap-1">
+                                  {submissionTime && (
+                                    <span className="text-xs text-muted-foreground">
+                                      {new Date(submissionTime).toLocaleDateString()}
+                                    </span>
+                                  )}
+                                  {isLate && (
+                                    <Badge className="bg-yellow-600 text-white">Late</Badge>
+                                  )}
+                                </div>
+                              </>
                             ) : (
                               <XCircle className="h-5 w-5 text-red-500" />
                             )}

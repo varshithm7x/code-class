@@ -8,6 +8,7 @@ import { Button } from '../../components/ui/button';
 import LoadingScreen from '../../components/ui/LoadingScreen';
 import LeetCodeStats from '../../components/ui/LeetCodeStats';
 import { CheckCircle2, XCircle, ArrowLeft } from 'lucide-react';
+import { differenceInMilliseconds } from 'date-fns';
 
 const StudentProfilePage: React.FC = () => {
   const { studentId } = useParams<{ studentId: string }>();
@@ -146,6 +147,10 @@ const StudentProfilePage: React.FC = () => {
                           <div className="flex items-center gap-2 mt-1">
                             <Badge variant="outline">{sub.problem.difficulty}</Badge>
                             <Badge variant="secondary">{sub.problem.platform}</Badge>
+                            {sub.completed && sub.submissionTime && sub.problem.assignment?.dueDate &&
+                              new Date(sub.submissionTime).getTime() > new Date(sub.problem.assignment.dueDate).getTime() && (
+                                <Badge className="bg-yellow-600 text-white">Late</Badge>
+                            )}
                           </div>
                         </div>
                         {sub.completed ? (

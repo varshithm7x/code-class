@@ -52,8 +52,10 @@ export interface StudentProfile extends Student {
       assignment: {
         id: string;
         title: string;
+        dueDate: string;
       }
-    }
+    };
+    isLate?: boolean;
   }[];
 }
 

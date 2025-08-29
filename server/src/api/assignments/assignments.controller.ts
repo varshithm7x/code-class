@@ -253,7 +253,15 @@ export const getAssignmentById = async (
 
       const problemsWithSubmissions = assignment.problems.map((problem) => ({
         ...problem,
-        submissions: allSubmissions.filter((s) => s.problemId === problem.id),
+        submissions: allSubmissions
+          .filter((s) => s.problemId === problem.id)
+          .map((s) => ({
+            ...s,
+            isLate:
+              !!s.submissionTime &&
+              !!assignment.dueDate &&
+              new Date(s.submissionTime).getTime() > new Date(assignment.dueDate).getTime(),
+          })),
       }));
 
       res.status(200).json({

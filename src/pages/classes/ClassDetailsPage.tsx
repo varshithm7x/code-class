@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { getClassDetails, getClassAssignments, removeStudentFromClass } from '../../api/classes';
+import { getAssignmentDetails } from '../../api/assignments';
 import { deleteAssignment } from '../../api/assignments';
 import { getClassAnnouncements } from '../../api/announcements';
 import { ClassWithStudents, Assignment, TeacherAssignment, StudentAssignment, Student, Announcement } from '../../types';
@@ -21,6 +22,7 @@ import { Input } from '../../components/ui/input';
 import SubmissionStatusChecker from '../../components/classes/SubmissionStatusChecker';
 import { StudentAnalyticsDashboard } from '../../components/analytics/StudentAnalyticsDashboard';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '../../components/ui/accordion';
+import { Badge } from '../../components/ui/badge';
 
 
 const ClassDetailsPage: React.FC = () => {
@@ -41,6 +43,7 @@ const ClassDetailsPage: React.FC = () => {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [latestAssignmentLateCounts, setLatestAssignmentLateCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
     const tab = searchParams.get('tab');
@@ -64,6 +67,34 @@ const ClassDetailsPage: React.FC = () => {
         setClassDetails(classData);
         setAssignments(assignmentsData);
         setAnnouncements(announcementsData);
+
+        // Compute late counts for the most recent assignment (lightweight: single extra call)
+        const sorted = [...assignmentsData].sort((a, b) => {
+          const aTime = new Date((a as any).dueDate || (a as any).createdAt).getTime();
+          const bTime = new Date((b as any).dueDate || (b as any).createdAt).getTime();
+          return bTime - aTime;
+        });
+        const latest = sorted[0];
+        if (latest && (user?.role === 'TEACHER')) {
+          try {
+            const details: any = await getAssignmentDetails(latest.id);
+            if (details && Array.isArray(details.problems)) {
+              const counts: Record<string, number> = {};
+              details.problems.forEach((p: any) => {
+                if (Array.isArray(p.submissions)) {
+                  p.submissions.forEach((s: any) => {
+                    if (s?.completed && (s?.isLate || (s?.submissionTime && details?.dueDate && new Date(s.submissionTime).getTime() > new Date(details.dueDate).getTime()))) {
+                      counts[s.userId] = (counts[s.userId] || 0) + 1;
+                    }
+                  });
+                }
+              });
+              setLatestAssignmentLateCounts(counts);
+            }
+          } catch (e) {
+            // Non-critical; ignore
+          }
+        }
         
         // Mock test data for now - will be replaced with API call
         const mockTests: CodingTest[] = [
@@ -250,7 +281,14 @@ const ClassDetailsPage: React.FC = () => {
                     className="text-lg hover:text-blue-600 transition-colors cursor-pointer"
                     onClick={() => navigate(`/students/${student.id}`)}
                   >
-                    {student.name}
+                    <span className="flex items-center gap-2">
+                      {student.name}
+                      {latestAssignmentLateCounts[student.id] > 0 && (
+                        <Badge className="bg-yellow-600 text-white" title={`Late ${latestAssignmentLateCounts[student.id]} in last assignment`}>
+                          Late x{latestAssignmentLateCounts[student.id]}
+                        </Badge>
+                      )}
+                    </span>
                   </CardTitle>
                   {isTeacher && (
                     <Button 

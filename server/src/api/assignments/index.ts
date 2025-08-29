@@ -13,6 +13,7 @@ import {
   extractProblemFromUrl,
   debugExtractProblemFromUrl
 } from './assignments.controller';
+import { cacheMiddleware } from '../middleware/cache';
 
 const router = Router();
 
@@ -23,7 +24,7 @@ router.post('/:assignmentId/check-my-submissions', protect, checkMySubmissionsFo
 router.post('/:assignmentId/mark-completed', protect, markAllAsCompleted);
 
 // Teacher-specific routes
-router.get('/:assignmentId', protect, getAssignmentById);
+router.get('/:assignmentId', protect, cacheMiddleware, getAssignmentById);
 
 // Assignment CRUD
 router.post('/', protect, createAssignment);

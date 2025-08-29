@@ -32,6 +32,7 @@ export const getStudentProfile = async (req: Request, res: Response): Promise<vo
                                     select: {
                                         id: true,
                                         title: true,
+                                        dueDate: true
                                     }
                                 }
                             }
@@ -58,4 +59,4 @@ export const getStudentProfile = async (req: Request, res: Response): Promise<vo
         console.error("Error fetching student profile:", error);
         res.status(500).json({ message: 'Error fetching student profile' });
     }
-} 
+}; 

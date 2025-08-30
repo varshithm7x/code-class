@@ -17,6 +17,15 @@ import { cacheMiddleware } from '../middleware/cache';
 
 const router = Router();
 
+// Conditional cache middleware - can be disabled via environment variable
+const maybeCache = (req: any, res: any, next: any) => {
+  if (process.env.DISABLE_ASSIGNMENT_CACHE === 'true') {
+    console.log('Assignment cache disabled via environment variable');
+    return next();
+  }
+  return cacheMiddleware(req, res, next);
+};
+
 // Student routes
 router.get('/my', protect, getMyAssignments);
 router.post('/:assignmentId/check-submissions', protect, checkAssignmentSubmissions);
@@ -24,12 +33,36 @@ router.post('/:assignmentId/check-my-submissions', protect, checkMySubmissionsFo
 router.post('/:assignmentId/mark-completed', protect, markAllAsCompleted);
 
 // Teacher-specific routes
-router.get('/:assignmentId', protect, cacheMiddleware, getAssignmentById);
+router.get('/:assignmentId', protect, maybeCache, getAssignmentById);
 
 // Assignment CRUD
 router.post('/', protect, createAssignment);
 router.patch('/:assignmentId', protect, updateAssignment);
 router.delete('/:assignmentId', protect, deleteAssignment);
+
+// Cache invalidation for teachers
+router.post('/:assignmentId/invalidate-cache', protect, (req, res) => {
+  // Clear cache for this assignment
+  const { assignmentId } = req.params;
+  const cacheKey = `__express__/api/v1/assignments/${assignmentId}`;
+  
+  // Import redis client dynamically to avoid circular dependencies
+  import('../../lib/redis').then(redisModule => {
+    const redisClient = redisModule.default;
+    redisClient.del(cacheKey, (err) => {
+      if (err) {
+        console.error('Error clearing cache:', err);
+        res.status(500).json({ message: 'Failed to clear cache' });
+      } else {
+        console.log(`Cache cleared for assignment ${assignmentId}`);
+        res.json({ message: 'Cache cleared successfully' });
+      }
+    });
+  }).catch(err => {
+    console.error('Error importing redis module:', err);
+    res.status(500).json({ message: 'Failed to clear cache' });
+  });
+});
 
 // Submission checking
 router.post('/check-submissions', protect, checkSubmissions);

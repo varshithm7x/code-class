@@ -15,6 +15,7 @@ import { RefreshCw, Pencil, CheckCircle2, Clock, AlertCircle, ArrowLeft } from '
 import { Link } from 'react-router-dom';
 import { Progress } from '../../components/ui/progress';
 import { isAxiosError } from 'axios';
+import api from '../../api/axios';
 
 const AssignmentDetailsPage: React.FC = () => {
   const { assignmentId } = useParams<{ assignmentId: string }>();
@@ -77,6 +78,18 @@ const AssignmentDetailsPage: React.FC = () => {
       toast.error('Failed to check submissions.');
     } finally {
       setIsChecking(false);
+    }
+  };
+
+  const handleInvalidateCache = async () => {
+    if (!assignmentId) return;
+    try {
+      await api.post(`/assignments/${assignmentId}/invalidate-cache`);
+      toast.success('Cache cleared successfully. Refreshing data...');
+      await fetchAssignment(); // Refresh to get fresh data
+    } catch (error) {
+      console.error('Failed to invalidate cache:', error);
+      toast.error('Failed to clear cache.');
     }
   };
 
@@ -143,34 +156,34 @@ const AssignmentDetailsPage: React.FC = () => {
                 )}
               </div>
             </div>
-              <div className="flex gap-2">
-              {isTeacher ? (
-                <>
-                <Button asChild variant="outline">
-                  <Link to={`/assignments/${assignment.id}/edit`}>
-                    <Pencil className="mr-2 h-4 w-4" />
-                    Edit
-                  </Link>
-                </Button>
-                <Button onClick={handleCheckSubmissions} disabled={isChecking}>
-                  <RefreshCw className={`mr-2 h-4 w-4 ${isChecking ? 'animate-spin' : ''}`} />
-                  {isChecking ? 'Checking...' : 'Check Submissions'}
-                </Button>
-                </>
-              ) : null}
-              {!isTeacher && (
+              <div className="flex items-center gap-2">
                 <Button
-                  onClick={handleCheckMySubmissions}
-                  disabled={isChecking || cooldown > 0}
-                  className="w-full sm:w-auto"
+                  onClick={handleCheckSubmissions}
+                  disabled={isChecking}
+                  className="flex items-center gap-2"
                 >
-                  {isChecking
-                    ? 'Checking...'
-                    : cooldown > 0
-                    ? `Available in ${Math.floor(cooldown / 60)}:${(cooldown % 60).toString().padStart(2, '0')}`
-                    : 'Check My Submissions'}
+                  <RefreshCw className={`h-4 w-4 ${isChecking ? 'animate-spin' : ''}`} />
+                  Check Submissions
                 </Button>
-              )}
+                {isTeacher && (
+                  <Button
+                    onClick={handleInvalidateCache}
+                    variant="outline"
+                    className="flex items-center gap-2"
+                    title="Clear cache if you see stale data"
+                  >
+                    <AlertCircle className="h-4 w-4" />
+                    Clear Cache
+                  </Button>
+                )}
+                {isTeacher && (
+                  <Button asChild variant="outline">
+                    <Link to={`/assignments/${assignmentId}/edit`}>
+                      <Pencil className="h-4 w-4" />
+                      Edit Assignment
+                    </Link>
+                  </Button>
+                )}
               </div>
           </div>
         </CardHeader>

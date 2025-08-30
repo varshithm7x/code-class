@@ -44,9 +44,15 @@ interface SubmissionStatusGridProps {
 const SubmissionStatusGrid: React.FC<SubmissionStatusGridProps> = ({ assignment, onRefresh }) => {
   const [unsolvedFilter, setUnsolvedFilter] = useState<string>('all');
 
+  // Debug logging to understand data structure
+  console.log('SubmissionStatusGrid - assignment:', assignment);
+  console.log('SubmissionStatusGrid - problems:', assignment?.problems);
+  console.log('SubmissionStatusGrid - first problem submissions:', assignment?.problems?.[0]?.submissions);
+
   // Extract unique students from submissions data (since class.students might not be available)
   const students = useMemo(() => {
     if (!assignment || !assignment.problems || assignment.problems.length === 0) {
+      console.log('No assignment or problems found');
       return [];
     }
 
@@ -54,20 +60,26 @@ const SubmissionStatusGrid: React.FC<SubmissionStatusGridProps> = ({ assignment,
     
     // Collect unique students from all submissions
     assignment.problems.forEach(problem => {
-      if (problem.submissions && Array.isArray(problem.submissions)) {
-        problem.submissions.forEach(submission => {
-          if (submission?.user && 
-              submission.user.id && 
-              submission.user.name && 
-              !studentMap.has(submission.user.id)) {
-            studentMap.set(submission.user.id, {
-              id: submission.user.id,
-              name: submission.user.name,
-              email: submission.user.email || ''
-            });
-          }
-        });
+      console.log('Processing problem:', problem.id, 'submissions:', problem.submissions);
+      
+      // Defensive check for submissions
+      if (!problem?.submissions || !Array.isArray(problem.submissions)) {
+        console.warn(`Problem ${problem.id} has no submissions or invalid submissions:`, problem.submissions);
+        return;
       }
+      
+      problem.submissions.forEach(submission => {
+        if (submission?.user && 
+            submission.user.id && 
+            submission.user.name && 
+            !studentMap.has(submission.user.id)) {
+          studentMap.set(submission.user.id, {
+            id: submission.user.id,
+            name: submission.user.name,
+            email: submission.user.email || ''
+          });
+        }
+      });
     });
 
     // If we have class.students, use that as it might be more complete
@@ -83,9 +95,12 @@ const SubmissionStatusGrid: React.FC<SubmissionStatusGridProps> = ({ assignment,
       });
     }
 
-    return Array.from(studentMap.values())
+    const result = Array.from(studentMap.values())
       .filter(student => student && student.name) // Extra safety check
       .sort((a, b) => a.name.localeCompare(b.name));
+    
+    console.log('Extracted students:', result);
+    return result;
   }, [assignment]);
 
   const totalProblems = assignment?.problems?.length ?? 0;
@@ -97,7 +112,12 @@ const SubmissionStatusGrid: React.FC<SubmissionStatusGridProps> = ({ assignment,
       students.forEach(student => {
         if (!student?.id) return;
         const completedCount = assignment.problems.reduce((acc, problem) => {
-          if (!problem?.submissions || !Array.isArray(problem.submissions)) return acc;
+          // Defensive check for submissions
+          if (!problem?.submissions || !Array.isArray(problem.submissions)) {
+            console.warn(`Problem ${problem.id} has no submissions in unsolvedCounts calculation`);
+            return acc;
+          }
+          
           const submission = problem.submissions.find(s => s?.userId === student.id);
           return acc + (submission?.completed ? 1 : 0);
         }, 0);
@@ -120,7 +140,12 @@ const SubmissionStatusGrid: React.FC<SubmissionStatusGridProps> = ({ assignment,
     return students.filter(student => {
       if (!student?.id) return false;
       const completedCount = assignment.problems.reduce((acc, problem) => {
-        if (!problem?.submissions || !Array.isArray(problem.submissions)) return acc;
+        // Defensive check for submissions
+        if (!problem?.submissions || !Array.isArray(problem.submissions)) {
+          console.warn(`Problem ${problem.id} has no submissions in filteredStudents calculation`);
+          return acc;
+        }
+        
         const submission = problem.submissions.find(s => s?.userId === student.id);
         return acc + (submission?.completed ? 1 : 0);
       }, 0);
@@ -131,7 +156,10 @@ const SubmissionStatusGrid: React.FC<SubmissionStatusGridProps> = ({ assignment,
   // Get student completion data - only automatic completion
   const getStudentCompletion = (studentId: string, problemId: string) => {
     const problem = assignment?.problems?.find(p => p?.id === problemId);
-    if (!problem || !problem.submissions) return { completed: false };
+    if (!problem || !problem.submissions) {
+      console.warn(`Problem ${problemId} not found or has no submissions`);
+      return { completed: false };
+    }
     
     const submission = problem.submissions.find(s => s?.userId === studentId);
     return {
@@ -149,7 +177,12 @@ const SubmissionStatusGrid: React.FC<SubmissionStatusGridProps> = ({ assignment,
     
     const totalProblems = assignment.problems.length;
     const completedProblems = assignment.problems.filter(problem => {
-      if (!problem?.submissions || !Array.isArray(problem.submissions)) return false;
+      // Defensive check for submissions
+      if (!problem?.submissions || !Array.isArray(problem.submissions)) {
+        console.warn(`Problem ${problem.id} has no submissions in getStudentProgress`);
+        return false;
+      }
+      
       const submission = problem.submissions.find(s => s?.userId === studentId);
       return submission?.completed || false;
     }).length;
@@ -162,6 +195,7 @@ const SubmissionStatusGrid: React.FC<SubmissionStatusGridProps> = ({ assignment,
   };
 
   if (!assignment || !assignment.problems || assignment.problems.length === 0) {
+    console.log('No assignment data available for SubmissionStatusGrid');
     return (
       <div className="text-center py-10">
         <p className="text-muted-foreground">No problems in this assignment.</p>
@@ -213,6 +247,19 @@ const SubmissionStatusGrid: React.FC<SubmissionStatusGridProps> = ({ assignment,
             <TableRow>
               <TableHead className="sticky left-0 bg-background z-10 min-w-[150px]">Student</TableHead>
               {assignment.problems.map((problem) => {
+                // Defensive check for submissions
+                if (!problem?.submissions || !Array.isArray(problem.submissions)) {
+                  console.warn(`Problem ${problem.id} has no submissions in table header`);
+                  return (
+                    <TableHead key={problem.id} className="text-center min-w-[200px]">
+                      <a href={problem.url} target="_blank" rel="noopener noreferrer" className="hover:underline font-medium">
+                        {problem.title}
+                      </a>
+                      <div className="text-xs text-red-500 mt-1">No submissions data</div>
+                    </TableHead>
+                  );
+                }
+                
                 const solvedCount = problem.submissions.filter(s => s.completed).length;
                 const notSolvedCount = students.length - solvedCount;
                 return (
@@ -276,26 +323,26 @@ const SubmissionStatusGrid: React.FC<SubmissionStatusGridProps> = ({ assignment,
                       );
                     })}
                     
-                                      <TableCell className="text-center">
-                    <div className="flex flex-col items-center gap-1">
-                      {progress.completed === progress.total && progress.total > 0 ? (
-                        <Badge className="bg-green-500 text-white">
-                          All Questions Completed
-                        </Badge>
-                      ) : progress.completed > 0 ? (
-                        <Badge className="bg-yellow-500 text-white">
-                          In Progress
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-gray-600 border-gray-300">
-                          Not Started
-                        </Badge>
-                      )}
-                      <span className="text-xs text-muted-foreground">
-                        {progress.completed}/{progress.total}
-                      </span>
-                    </div>
-                  </TableCell>
+                    <TableCell className="text-center">
+                      <div className="flex flex-col items-center gap-1">
+                        {progress.completed === progress.total && progress.total > 0 ? (
+                          <Badge className="bg-green-500 text-white">
+                            All Questions Completed
+                          </Badge>
+                        ) : progress.completed > 0 ? (
+                          <Badge className="bg-yellow-500 text-white">
+                            In Progress
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-gray-600 border-gray-300">
+                            Not Started
+                          </Badge>
+                        )}
+                        <span className="text-xs text-muted-foreground">
+                          {progress.completed}/{progress.total}
+                        </span>
+                      </div>
+                    </TableCell>
                   </TableRow>
                 );
               })

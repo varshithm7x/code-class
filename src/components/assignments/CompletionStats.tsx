@@ -24,11 +24,6 @@ interface CompletionStatsProps {
 }
 
 const CompletionStats: React.FC<CompletionStatsProps> = ({ assignment }) => {
-  // Debug logging to understand data structure
-  console.log('CompletionStats - assignment:', assignment);
-  console.log('CompletionStats - problems:', assignment?.problems);
-  console.log('CompletionStats - first problem submissions:', assignment?.problems?.[0]?.submissions);
-
   const totalStudents = assignment.problems?.[0]?.submissions?.length || 0;
   const totalProblems = assignment.problems?.length || 0;
 
@@ -38,11 +33,8 @@ const CompletionStats: React.FC<CompletionStatsProps> = ({ assignment }) => {
   // Count completed problems per student
   if (assignment.problems && assignment.problems.length > 0) {
     assignment.problems.forEach(problem => {
-      console.log('Processing problem in CompletionStats:', problem.id, 'submissions:', problem.submissions);
-      
       // Defensive check for submissions
       if (!problem?.submissions || !Array.isArray(problem.submissions)) {
-        console.warn(`Problem ${problem.id} has no submissions in CompletionStats`);
         return;
       }
       
@@ -65,7 +57,6 @@ const CompletionStats: React.FC<CompletionStatsProps> = ({ assignment }) => {
   assignment.problems?.forEach(problem => {
     // Defensive check for submissions
     if (!problem?.submissions || !Array.isArray(problem.submissions)) {
-      console.warn(`Problem ${problem.id} has no submissions in CompletionStats student ID collection`);
       return;
     }
     
@@ -91,7 +82,6 @@ const CompletionStats: React.FC<CompletionStatsProps> = ({ assignment }) => {
   assignment.problems?.forEach(problem => {
     // Defensive check for submissions
     if (!problem?.submissions || !Array.isArray(problem.submissions)) {
-      console.warn(`Problem ${problem.id} has no submissions in CompletionStats late count`);
       return;
     }
     
@@ -102,8 +92,6 @@ const CompletionStats: React.FC<CompletionStatsProps> = ({ assignment }) => {
       }
     });
   });
-
-  console.log('CompletionStats - calculated counts:', { allCompleted, inProgress, notStarted, lateCount });
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">

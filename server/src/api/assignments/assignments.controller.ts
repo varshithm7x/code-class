@@ -267,7 +267,6 @@ export const getAssignmentById = async (
       res.status(200).json({
         ...assignment,
         problems: problemsWithSubmissions,
-        _cacheVersion: Date.now(), // Cache busting for schema changes
       });
     } else {
       // For students, return only their own submissions (including manual marking)

@@ -44,15 +44,9 @@ interface SubmissionStatusGridProps {
 const SubmissionStatusGrid: React.FC<SubmissionStatusGridProps> = ({ assignment, onRefresh }) => {
   const [unsolvedFilter, setUnsolvedFilter] = useState<string>('all');
 
-  // Debug logging to understand data structure
-  console.log('SubmissionStatusGrid - assignment:', assignment);
-  console.log('SubmissionStatusGrid - problems:', assignment?.problems);
-  console.log('SubmissionStatusGrid - first problem submissions:', assignment?.problems?.[0]?.submissions);
-
   // Extract unique students from submissions data (since class.students might not be available)
   const students = useMemo(() => {
     if (!assignment || !assignment.problems || assignment.problems.length === 0) {
-      console.log('No assignment or problems found');
       return [];
     }
 
@@ -60,11 +54,8 @@ const SubmissionStatusGrid: React.FC<SubmissionStatusGridProps> = ({ assignment,
     
     // Collect unique students from all submissions
     assignment.problems.forEach(problem => {
-      console.log('Processing problem:', problem.id, 'submissions:', problem.submissions);
-      
       // Defensive check for submissions
       if (!problem?.submissions || !Array.isArray(problem.submissions)) {
-        console.warn(`Problem ${problem.id} has no submissions or invalid submissions:`, problem.submissions);
         return;
       }
       
@@ -99,7 +90,6 @@ const SubmissionStatusGrid: React.FC<SubmissionStatusGridProps> = ({ assignment,
       .filter(student => student && student.name) // Extra safety check
       .sort((a, b) => a.name.localeCompare(b.name));
     
-    console.log('Extracted students:', result);
     return result;
   }, [assignment]);
 
@@ -114,7 +104,6 @@ const SubmissionStatusGrid: React.FC<SubmissionStatusGridProps> = ({ assignment,
         const completedCount = assignment.problems.reduce((acc, problem) => {
           // Defensive check for submissions
           if (!problem?.submissions || !Array.isArray(problem.submissions)) {
-            console.warn(`Problem ${problem.id} has no submissions in unsolvedCounts calculation`);
             return acc;
           }
           
@@ -142,7 +131,6 @@ const SubmissionStatusGrid: React.FC<SubmissionStatusGridProps> = ({ assignment,
       const completedCount = assignment.problems.reduce((acc, problem) => {
         // Defensive check for submissions
         if (!problem?.submissions || !Array.isArray(problem.submissions)) {
-          console.warn(`Problem ${problem.id} has no submissions in filteredStudents calculation`);
           return acc;
         }
         
@@ -157,7 +145,6 @@ const SubmissionStatusGrid: React.FC<SubmissionStatusGridProps> = ({ assignment,
   const getStudentCompletion = (studentId: string, problemId: string) => {
     const problem = assignment?.problems?.find(p => p?.id === problemId);
     if (!problem || !problem.submissions) {
-      console.warn(`Problem ${problemId} not found or has no submissions`);
       return { completed: false };
     }
     
@@ -179,7 +166,6 @@ const SubmissionStatusGrid: React.FC<SubmissionStatusGridProps> = ({ assignment,
     const completedProblems = assignment.problems.filter(problem => {
       // Defensive check for submissions
       if (!problem?.submissions || !Array.isArray(problem.submissions)) {
-        console.warn(`Problem ${problem.id} has no submissions in getStudentProgress`);
         return false;
       }
       
@@ -195,7 +181,6 @@ const SubmissionStatusGrid: React.FC<SubmissionStatusGridProps> = ({ assignment,
   };
 
   if (!assignment || !assignment.problems || assignment.problems.length === 0) {
-    console.log('No assignment data available for SubmissionStatusGrid');
     return (
       <div className="text-center py-10">
         <p className="text-muted-foreground">No problems in this assignment.</p>
@@ -249,7 +234,6 @@ const SubmissionStatusGrid: React.FC<SubmissionStatusGridProps> = ({ assignment,
               {assignment.problems.map((problem) => {
                 // Defensive check for submissions
                 if (!problem?.submissions || !Array.isArray(problem.submissions)) {
-                  console.warn(`Problem ${problem.id} has no submissions in table header`);
                   return (
                     <TableHead key={problem.id} className="text-center min-w-[200px]">
                       <a href={problem.url} target="_blank" rel="noopener noreferrer" className="hover:underline font-medium">

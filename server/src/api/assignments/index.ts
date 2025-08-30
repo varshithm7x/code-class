@@ -40,30 +40,6 @@ router.post('/', protect, createAssignment);
 router.patch('/:assignmentId', protect, updateAssignment);
 router.delete('/:assignmentId', protect, deleteAssignment);
 
-// Cache invalidation for teachers
-router.post('/:assignmentId/invalidate-cache', protect, (req, res) => {
-  // Clear cache for this assignment
-  const { assignmentId } = req.params;
-  const cacheKey = `__express__/api/v1/assignments/${assignmentId}`;
-  
-  // Import redis client dynamically to avoid circular dependencies
-  import('../../lib/redis').then(redisModule => {
-    const redisClient = redisModule.default;
-    redisClient.del(cacheKey, (err) => {
-      if (err) {
-        console.error('Error clearing cache:', err);
-        res.status(500).json({ message: 'Failed to clear cache' });
-      } else {
-        console.log(`Cache cleared for assignment ${assignmentId}`);
-        res.json({ message: 'Cache cleared successfully' });
-      }
-    });
-  }).catch(err => {
-    console.error('Error importing redis module:', err);
-    res.status(500).json({ message: 'Failed to clear cache' });
-  });
-});
-
 // Submission checking
 router.post('/check-submissions', protect, checkSubmissions);
 

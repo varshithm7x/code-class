@@ -27,7 +27,7 @@ const AssignmentDetailsPage: React.FC = () => {
   const isTeacher = user?.role === 'TEACHER';
   const cooldownDuration = 60; // 1 minute
 
-  const fetchAssignment = async () => {
+  const fetchAssignment = useCallback(async () => {
     if (!assignmentId) return;
     try {
       const data = await getAssignmentDetails(assignmentId);
@@ -51,11 +51,11 @@ const AssignmentDetailsPage: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [assignmentId, user?.role]);
 
   useEffect(() => {
     fetchAssignment();
-  }, [assignmentId]);
+  }, [fetchAssignment]);
 
   useEffect(() => {
     if (cooldown > 0) {
@@ -74,7 +74,11 @@ const AssignmentDetailsPage: React.FC = () => {
       await fetchAssignment(); // Refresh to get the updated lastSubmissionCheck
     } catch (error) {
       console.error('Failed to check submissions', error);
-      toast.error('Failed to check submissions.');
+      if (isAxiosError(error) && error.response?.status === 403) {
+        toast.error('Only teachers can trigger submission checks.');
+      } else {
+        toast.error('Failed to check submissions.');
+      }
     } finally {
       setIsChecking(false);
     }
@@ -144,14 +148,27 @@ const AssignmentDetailsPage: React.FC = () => {
               </div>
             </div>
               <div className="flex items-center gap-2">
-                <Button
-                  onClick={handleCheckSubmissions}
-                  disabled={isChecking}
-                  className="flex items-center gap-2"
-                >
-                  <RefreshCw className={`h-4 w-4 ${isChecking ? 'animate-spin' : ''}`} />
-                  Check Submissions
-                </Button>
+                {isTeacher ? (
+                  <Button
+                    onClick={handleCheckSubmissions}
+                    disabled={isChecking}
+                    className="flex items-center gap-2"
+                  >
+                    <RefreshCw className={`h-4 w-4 ${isChecking ? 'animate-spin' : ''}`} />
+                    Check Submissions
+                  </Button>
+                ) : (
+                  <>
+                    <Button
+                      onClick={handleCheckMySubmissions}
+                      disabled={isChecking || cooldown > 0}
+                      className="flex items-center gap-2"
+                    >
+                      <RefreshCw className={`h-4 w-4 ${isChecking ? 'animate-spin' : ''}`} />
+                      {cooldown > 0 ? `Try again in ${cooldown}s` : 'Check My Submissions'}
+                    </Button>
+                  </>
+                )}
                 {isTeacher && (
                   <Button asChild variant="outline">
                     <Link to={`/assignments/${assignmentId}/edit`}>
@@ -197,7 +214,7 @@ const AssignmentDetailsPage: React.FC = () => {
 
                 {/* Problems List */}
                 <h3 className="font-semibold mb-4">Problems</h3>
-                <ProblemCompletionList problems={studentProblems} dueDate={(assignment as any).dueDate} />
+                <ProblemCompletionList problems={studentProblems} dueDate={assignment.dueDate} />
               </>
             )}
           </div>

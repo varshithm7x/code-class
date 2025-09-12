@@ -18,7 +18,7 @@ import { cacheMiddleware } from '../middleware/cache';
 const router = Router();
 
 // Conditional cache middleware - can be disabled via environment variable
-const maybeCache = (req: any, res: any, next: any) => {
+const maybeCache = (req: Parameters<typeof cacheMiddleware>[0], res: Parameters<typeof cacheMiddleware>[1], next: Parameters<typeof cacheMiddleware>[2]) => {
   if (process.env.DISABLE_ASSIGNMENT_CACHE === 'true') {
     console.log('Assignment cache disabled via environment variable');
     return next();
@@ -32,8 +32,8 @@ router.post('/:assignmentId/check-submissions', protect, checkAssignmentSubmissi
 router.post('/:assignmentId/check-my-submissions', protect, checkMySubmissionsForAssignment);
 router.post('/:assignmentId/mark-completed', protect, markAllAsCompleted);
 
-// Teacher-specific routes
-router.get('/:assignmentId', protect, maybeCache, getAssignmentById);
+// Teacher/Student assignment detail - do NOT cache because response varies per user/role
+router.get('/:assignmentId', protect, getAssignmentById);
 
 // Assignment CRUD
 router.post('/', protect, createAssignment);

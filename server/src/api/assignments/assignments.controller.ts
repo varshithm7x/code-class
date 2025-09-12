@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { Prisma } from "@prisma/client"; // <-- ADD THIS LINE
 import prisma from "../../lib/prisma";
+import redisClient from "../../lib/redis";
 import {
   checkAllSubmissions as checkAllSubmissionsService,
   checkSubmissionsForAssignment as checkSubmissionsForAssignmentService,
@@ -393,6 +394,15 @@ export const checkAssignmentSubmissions = async (
       where: { id: assignmentId },
       data: { lastSubmissionCheck: new Date() },
     });
+
+    // Clear cache for this assignment to ensure fresh data on next request
+    const cacheKey = `__express__/api/v1/assignments/${assignmentId}`;
+    redisClient.del(cacheKey).then(() => {
+      console.log(`✅ Cleared cache for assignment ${assignmentId}`);
+    }).catch((err: Error) => {
+      console.error('Error clearing assignment cache:', err);
+    });
+
     res.status(200).json({
       message: `Submission check completed. ${count} submissions updated.`,
     });
@@ -453,6 +463,14 @@ export const checkMySubmissionsForAssignment = async (
         assignmentId,
         lastCheckedAt: new Date(),
       },
+    });
+
+    // Clear cache for this assignment to ensure fresh data on next request
+    const cacheKey = `__express__/api/v1/assignments/${assignmentId}`;
+    redisClient.del(cacheKey).then(() => {
+      console.log(`✅ Cleared cache for assignment ${assignmentId}`);
+    }).catch((err: Error) => {
+      console.error('Error clearing assignment cache:', err);
     });
 
     res.status(200).json({

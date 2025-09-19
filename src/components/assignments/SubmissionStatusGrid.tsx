@@ -37,6 +37,7 @@ interface SubmissionStatusGridProps {
       }>;
     };
     dueDate?: string;
+    assignDate?: string; // Add this line
   };
   onRefresh?: () => void;
 }
@@ -152,7 +153,9 @@ const SubmissionStatusGrid: React.FC<SubmissionStatusGridProps> = ({ assignment,
     return {
       completed: submission?.completed || false,
       submissionTime: submission?.submissionTime,
-      isLate: submission?.isLate ?? (submission?.submissionTime && assignment?.dueDate ? (new Date(submission.submissionTime).getTime() > new Date(assignment.dueDate!).getTime()) : false)
+      isLate: submission?.isLate ?? (submission?.submissionTime && assignment?.dueDate && assignment?.assignDate ? 
+      (new Date(submission.submissionTime).getTime() > new Date(assignment.dueDate!).getTime() && 
+       new Date(submission.submissionTime).getTime() >= new Date(assignment.assignDate!).getTime()) : false)
     };
   };
 

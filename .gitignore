@@ -24,7 +24,7 @@ dist-ssr
 *.sw?
 
 /generated/prisma
-
+/tools
 # Dependencies
 node_modules/
 npm-debug.log*

@@ -261,7 +261,9 @@ export const getAssignmentById = async (
             isLate:
               !!s.submissionTime &&
               !!assignment.dueDate &&
-              new Date(s.submissionTime).getTime() > new Date(assignment.dueDate).getTime(),
+              !!assignment.assignDate &&
+              new Date(s.submissionTime).getTime() > new Date(assignment.dueDate).getTime() &&
+              new Date(s.submissionTime).getTime() >= new Date(assignment.assignDate).getTime(),
           })),
       }));
 
